@@ -57,10 +57,12 @@ ApplicationWindow {
     function focusSearch() { navigate(1); searchField.forceActiveFocus(); searchField.selectAll(); }
     Shortcut { sequence: "Ctrl+K"; onActivated: window.focusSearch() }
     Shortcut { sequence: "Ctrl+F"; onActivated: window.focusSearch() }
-    Shortcut { sequence: "Alt+Left"; enabled: window.showingSubpage; onActivated: window.back() }
-    Shortcut { sequence: "Escape"; enabled: window.showingSubpage; onActivated: window.back() }
+    Shortcut { sequence: "Alt+Left"; enabled: window.showingSubpage && !planDialog.visible; onActivated: window.back() }
+    Shortcut { sequence: "Escape"; enabled: window.showingSubpage && !planDialog.visible; onActivated: window.back() }
     Shortcut { sequence: "Ctrl+R"; onActivated: core.refresh() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
+
+    PlanDialog {id:planDialog;core:window.core;theme:storeTheme}
 
     RowLayout {
         anchors.fill: parent

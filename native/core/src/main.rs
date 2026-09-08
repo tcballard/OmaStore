@@ -1,10 +1,13 @@
 mod catalogue;
+mod planner;
+mod platform;
 mod setups;
 mod workspace;
 struct Runtime {
     catalogue: catalogue::Client,
     workspace: Option<workspace::Client>,
     demo: bool,
+    plan: Option<planner::Plan>,
 }
 impl Runtime {
     fn new(demo: bool) -> Self {
@@ -12,6 +15,7 @@ impl Runtime {
             catalogue: catalogue::Client::new(demo),
             workspace: None,
             demo,
+            plan: None,
         }
     }
 }
@@ -64,6 +68,21 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
             Err(e) => error(Some(&request.id), e.code),
         };
     }
+    if request.method == "system.probe" || request.method == "system.plan" {
+        let result = if request.method == "system.probe" && request.params == json!({}) {
+            Ok(platform::probe().summary())
+        } else if request.method == "system.plan" {
+            prepare_plan(runtime, request.params)
+        } else {
+            Err("invalid_request")
+        };
+        return match result {
+            Ok(value) => {
+                json!({"protocol_version":PROTOCOL_VERSION,"id":request.id,"ok":true,"result":value})
+            }
+            Err(code) => error(Some(&request.id), code),
+        };
+    }
     let client = &mut runtime.catalogue;
     let now = chrono::Utc::now();
     let result: Result<Value, &str> = match request.method.as_str() {
@@ -75,7 +94,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
@@ -148,6 +167,58 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         }
         Err(code) => error(Some(&request.id), code),
     }
+}
+
+fn prepare_plan(runtime: &mut Runtime, params: Value) -> platform::Result<Value> {
+    let selection: planner::Selection =
+        serde_json::from_value(params).map_err(|_| "invalid_selection")?;
+    let now = chrono::Utc::now().timestamp();
+    let ids = selection.ids(&runtime.catalogue.catalogue, now)?;
+    #[cfg(feature = "development-catalogue")]
+    if runtime.demo {
+        let (host, status, packages) = planner::sample(
+            &runtime.catalogue.catalogue,
+            &selection,
+            Default::default(),
+            now,
+        )?;
+        let plan = planner::build(
+            &runtime.catalogue.catalogue,
+            selection,
+            &host,
+            &status,
+            Ok(packages),
+            now,
+        )?;
+        let value = serde_json::to_value(&plan).map_err(|_| "plan_invalid")?;
+        runtime.plan = Some(plan);
+        return Ok(value);
+    }
+    let host = platform::probe();
+    let workspace = runtime
+        .workspace
+        .get_or_insert_with(|| workspace::Client::new(false));
+    let status = workspace
+        .dispatch("status.get", json!({"ids":ids}))
+        .map(|v| v["value"].clone())
+        .unwrap_or(Value::Null);
+    let targets = planner::targets(&runtime.catalogue.catalogue, &ids, &host);
+    let resolved = if host.state == "supported" && !host.update_required && !host.locked {
+        platform::resolve(&targets)
+    } else {
+        Ok(Vec::new())
+    };
+    let plan = planner::build(
+        &runtime.catalogue.catalogue,
+        selection,
+        &host,
+        &status,
+        resolved,
+        now,
+    )?;
+    let value = serde_json::to_value(&plan).map_err(|_| "plan_invalid")?;
+    runtime.plan = Some(plan);
+    Ok(value)
 }
 
 fn serve(mut input: impl BufRead, mut output: impl Write, runtime: &mut Runtime) -> io::Result<()> {

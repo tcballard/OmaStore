@@ -41,6 +41,18 @@ class CoreProcessTests(unittest.TestCase):
         replies = self.run_core(b"\n".join(json.dumps(r).encode() for r in requests) + b"\n")
         self.assertEqual([r["error"]["code"] for r in replies], ["unsupported_protocol", "invalid_request"])
 
+    def test_planning_rejects_execution_text_and_origins(self):
+        requests = [
+            {"protocol_version": 1, "id": "bad", "method": "system.plan", "params": value}
+            for value in [
+                {"kind": "app", "id": "--root"},
+                {"kind": "app", "id": "app", "origin": "https://example.com"},
+                {"kind": "app", "id": "app", "command": "touch /tmp/should-not-run"},
+            ]
+        ]
+        replies = self.run_core(b"\n".join(json.dumps(r).encode() for r in requests) + b"\n")
+        self.assertTrue(all(not r["ok"] for r in replies))
+
     def test_oversized_input_is_bounded_and_terminates(self):
         replies = self.run_core(b"x" * (256 * 1024 + 1))
         self.assertEqual(len(replies), 1)

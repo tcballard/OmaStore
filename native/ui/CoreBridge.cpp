@@ -25,7 +25,7 @@ CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(dem
     m_timeout.setInterval(1000);
     connect(&m_timeout, &QTimer::timeout, this, [this] {
         for (const auto &pending : m_pending) {
-            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
+            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("system.") ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
         }
     });
     connect(&m_process, &QProcess::started, this, [this] { request("core.info"); });
@@ -55,7 +55,7 @@ void CoreBridge::start() {
 void CoreBridge::request(const QString &method, const QVariantMap &params) {
     if (m_process.state() != QProcess::Running || m_pending.size() >= 16) return;
     const QString id = QString::number(++m_sequence);
-    if (method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick") m_communityRequests[method]=id;
+    if (method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick" || method.startsWith("system.")) m_communityRequests[method]=id;
     if (method == "candidate.prepare") m_candidateRequest = id;
     m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor")});
     const QJsonObject envelope{{"protocol_version", 1}, {"id", id}, {"method", method}, {"params", QJsonObject::fromVariantMap(params)}};
@@ -220,8 +220,8 @@ bool CoreBridge::openLink(const QString &kind, int index) {
 bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() && m_distributionUntil>QDateTime::currentSecsSinceEpoch();}
 
 void CoreBridge::communityAction(const QString &method,const QVariantMap &params) {
-    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick"};
-    if(m_ready && methods.contains(method)) request(method,params);
+    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan"};
+    if(m_ready && methods.contains(method)) { if(method=="system.plan") { m_community.remove(method); emit communityChanged(); } request(method,params); }
 }
 bool CoreBridge::openMakerLink(const QString &kind) {
     if(kind!="homepage" && kind!="support") return false;

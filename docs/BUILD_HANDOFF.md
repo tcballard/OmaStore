@@ -1,5 +1,9 @@
 # Build handoff
 
+B12 implements bounded read-only Omarchy/Arch probing, signature-policy checks, installed/update queries, dependency resolution, deterministic typed proposals and native plan review from app/setup details. Exact repository package versions are separate from display release versions. Unknown hosts, stale or changed status, signature exceptions, replacements/conflicts and system upgrades remain explicit blockers. All 47 Rust tests, ordinary/development Clippy and 8 native checks pass (22.00 seconds). A transient empty C++ object was rebuilt serially; the resulting full native suite passed. No real Omarchy package probe or package mutation was performed. B13 is next.
+
+B11b is published as `dbe284298e523cd6d21a822fc266c25b3db0b134`, matching local `8ee22d0777663e65f74cf1923bf1439c1d2d69c7` and tree `2374bd67937dbb253629a693e9a8fa7dd58b211f`.
+
 B11b completes native setup browsing, optional component selection/dependency explanations, price grouping, current status, creator/media actions, exact selection preview, native import/export and published-app selection in author drafts. All 45 Rust tests, workspace Clippy and 8 native checks pass (21.24 seconds), including keyboard selection and export/import at three sizes and 200% scaling. Portal dialogs and three real tested recipes still require Omarchy/content evidence. B12 read-only planning is next; no package writes were performed.
 
 The separate Qt 6.4 RSS comparison correction is published as `a62a621bfc5289ffca080dd25e328d00f52cedbc`, matching local `ad1e23c8075de8218758945d5b5f34836a0cd666` and tree `006414ced999984bf93a0803bab87035fe7a2c49`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34277144978), including the ordinary and demo native suites.

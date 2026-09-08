@@ -165,6 +165,14 @@ int main(int argc, char *argv[]) {
                         pressSetup(findItem(window->contentItem(),"component-demo-papertrail"));
                         for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
                         selection=core.community().value("setups.select").toMap();check(selection.value("selected").toList().size()==2,"select optional setup component");
+                        pressSetup(findItem(window->contentItem(),"previewSetupPlan"));
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        const auto proposal=core.community().value("system.plan").toMap();
+                        check(proposal.value("simulated").toBool() && proposal.value("operations").toList().size()==2,"typed setup installation proposal");
+                        check(!proposal.value("digest").toString().isEmpty(),"proposal has a stable content digest");
+                        auto *planNotice=findItem(window->contentItem(),"planNotice");
+                        check(planNotice && planNotice->isVisible(),"native plan review is visible");
+                        pressSetup(findItem(window->contentItem(),"closePlan"));QTest::qWait(50);
                         QTemporaryDir selectionDirectory;const auto selectionFile=QUrl::fromLocalFile(selectionDirectory.filePath("selection.json")).toString();
                         const QVariantMap intent{{"id","demo-writing-desk"},{"revision","1"},{"chosen",selection.value("requested")}};
                         core.communityAction("setups.export",{{"selection",intent},{"snapshot",selection.value("snapshot")},{"file",selectionFile}});
