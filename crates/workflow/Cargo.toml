@@ -19,6 +19,5 @@ tokio.workspace = true
 reqwest.workspace = true
 rustls.workspace = true
 omastore-catalogue.workspace = true
-
-[dev-dependencies]
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
 tempfile = "3.23"

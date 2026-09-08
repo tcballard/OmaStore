@@ -16,6 +16,12 @@ Rollback: revert the B04a implementation and retain private database files for r
 
 ## Earlier native preview receipt
 
+B04b is committed locally as `d2e341a4ee3d8363f5397a6d2a0173c6d92ae308` and published as `d17855a5ab5968882f8cce41bb486f229cecf8c9`, with identical tree `3750cc37a612fe44047fdc3f5b5844cc027af955`. The author continuation is [draft PR #2](https://github.com/tcballard/OmaStore/pull/2), stacked on PR #1.
+
+B05a adds private versioned drafts, atomic idempotent commands, immutable submitted candidates, revision-scoped findings, and authenticated media upload/read endpoints. Images are decoded and normalised; videos are bounded and metadata-stripped by resource-limited FFmpeg subprocesses. Files live behind an explicit private/public object-storage interface. The default persistent-volume implementation works without an external object provider. Public catalogue writes remain unavailable until independent review and publication. Drafts are bounded to 80 KiB to leave room for recovery data inside the native 256 KiB transport. Six workflow unit tests pass; the expanded HTTP/native acceptance checks are running in B05b. Retention and operational media cleanup remain tracked for B16.
+
+## Earlier native preview receipt
+
 Date: 8 September 2026. Branch: `build/native-discovery`. Scope: B01, B02, B03 and bounded extension B03b, followed by the executed-byte evidence correction. Review: [draft PR #1](https://github.com/tcballard/OmaStore/pull/1).
 
 Verified implementation: [`887d44947beee29ca45c89b7ff5f6888542d3ae6`](https://github.com/tcballard/OmaStore/commit/887d44947beee29ca45c89b7ff5f6888542d3ae6), with Git tree `3ddb5cd7b037d8838d3dd72fab187700109e633f`. The published tree exactly matches the locally checked tree. The following documentation receipt commit does not change implementation files.

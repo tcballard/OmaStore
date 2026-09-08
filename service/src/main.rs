@@ -40,6 +40,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         #[cfg(not(feature = "development-workflow"))]
         let store = Store::open(&path)?;
         state.store = Some(store);
+        state.objects = Some(omastore_workflow::media::LocalObjects::new(
+            &path
+                .parent()
+                .unwrap_or(std::path::Path::new("."))
+                .join("objects"),
+        )?);
     }
     state.origin = std::env::var("OMASTORE_SERVICE_ORIGIN")
         .unwrap_or_default()

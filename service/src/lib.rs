@@ -1,3 +1,4 @@
+mod workspace;
 use axum::{
     body::{Body, Bytes},
     extract::{DefaultBodyLimit, Query, State},
@@ -18,20 +19,24 @@ use tokio::sync::Semaphore;
 pub struct AppState {
     pub catalogue: PathBuf,
     pub store: Option<Store>,
+    pub objects: Option<omastore_workflow::media::LocalObjects>,
     pub oauth: Option<Arc<GithubOAuth>>,
     pub origin: String,
     pub sandbox: bool,
     pub concurrency: Arc<Semaphore>,
+    pub upload_concurrency: Arc<Semaphore>,
 }
 impl AppState {
     pub fn public(catalogue: PathBuf) -> Self {
         Self {
             catalogue,
             store: None,
+            objects: None,
             oauth: None,
             origin: String::new(),
             sandbox: false,
             concurrency: Arc::new(Semaphore::new(32)),
+            upload_concurrency: Arc::new(Semaphore::new(2)),
         }
     }
     pub fn read_catalogue(&self) -> omastore_workflow::Result<Catalogue> {
@@ -69,12 +74,27 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/auth/logout", post(logout))
         .route("/api/v1/auth/sandbox", post(sandbox_login))
         .route("/api/v1/workspace", get(workspace))
+        .route("/api/v1/commands", post(workspace::command))
+        .route("/api/v1/drafts/{id}", get(workspace::draft))
+        .route("/api/v1/revisions/{id}", get(workspace::revision))
+        .route("/api/v1/media/{id}", get(workspace::media))
+        .route(
+            "/api/v1/media",
+            post(workspace::upload)
+                .layer(DefaultBodyLimit::max(42 * 1024 * 1024))
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    workspace::upload_guard,
+                )),
+        )
         .route("/api/v1/claims/start", post(claim_start))
         .route("/api/v1/claims/verify", post(claim_verify))
         .route("/api/v1/claims/revoke", post(claim_revoke))
         .fallback(public_read)
         .layer(DefaultBodyLimit::max(1024 * 1024))
-        .layer(tower_http::limit::RequestBodyLimitLayer::new(1024 * 1024))
+        .layer(tower_http::limit::RequestBodyLimitLayer::new(
+            42 * 1024 * 1024,
+        ))
         .layer(middleware::from_fn_with_state(state.clone(), guard))
         .with_state(state)
 }
@@ -269,11 +289,9 @@ async fn sandbox_login(
 }
 async fn workspace(State(s): State<AppState>, headers: HeaderMap) -> ApiResult<Json<Value>> {
     let actor = actor(&s, &headers).await?;
-    db(&s, move |store| {
-        Ok(json!({"actor":actor,"claims":store.claims(&actor,now())?,"drafts":[],"revisions":[]}))
-    })
-    .await
-    .map(Json)
+    db(&s, move |store| store.workspace(&actor, now()))
+        .await
+        .map(Json)
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]

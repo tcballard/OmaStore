@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "channel": "development",
+  "revision": "candidate",
+  "buildRevision": "candidate",
+  "generatedAt": "2000-01-01T00:00:00Z",
+  "apps": [
+    {
+      "id": "APP_ID",
+      "slug": "",
+      "name": "",
+      "summary": "",
+      "description": "",
+      "tags": [],
+      "category": "",
+      "appType": "desktop",
+      "maturity": "preview",
+      "licence": {
+        "class": "unknown",
+        "identifier": "Unknown",
+        "url": null
+      },
+      "makerIds": [
+        "MAKER_ID"
+      ],
+      "homepage": "",
+      "source": null,
+      "support": "",
+      "media": [],
+      "capabilities": [],
+      "currentReleaseId": "r1",
+      "releases": [
+        {
+          "id": "r1",
+          "version": "",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "extra",
+            "package": "",
+            "version": "",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "extra",
+            "package": "",
+            "url": ""
+          },
+          "notes": "",
+          "offline": "yes",
+          "account": "no",
+          "activation": "no",
+          "serviceCosts": "",
+          "privileges": [],
+          "services": [],
+          "removal": ""
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "MAKER_ID",
+          "model": "free",
+          "url": "",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": null,
+          "entitlement": "",
+          "terms": "",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    }
+  ],
+  "makers": [
+    {
+      "id": "MAKER_ID",
+      "slug": "",
+      "name": "",
+      "bio": "",
+      "homepage": "",
+      "claim": "unclaimed",
+      "claimEvidence": null
+    }
+  ],
+  "recipes": [],
+  "editorial": []
+}
