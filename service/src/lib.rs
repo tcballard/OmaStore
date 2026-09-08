@@ -74,6 +74,8 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/auth/logout", post(logout))
         .route("/api/v1/auth/sandbox", post(sandbox_login))
         .route("/api/v1/workspace", get(workspace))
+        .route("/api/v1/review", get(workspace::review_queue))
+        .route("/api/v1/review/{id}", get(workspace::review_detail))
         .route("/api/v1/commands", post(workspace::command))
         .route("/api/v1/drafts/{id}", get(workspace::draft))
         .route("/api/v1/revisions/{id}", get(workspace::revision))

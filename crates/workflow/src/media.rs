@@ -421,14 +421,31 @@ impl Store {
     pub fn private_media_key(&self, actor: &Actor, id: &str) -> Result<(String, String)> {
         let c = self.connection()?;
         recheck(&c, actor, "author")?;
-        let (sha, content_type): (String, String) = c
+        let row = c
             .query_row(
-                "SELECT digest,content_type FROM media WHERE id=?1 AND owner=?2",
-                params![id, actor.id],
-                |r| Ok((r.get(0)?, r.get(1)?)),
+                "SELECT digest,content_type,owner,draft_id FROM media WHERE id=?1",
+                [id],
+                |r| {
+                    Ok((
+                        r.get::<_, String>(0)?,
+                        r.get::<_, String>(1)?,
+                        r.get::<_, String>(2)?,
+                        r.get::<_, String>(3)?,
+                    ))
+                },
             )
             .optional()?
             .ok_or(Error::new(404, "media_unavailable"))?;
+        let (sha, content_type, owner, draft) = row;
+        if owner != actor.id {
+            if recheck(&c, actor, "reviewer").is_err() {
+                return Err(Error::new(404, "media_unavailable"));
+            }
+            let submitted:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM revisions r,json_each(r.candidate,'$.apps') a,json_each(a.value,'$.media') m WHERE r.draft_id=?1 AND json_extract(m.value,'$.sha256')=?2)",params![draft,sha],|r|r.get(0))?;
+            if !submitted {
+                return Err(Error::new(404, "media_unavailable"));
+            }
+        }
         let extension = match content_type.as_str() {
             "image/png" => "png",
             "video/mp4" => "mp4",

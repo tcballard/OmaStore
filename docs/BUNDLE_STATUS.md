@@ -12,7 +12,7 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B04 | Publisher identity and persistent workspaces | B01 | implemented_unverified; local service/native checks pass; real OAuth callback and keyring pending |
 | B05 | Submission drafts, media and preview | B04 | implemented; 22 Rust tests and 8 native checks pass; retention integration closes in B16 |
 | B06 | Bounded checks and evidence intake | B05 | implemented; lease/replay tests pass; live disposable-VM report remains an external gate |
-| B07 | Review workflow and approval records | B06 | not_started |
+| B07 | Review workflow and approval records | B06 | implemented; 27 Rust tests and 8 native checks pass, including sample submission through independent approval |
 | B08 | GitHub publication bridge | B02, B07 | not_started |
 | B09 | Release monitoring and suspensions | B08 | not_started |
 | B10 | Makers, editorial selection and RSS | B03, B04, B08 | not_started |

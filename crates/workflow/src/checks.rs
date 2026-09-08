@@ -281,6 +281,8 @@ pub(crate) fn record_runtime(
     }
     let mut candidate = Catalogue::parse(body.as_bytes(), true)
         .map_err(|_| Error::new(500, "stored_candidate_invalid"))?;
+    crate::review::independent(t, actor, &owner, &candidate, now)
+        .map_err(|_| Error::new(403, "independent_tester_required"))?;
     if candidate_digest(&candidate)? != e.revision_digest {
         return Err(Error::new(409, "evidence_candidate_mismatch"));
     }
@@ -297,6 +299,12 @@ pub(crate) fn record_runtime(
         .timestamp();
     if tested > now + 60 || now - tested > 90 * 86400 {
         return Err(Error::new(422, "evidence_not_current"));
+    }
+    bounded(&e.record.environment, 1024)?;
+    bounded(&e.record.tool_version, 256)?;
+    bounded(&e.record.actor, 128)?;
+    if !e.record.limitations.is_empty() {
+        bounded(&e.record.limitations, 2048)?;
     }
     for value in [&e.install, &e.launch, &e.update_or_handoff, &e.removal] {
         bounded(value, 2000)?;

@@ -119,6 +119,7 @@ ColumnLayout {
             Label {text:"Revision · " + (panel.revision.state || "").replace(/_/g," ");font.bold:true}
             Label {text:"Content digest: " + (panel.revision.digest || "");Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}
             Repeater {model:panel.revision.findings || [];Label {required property var modelData;text:modelData.check+" · "+modelData.result+" · "+modelData.detail;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}}
+            Repeater {model:panel.revision.decisions || [];Label {required property var modelData;text:modelData.decision+": "+modelData.reason;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}}
             TextField {id:withdrawReason;placeholderText:"Reason for withdrawing";Layout.fillWidth:true;maximumLength:2000;Accessible.name:"Withdrawal reason"}
             Button {text:"Withdraw revision";enabled:!core.loading && withdrawReason.text.length>0 && ["submitted","checking","in_review","needs_changes","approved"].indexOf(panel.revision.state)>=0;onClicked:panel.command({command:"withdraw_revision",id:panel.revision.id,version:panel.revision.version,reason:withdrawReason.text})}
         }

@@ -158,6 +158,23 @@ pub async fn media(
         .into_response())
 }
 
+pub async fn review_queue(State(s): State<AppState>, headers: HeaderMap) -> ApiResult<Json<Value>> {
+    let actor = actor(&s, &headers).await?;
+    db(&s, move |store| store.review_queue(&actor, now()))
+        .await
+        .map(Json)
+}
+pub async fn review_detail(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> ApiResult<Json<Value>> {
+    let actor = actor(&s, &headers).await?;
+    db(&s, move |store| store.review_detail(&actor, &id, now()))
+        .await
+        .map(Json)
+}
+
 #[cfg(all(test, feature = "development-workflow"))]
 mod tests {
     use super::*;

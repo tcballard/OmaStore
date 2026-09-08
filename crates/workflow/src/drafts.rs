@@ -12,6 +12,13 @@ pub const MAX_DRAFT_BYTES: usize = 80 * 1024;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    ReviewDecision {
+        id: String,
+        version: i64,
+        decision: String,
+        reason: String,
+        acknowledge_limits: bool,
+    },
     RecordRuntime {
         evidence: Box<crate::checks::RuntimeEvidence>,
     },
@@ -43,7 +50,7 @@ pub enum Command {
 impl Command {
     pub fn role(&self) -> &'static str {
         match self {
-            Self::RecordRuntime { .. } => "reviewer",
+            Self::RecordRuntime { .. } | Self::ReviewDecision { .. } => "reviewer",
             _ => "author",
         }
     }
@@ -89,7 +96,7 @@ impl Store {
         let mut s=c.prepare("SELECT id,kind,candidate,version,updated_at,expiry_notice_at FROM drafts WHERE owner=?1 AND archived_at IS NULL ORDER BY updated_at DESC,id LIMIT 40")?;
         let rows=s.query_map([&actor.id],|r|{
             let candidate:Value=serde_json::from_str(&r.get::<_,String>(2)?).unwrap_or(Value::Null);
-            Ok(json!({"id":r.get::<_,String>(0)?,"kind":r.get::<_,String>(1)?,"name":candidate["apps"][0]["name"].as_str().or_else(||candidate["recipes"][0]["name"].as_str()).unwrap_or("Untitled listing"),"version":r.get::<_,i64>(3)?,"updatedAt":r.get::<_,i64>(4)?,"expiryNoticeAt":r.get::<_,Option<i64>>(5)?}))
+            Ok(json!({"id":r.get::<_,String>(0)?,"kind":r.get::<_,String>(1)?,"name":candidate["apps"][0]["name"].as_str().or_else(||candidate["recipes"][0]["name"].as_str()).unwrap_or("Untitled listing").chars().take(160).collect::<String>(),"version":r.get::<_,i64>(3)?,"updatedAt":r.get::<_,i64>(4)?,"expiryNoticeAt":r.get::<_,Option<i64>>(5)?}))
         })?.collect::<std::result::Result<Vec<_>,_>>()?;
         let mut s=c.prepare("SELECT id,draft_id,number,digest,state,version,submitted_at FROM revisions WHERE owner=?1 ORDER BY submitted_at DESC,id LIMIT 40")?;
         let revisions=s.query_map([&actor.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"draftId":r.get::<_,String>(1)?,"number":r.get::<_,i64>(2)?,"digest":r.get::<_,String>(3)?,"state":r.get::<_,String>(4)?,"version":r.get::<_,i64>(5)?,"submittedAt":r.get::<_,i64>(6)?})))?.collect::<std::result::Result<Vec<_>,_>>()?;
@@ -127,15 +134,36 @@ impl Store {
         if row.0 != actor.id && !reviewer {
             return Err(Error::new(404, "revision_unavailable"));
         }
-        let mut s=c.prepare("SELECT id,actor,check_name,result,code,detail,created_at FROM findings WHERE revision_id=?1 AND (private=0 OR ?2=1) ORDER BY created_at,id LIMIT 20")?;
+        let mut s=c.prepare("SELECT id,actor,check_name,result,code,detail,created_at FROM findings WHERE revision_id=?1 AND (private=0 OR ?2=1) ORDER BY created_at,id LIMIT 10")?;
         let findings=s.query_map(params![id,reviewer && row.0!=actor.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"actor":r.get::<_,String>(1)?,"check":r.get::<_,String>(2)?,"result":r.get::<_,String>(3)?,"code":r.get::<_,String>(4)?,"detail":r.get::<_,String>(5)?,"at":r.get::<_,i64>(6)?})))?.collect::<std::result::Result<Vec<_>,_>>()?;
+        let mut decisions=c.prepare("SELECT actor,decision,reason,created_at FROM review_decisions WHERE revision_id=?1 ORDER BY created_at DESC,id LIMIT 10")?;
+        let decisions=decisions.query_map([id],|r|Ok(json!({"actor":r.get::<_,String>(0)?,"decision":r.get::<_,String>(1)?,"reason":r.get::<_,String>(2)?,"at":r.get::<_,i64>(3)?})))?.collect::<std::result::Result<Vec<_>,_>>()?;
+        let approval=c.query_row("SELECT id,candidate_digest,payload_digest,policy,created_at FROM approvals WHERE revision_id=?1",[id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"candidateDigest":r.get::<_,String>(1)?,"payloadDigest":r.get::<_,String>(2)?,"policy":r.get::<_,String>(3)?,"at":r.get::<_,i64>(4)?}))).optional()?;
         Ok(
-            json!({"id":id,"owner":row.0,"candidate":serde_json::from_str::<Value>(&row.1)?,"digest":row.2,"state":row.3,"version":row.4,"draftId":row.5,"findings":findings}),
+            json!({"id":id,"owner":row.0,"candidate":serde_json::from_str::<Value>(&row.1)?,"digest":row.2,"state":row.3,"version":row.4,"draftId":row.5,"findings":findings,"decisions":decisions,"approval":approval}),
         )
     }
 }
 fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Result<Value> {
     match command {
+        Command::ReviewDecision {
+            id,
+            version,
+            decision,
+            reason,
+            acknowledge_limits,
+        } => crate::review::decide(
+            t,
+            actor,
+            crate::review::Decision {
+                id: &id,
+                version,
+                decision: &decision,
+                reason: &reason,
+                acknowledge: acknowledge_limits,
+            },
+            now,
+        ),
         Command::RecordRuntime { evidence } => {
             crate::checks::record_runtime(t, actor, &evidence, now)
         }

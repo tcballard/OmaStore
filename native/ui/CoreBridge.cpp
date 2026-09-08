@@ -2,6 +2,8 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFileInfo>
+#include <QStandardPaths>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSettings>
@@ -103,6 +105,12 @@ void CoreBridge::acceptReply(const QByteArray &line) {
                 if (!QDesktopServices::openUrl(url)) m_workspaceReply.insert("error","browser_unavailable");
             }
         }
+        if (pending.method == "workspace.media.preview" && m_workspaceReply.value("contentType").toString().startsWith("video/")) {
+            const QUrl url(m_workspaceReply.value("url").toString(),QUrl::StrictMode);
+            const QFileInfo file(url.toLocalFile());
+            const QDir owned(QDir(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)).filePath(m_demo ? "omastore-sample" : "omastore"));
+            if (!url.isLocalFile() || file.absolutePath()!=owned.absolutePath() || !file.fileName().startsWith("review-media-") || !QDesktopServices::openUrl(url)) m_workspaceReply.insert("error","media_player_unavailable");
+        }
         emit workspaceChanged();
     } else if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
         emit candidatePrepared(result);
@@ -127,7 +135,7 @@ void CoreBridge::fail(const QString &message) {
 }
 void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
 void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
-    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","checks.run_sample","evidence.import"};
+    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence"};
     if (!m_ready || !actions.contains(action)) return;
     request("workspace."+action,params);
 }

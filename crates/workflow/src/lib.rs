@@ -4,6 +4,7 @@ pub mod checks;
 pub mod drafts;
 pub mod media;
 pub mod net;
+pub mod review;
 pub mod store;
 
 use serde::Serialize;

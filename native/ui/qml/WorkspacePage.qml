@@ -28,6 +28,7 @@ ColumnLayout {
         Layout.fillWidth: true
         TabButton { objectName: "authorWorkspaceTab"; text: "Author workspace" }
         TabButton { objectName: "localWorksheetTab"; text: "Local worksheet" }
+        TabButton { objectName: "reviewWorkspaceTab"; text: "Review" }
     }
     StackLayout {
         currentIndex: tabs.currentIndex
@@ -105,5 +106,6 @@ ColumnLayout {
             }
         }
         SubmitPage { core: page.core; theme: page.theme; worksheet: page.worksheet }
+        ScrollView {id:reviewScroll;clip:true;contentWidth:availableWidth;ReviewPanel {width:reviewScroll.availableWidth;core:page.core;theme:page.theme}}
     }
 }

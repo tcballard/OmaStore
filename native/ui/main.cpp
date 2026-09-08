@@ -154,6 +154,32 @@ int main(int argc, char *argv[]) {
                         if (draftName) {draftName->forceActiveFocus();for (const auto character:QByteArray("My draft")) QTest::keyClick(window,character);QTest::keyClick(window,Qt::Key_Tab);}
                         QTest::qWait(850);
                         check(core.workspaceReply().value("localSaved").toBool(),"private draft autosave");
+                        core.workspaceAction("drafts.sample",{});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        const auto sampleDraft=core.workspaceReply();
+                        core.workspaceAction("command",{{"command","submit_draft"},{"id",sampleDraft.value("id")},{"version",sampleDraft.value("version")},{"confirm_public_preview",true}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        const auto revisions=core.workspace().value("revisions").toList();
+                        check(!revisions.isEmpty(),"immutable sample submission");
+                        core.workspaceAction("checks.run_sample",{});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        core.workspaceAction("auth.sandbox",{{"name","reviewer"}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        auto press=[window](QQuickItem *item) {if(item){item->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}};
+                        press(findItem(window->contentItem(),"reviewWorkspaceTab"));
+                        QTest::qWait(50);press(findItem(window->contentItem(),"loadReviewQueue"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"inspectReview"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("independent").toBool(),"reviewer independence");
+                        press(findItem(window->contentItem(),"sampleEvidence"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        auto *reviewReason=findItem(window->contentItem(),"reviewReason");
+                        if(reviewReason){reviewReason->forceActiveFocus();for(const auto character:QByteArray("Fictional QA review")) QTest::keyClick(window,character);}
+                        press(findItem(window->contentItem(),"reviewAcknowledgement"));
+                        press(findItem(window->contentItem(),"approveReview"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("state").toString()=="approved","independent sample approval");
                     }
                     auto *localTab=findItem(window->contentItem(),"localWorksheetTab");
                     if (localTab) {localTab->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
@@ -180,7 +206,7 @@ int main(int argc, char *argv[]) {
             });
         });
         QObject::connect(&core, &CoreBridge::stateChanged, &app, [&] { if (!core.ready() && !core.error().isEmpty()) app.exit(1); });
-        QTimer::singleShot(10000, &app, [&app] { app.exit(1); });
+        QTimer::singleShot(20000, &app, [&app] { app.exit(1); });
     }
 #endif
     core.start();

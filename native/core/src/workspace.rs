@@ -16,6 +16,7 @@ pub struct Client {
     storage: &'static str,
     cached: Value,
     demo: bool,
+    previews: Vec<tempfile::NamedTempFile>,
     agent: ureq::Agent,
     #[cfg(feature = "development-catalogue")]
     sandbox: Option<omastore_workflow::Store>,
@@ -53,6 +54,7 @@ impl Client {
             storage: "signed_out",
             cached: json!({"actor":null}),
             demo,
+            previews: Vec::new(),
             agent: ureq::Agent::new_with_config(
                 ureq::Agent::config_builder()
                     .timeout_global(Some(Duration::from_secs(10)))
@@ -120,6 +122,13 @@ impl Client {
                 "revision_unavailable" => "revision_unavailable",
                 "transition_unavailable" => "transition_unavailable",
                 "public_preview_required" => "public_preview_required",
+                "independent_reviewer_required" => "independent_reviewer_required",
+                "independent_tester_required" => "independent_tester_required",
+                "required_checks_missing" => "required_checks_missing",
+                "runtime_evidence_missing" => "runtime_evidence_missing",
+                "evidence_invalid" => "evidence_invalid",
+                "evidence_identity_mismatch" => "evidence_identity_mismatch",
+                "evidence_candidate_mismatch" => "evidence_candidate_mismatch",
                 "invalid_fields" => "invalid_fields",
                 _ => "workspace_request_failed",
             };
@@ -167,6 +176,7 @@ impl Client {
                     self.storage = "no_session";
                     self.login = None;
                     self.cached = json!({"actor":null});
+                    self.previews.clear();
                     json!({"actor":null,"signInConfigured":true,"sessionExpired":true})
                 }
                 Err(error) => return Err(error),
@@ -216,6 +226,53 @@ impl Client {
                     json!({"value":{"candidate":candidate,"errors":errors},"workspace":self.cached}),
                 );
             }
+            #[cfg(feature = "development-catalogue")]
+            "review.sample_evidence" => {
+                let store = self
+                    .sandbox
+                    .as_ref()
+                    .ok_or(Error::new(403, "sample_mode_required"))?;
+                let actor = store.actor(
+                    self.token.as_deref().unwrap_or(""),
+                    omastore_workflow::now(),
+                )?;
+                store.sample_runtime(&actor, record_id(&params)?, omastore_workflow::now())?
+            }
+            "review.queue" | "review.get" => {
+                let id = if method == "review.get" {
+                    record_id(&params)?
+                } else {
+                    ""
+                };
+                #[cfg(feature = "development-catalogue")]
+                let local = if let Some(store) = &self.sandbox {
+                    let actor = store.actor(
+                        self.token.as_deref().unwrap_or(""),
+                        omastore_workflow::now(),
+                    )?;
+                    Some(if method == "review.queue" {
+                        store.review_queue(&actor, omastore_workflow::now())?
+                    } else {
+                        store.review_detail(&actor, id, omastore_workflow::now())?
+                    })
+                } else {
+                    None
+                };
+                #[cfg(not(feature = "development-catalogue"))]
+                let local: Option<Value> = None;
+                match local {
+                    Some(value) => value,
+                    None => self.http(
+                        "GET",
+                        &if method == "review.queue" {
+                            "/api/v1/review".into()
+                        } else {
+                            format!("/api/v1/review/{id}")
+                        },
+                        &json!({}),
+                    )?,
+                }
+            }
             "drafts.get" | "revisions.get" => {
                 let id = record_id(&params)?;
                 let mut value = self.record(method, id)?;
@@ -238,6 +295,7 @@ impl Client {
                 return Ok(json!({"value":{"id":id,"localSaved":true},"workspace":self.cached}));
             }
             "media.upload" => self.upload(params)?,
+            "media.preview" => self.preview_media(params)?,
             #[cfg(feature = "development-catalogue")]
             "checks.run_sample" => {
                 let store = self
@@ -547,6 +605,91 @@ impl Client {
         let value = self.http_key("POST", "/api/v1/media", &body, &key)?;
         let _ = std::fs::remove_file(pending);
         Ok(value)
+    }
+    fn preview_media(&mut self, params: Value) -> Result<Value> {
+        #[cfg(feature = "development-catalogue")]
+        use omastore_workflow::media::ObjectStorage;
+        use omastore_workflow::media::VIDEO_LIMIT;
+        let id = record_id(&params)?;
+        let expected = params["sha256"]
+            .as_str()
+            .filter(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+            .ok_or(Error::new(422, "invalid_fields"))?;
+        #[cfg(feature = "development-catalogue")]
+        let local = if let Some(store) = &self.sandbox {
+            let actor = store.actor(
+                self.token.as_deref().unwrap_or(""),
+                omastore_workflow::now(),
+            )?;
+            let (key, mime) = store.private_media_key(&actor, id)?;
+            let objects = omastore_workflow::media::LocalObjects::new(
+                &private_directory(true)?.join("objects"),
+            )?;
+            Some((mime, objects.read_private(&key, VIDEO_LIMIT)?))
+        } else {
+            None
+        };
+        #[cfg(not(feature = "development-catalogue"))]
+        let local: Option<(String, Vec<u8>)> = None;
+        let (mime, bytes) = match local {
+            Some(value) => value,
+            None => {
+                let origin = self
+                    .origin
+                    .as_deref()
+                    .ok_or(Error::new(503, "workspace_unconfigured"))?;
+                let token = self
+                    .token
+                    .as_deref()
+                    .ok_or(Error::new(401, "sign_in_required"))?;
+                let mut response = self
+                    .agent
+                    .get(&format!("{origin}/api/v1/media/{id}"))
+                    .header("X-OmaStore-Client", "native-v1")
+                    .header("Authorization", &format!("Bearer {token}"))
+                    .call()
+                    .map_err(|_| Error::new(503, "workspace_unavailable"))?;
+                if response.status().as_u16() != 200 {
+                    return Err(Error::new(404, "media_unavailable"));
+                }
+                let mime = response
+                    .headers()
+                    .get("Content-Type")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("")
+                    .to_owned();
+                let bytes = response
+                    .body_mut()
+                    .with_config()
+                    .limit(VIDEO_LIMIT as u64)
+                    .read_to_vec()
+                    .map_err(|_| Error::new(413, "media_too_large"))?;
+                (mime, bytes)
+            }
+        };
+        if digest(&bytes) != expected {
+            return Err(Error::new(422, "media_digest_mismatch"));
+        }
+        let ext = match mime.as_str() {
+            "image/png" => ".png",
+            "video/mp4" => ".mp4",
+            "video/webm" => ".webm",
+            _ => return Err(Error::new(422, "unsupported_media_format")),
+        };
+        let mut file = tempfile::Builder::new()
+            .prefix("review-media-")
+            .suffix(ext)
+            .tempfile_in(private_directory(self.demo)?)?;
+        file.write_all(&bytes)?;
+        file.as_file().sync_all()?;
+        let url = Url::from_file_path(file.path())
+            .map_err(|_| Error::new(500, "local_storage_unavailable"))?
+            .to_string();
+        if self.previews.len() >= 2 {
+            self.previews.remove(0);
+        }
+        self.previews.push(file);
+        Ok(json!({"id":id,"url":url,"contentType":mime}))
     }
     fn accept_token(&mut self, value: &Value) -> Result<()> {
         let token = value["token"]

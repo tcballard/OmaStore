@@ -16,6 +16,12 @@ Rollback: revert the B04a implementation and retain private database files for r
 
 ## Author continuation receipts
 
+B07 verification: all 27 Rust tests and Clippy with warnings denied pass. All 8 native CTest checks pass in 16.89 seconds, including sample submission, checks, role switch, evidence import and independent approval via keyboard at three sizes and 200% scaling. No production approval or public listing was created.
+
+B07 adds the independent reviewer queue and native workspace, field-level revision differences, author-visible decisions, current role checks, exact approval payloads and append-only review history. Sensitive capabilities require two distinct eligible reviewers. Project-control history remains a conflict even after a claim is revoked. Submitted media can be inspected without exposing later private draft files. Core media previews verify bytes and use owned temporary files; demo video playback uses the native system player. Policy tests cover self-approval, missing checks/evidence, two votes, stale concurrent decisions, replay, immutable receipts, private findings and London DST. B06 is published as `edcd37d8287cefbea413349cab8dd38fef3a7e29`, matching local `51fa9bffb7cad4120bb9b9c86c9a1c01575c033e` and tree `5b6d649d0ee52d6c9c7482c6d7668bc04c151305`.
+
+
+
 B06 adds a durable SQLite checks queue, expiring leases, bounded source/link/provenance reads, explicit unavailable findings, retry commands and immutable independent VM-report intake. The service dispatcher and pause mechanism are documented in REVIEW_OPERATIONS.md. Sample checks use the same leases and completion transitions in a development-only database. Seven workflow tests pass, including stale-worker rejection and lease recovery; no actual submitted program has been executed as a check. B05b is published as `d6f1aaa9246d58ac532b71ac9ea4c3812518083b`, matching local `0e2ad5a6b86da6b17b2ef93a04490e349bc496c2` and tree `7d4b94867f0e9482313c73894bb2a4fdb210c1bf`.
 
 
