@@ -293,9 +293,13 @@ fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Re
             if row.1 != version {
                 return Err(Error::new(409, "stale_revision"));
             }
-            if ["published", "publication_pending", "withdrawn", "rejected"]
-                .contains(&row.0.as_str())
-            {
+            if row.0 == "publication_pending" {
+                let busy:bool=t.query_row("SELECT EXISTS(SELECT 1 FROM worker_locks WHERE name='publication-dispatch' AND expires_at>?1) OR EXISTS(SELECT 1 FROM publications WHERE revision_id=?2 AND state IN ('merged','delivered'))",params![now,id],|r|r.get(0))?;
+                if busy {
+                    return Err(Error::new(409, "delivery_in_progress"));
+                }
+            }
+            if ["published", "withdrawn", "rejected"].contains(&row.0.as_str()) {
                 return Err(Error::new(409, "transition_unavailable"));
             }
             t.execute(

@@ -640,6 +640,9 @@ pub async fn reconcile(
     let public = api.read_public(target.origin, MAX_CATALOGUE_BYTES).await?;
     let observed = Catalogue::parse(&public, target.development)
         .map_err(|_| Error::new(503, "public_catalogue_unavailable"))?;
+    if observed != live {
+        return Err(Error::new(409, "delivery_not_observed"));
+    }
     store.mark_delivered(id, &observed, crate::now())
 }
 fn preserves_delivered(live: &Catalogue, next: &Catalogue, changed: &Catalogue) -> bool {

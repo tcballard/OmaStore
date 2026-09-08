@@ -139,7 +139,7 @@ impl Client {
     pub fn state(&mut self) -> Result<Value> {
         #[cfg(feature = "development-catalogue")]
         if let Some(store) = &self.sandbox {
-            let mut value = json!({"configured":true,"sandbox":true,"storage":"sample_session","actor":null,"claims":[],"drafts":[],"revisions":[]});
+            let mut value = json!({"configured":true,"sandbox":true,"publicationBridge":"local_rehearsal","storage":"sample_session","actor":null,"claims":[],"drafts":[],"revisions":[]});
             if let Some(token) = &self.token {
                 match store.actor(token, omastore_workflow::now()) {
                     Ok(actor) => {
@@ -285,6 +285,28 @@ impl Client {
                 }
                 value
             }
+            #[cfg(feature = "development-catalogue")]
+            "publication.sample" => {
+                let id = record_id(&params)?;
+                let store = self
+                    .sandbox
+                    .as_ref()
+                    .ok_or(Error::new(403, "sample_mode_required"))?;
+                let actor = store.actor(
+                    self.token.as_deref().unwrap_or(""),
+                    omastore_workflow::now(),
+                )?;
+                let dir = private_directory(true)?;
+                let objects = omastore_workflow::media::LocalObjects::new(&dir.join("objects"))?;
+                omastore_workflow::sample_publication::rehearse(
+                    store,
+                    &actor,
+                    id,
+                    &objects,
+                    &sample_catalogue_path()?,
+                )?
+            }
+            "publication.export" => self.export_publication(&params)?,
             "drafts.cache" => {
                 let id = record_id(&params)?;
                 let bytes = serde_json::to_vec(&params)?;
@@ -478,7 +500,10 @@ impl Client {
             return if method == "drafts.get" {
                 store.draft(&actor, id)
             } else {
-                store.revision(&actor, id)
+                let mut value = store.revision(&actor, id)?;
+                value["publication"] = store.publication_internal(id)?;
+                value["publication"]["bridge"] = json!("local_rehearsal");
+                Ok(value)
             };
         }
         let collection = if method == "drafts.get" {
@@ -486,7 +511,85 @@ impl Client {
         } else {
             "revisions"
         };
-        self.http("GET", &format!("/api/v1/{collection}/{id}"), &json!({}))
+        let mut value = self.http("GET", &format!("/api/v1/{collection}/{id}"), &json!({}))?;
+        if collection == "revisions" {
+            value["publication"] = self
+                .http("GET", &format!("/api/v1/publication/{id}"), &json!({}))
+                .unwrap_or(json!({"bridge":"unavailable"}));
+        }
+        Ok(value)
+    }
+    fn export_publication(&self, params: &Value) -> Result<Value> {
+        let id = record_id(params)?;
+        let path = params["file"]
+            .as_str()
+            .and_then(|s| Url::parse(s).ok())
+            .and_then(|u| u.to_file_path().ok())
+            .filter(|p| p.is_absolute())
+            .ok_or(Error::new(422, "local_file_required"))?;
+        #[cfg(feature = "development-catalogue")]
+        let sample = if let Some(store) = &self.sandbox {
+            let actor = store.actor(
+                self.token.as_deref().unwrap_or(""),
+                omastore_workflow::now(),
+            )?;
+            Some(store.publication_manifest(&actor, id)?)
+        } else {
+            None
+        };
+        #[cfg(not(feature = "development-catalogue"))]
+        let sample: Option<Value> = None;
+        let manifest = if let Some(value) = sample {
+            value
+        } else {
+            let origin = self
+                .origin
+                .as_ref()
+                .ok_or(Error::new(503, "workspace_unconfigured"))?;
+            let mut response = self
+                .agent
+                .get(format!("{origin}/api/v1/publication/{id}/manifest"))
+                .header("X-OmaStore-Client", "native-v1")
+                .header(
+                    "Authorization",
+                    &format!("Bearer {}", self.token.as_deref().unwrap_or("")),
+                )
+                .call()
+                .map_err(|_| Error::new(503, "workspace_unavailable"))?;
+            if response.status().as_u16() != 200 {
+                return Err(Error::new(409, "publication_manifest_unavailable"));
+            }
+            let bytes = response
+                .body_mut()
+                .with_config()
+                .limit(10 * 1024 * 1024)
+                .read_to_vec()
+                .map_err(|_| Error::new(503, "publication_manifest_invalid"))?;
+            serde_json::from_slice(&bytes)?
+        };
+        let registry: omastore_catalogue::Catalogue =
+            serde_json::from_value(manifest["registry"].clone())?;
+        let registry_bytes = registry.canonical_bytes();
+        let receipt_bytes = serde_json::to_vec_pretty(&manifest["receipt"])?;
+        let receipt_path = format!("data/approvals/{id}.json");
+        if manifest["files"]["data/registry.json"] != digest(&registry_bytes)
+            || manifest["files"][&receipt_path] != digest(&receipt_bytes)
+        {
+            return Err(Error::new(409, "publication_manifest_invalid"));
+        }
+        let output = json!({"files":[{"path":"data/registry.json","sha256":digest(&registry_bytes),"utf8":String::from_utf8(registry_bytes).map_err(|_|Error::new(500,"publication_manifest_invalid"))?},{"path":receipt_path,"sha256":digest(&receipt_bytes),"utf8":String::from_utf8(receipt_bytes).map_err(|_|Error::new(500,"publication_manifest_invalid"))?}],"mediaHashes":manifest["files"],"notice":"Write each utf8 value verbatim to its stated repository path. Supply the reviewed media bytes; attach the PR for independent verification."});
+        if std::fs::symlink_metadata(&path).is_ok_and(|m| !m.is_file()) {
+            return Err(Error::new(422, "regular_file_required"));
+        }
+        let parent = path
+            .parent()
+            .ok_or(Error::new(422, "local_file_required"))?;
+        let mut file = tempfile::NamedTempFile::new_in(parent)?;
+        file.write_all(&serde_json::to_vec_pretty(&output)?)?;
+        file.as_file().sync_all()?;
+        file.persist(&path)
+            .map_err(|_| Error::new(500, "local_export_failed"))?;
+        Ok(json!({"id":id,"exported":true}))
     }
     fn request_key(&self, params: &Value) -> Result<(String, std::path::PathBuf)> {
         let path = self.local_file("outbox", "pending")?;
@@ -799,4 +902,9 @@ fn save_private(path: &std::path::Path, bytes: &[u8]) -> Result<()> {
     file.persist(path)
         .map_err(|_| Error::new(500, "local_storage_unavailable"))?;
     Ok(())
+}
+
+#[cfg(feature = "development-catalogue")]
+pub(crate) fn sample_catalogue_path() -> Result<std::path::PathBuf> {
+    Ok(private_directory(true)?.join("sample-published.json"))
 }

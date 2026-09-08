@@ -30,7 +30,7 @@ void MediaPreview::load(const QVariantMap &media) {
     const auto kind = media.value("kind").toString();
     // Public preview assets are inert, digest-addressed files from our release-controlled origin.
     // Other publisher media remains a labelled external link until its hosting adapter is approved.
-    const QString prefix = "/tcballard/OmaStore/main/media/";
+    const QString prefix = "/tcballard/OmaStore/catalogue-live/media/";
     const QRegularExpression filePattern("^" + QString::fromLatin1(sha) + "\\.(png|jpg|jpeg|webp)$");
     if (kind == "demo" || sha.size() != 64 || !QRegularExpression("^[a-f0-9]{64}$").match(QString::fromLatin1(sha)).hasMatch()
         || url.scheme() != "https" || url.host() != "raw.githubusercontent.com" || !url.userInfo().isEmpty() || url.port(-1) != -1

@@ -8,6 +8,8 @@ pub mod net;
 pub mod publication;
 pub mod publisher;
 pub mod review;
+#[cfg(feature = "development-workflow")]
+pub mod sample_publication;
 pub mod store;
 
 use serde::Serialize;

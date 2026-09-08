@@ -648,6 +648,43 @@ impl Store {
     }
 }
 
+impl Store {
+    pub fn delivered_catalogue(&self) -> Result<Option<Catalogue>> {
+        let raw: Option<String> = self
+            .connection()?
+            .query_row(
+                "SELECT value FROM metadata WHERE key='delivered_catalogue'",
+                [],
+                |r| r.get(0),
+            )
+            .optional()?;
+        raw.map(|s| {
+            Catalogue::parse(s.as_bytes(), self.is_development()?)
+                .map_err(|_| Error::new(500, "stored_delivery_invalid"))
+        })
+        .transpose()
+    }
+}
+
+#[cfg(feature = "development-workflow")]
+impl Store {
+    pub(crate) fn reset_sample_publication(&self, actor: &Actor, id: &str) -> Result<()> {
+        if !self.is_development()? {
+            return Err(Error::new(403, "sample_mode_required"));
+        }
+        self.transaction(|t|{
+            recheck(t,actor,"author")?;
+            let approval=approved(t,id,crate::now())?;
+            if approval.owner!=actor.id {return Err(Error::new(403,"sample_author_required"));}
+            let state:String=t.query_row("SELECT state FROM revisions WHERE id=?1",[id],|r|r.get(0))?;
+            if state!="publication_pending" {return Err(Error::new(409,"publication_request_required"));}
+            t.execute("UPDATE publications SET state='requested',repository='',intake_state='queued',issue_number=NULL,pr_number=NULL,head_sha=NULL,base_sha=NULL,attached_pr=NULL,attached_issue=NULL,predecessor_sha=NULL,rebase_requested=0 WHERE revision_id=?1",[id])?;
+            t.execute("UPDATE jobs SET state='queued',attempts=0,due_at=?2,lease_token=NULL,lease_until=NULL WHERE revision_id=?1 AND kind IN ('intake','publication')",params![id,crate::now()])?;
+            audit(t,&actor.id,"local_publication_rehearsal_started",id,crate::now(),&json!({"simulated":true}))
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

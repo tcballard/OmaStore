@@ -11,6 +11,8 @@ ColumnLayout {
     property var draft: ({})
     property var candidate: ({})
     property var revision: ({})
+    readonly property var publication: revision.publication || ({})
+    function recover(action, number) { command({command:"recover_publication",id:revision.id,version:revision.version,action:action,number:number || null}); }
     property var errors: []
     property bool dirty: false
     property bool localSaved: false
@@ -46,6 +48,9 @@ ColumnLayout {
             else if (r.action === "drafts.preview") {panel.errors=r.errors || [];panel.previewReady=true;preview.open();}
             else if (r.action === "media.upload") panel.open(r.draftId);
             else if (r.action === "revisions.get") panel.revision=r;
+            else if (r.action === "publication.sample") {panel.notice=r.notice || "Local publication rehearsal completed.";core.workspaceAction("revisions.get",{id:r.id});}
+            else if (r.action === "publication.export") panel.notice="Exact publication files exported for your PR.";
+            else if (r.action === "command" && ["request_publication","recover_publication","withdraw_revision"].indexOf(r.command)>=0) core.workspaceAction("revisions.get",{id:r.id});
             else if (r.action === "command" && r.command === "submit_draft") {panel.notice="Revision submitted for checks. Further edits create a new immutable revision.";core.workspaceAction("revisions.get",{id:r.id});}
         }
     }
@@ -120,10 +125,32 @@ ColumnLayout {
             Label {text:"Content digest: " + (panel.revision.digest || "");Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}
             Repeater {model:panel.revision.findings || [];Label {required property var modelData;text:modelData.check+" · "+modelData.result+" · "+modelData.detail;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}}
             Repeater {model:panel.revision.decisions || [];Label {required property var modelData;text:modelData.decision+": "+modelData.reason;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}}
+            Label {text:"Publication · " + (panel.publication.state || "waiting for approval").replace(/_/g," ");font.bold:true;Layout.fillWidth:true;wrapMode:Text.Wrap}
+            Label {text:panel.publication.bridge === "local_rehearsal" ? "This playground uses a local provider. Its issues, PRs and delivery are simulated." : "Bridge: " + (panel.publication.bridge || "unavailable").replace(/_/g," ");Layout.fillWidth:true;wrapMode:Text.Wrap}
+            Label {text:"Intake: " + (panel.publication.intakeState || "queued").replace(/_/g," ") + (panel.publication.issueNumber ? " · issue #"+panel.publication.issueNumber : "") + (panel.publication.prNumber ? " · PR #"+panel.publication.prNumber : "");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+            Label {visible:!!panel.publication.mergedSha;text:"Merged commit: " + (panel.publication.mergedSha || "");Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}
+            Label {visible:!!panel.publication.deliveredRevision;text:"Delivered catalogue: " + (panel.publication.deliveredRevision || "");Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}
+            Label {visible:!!panel.publication.error;text:"Needs attention: " + (panel.publication.error || "").replace(/_/g," ");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+            Flow {
+                Layout.fillWidth:true;spacing:8
+                Button {objectName:"requestPublication";text:"Request publication";enabled:!core.loading && panel.revision.state==="approved";onClicked:panel.command({command:"request_publication",id:panel.revision.id,version:panel.revision.version})}
+                Button {text:"Refresh status";enabled:!core.loading;onClicked:core.workspaceAction("revisions.get",{id:panel.revision.id})}
+                Button {objectName:"samplePublication";visible:!!core.workspace.sandbox;text:"Rehearse local publication";enabled:!core.loading && panel.revision.state==="publication_pending";onClicked:core.workspaceAction("publication.sample",{id:panel.revision.id})}
+                Button {text:"Retry publication";enabled:!core.loading && panel.revision.state==="publication_pending";onClicked:panel.recover("retry",null)}
+                Button {text:"Update PR base";enabled:!core.loading && !!panel.publication.prNumber && panel.publication.state!=="merged" && panel.revision.state!=="published";onClicked:panel.recover("rebase",null)}
+                Button {text:"Export exact PR files";enabled:!core.loading && !!panel.publication.headSha;onClicked:publicationFile.open()}
+            }
+            RowLayout {
+                Layout.fillWidth:true
+                TextField {id:existingNumber;placeholderText:"Existing issue or PR number";maximumLength:10;validator:IntValidator{bottom:1} Layout.fillWidth:true;Accessible.name:"Existing issue or pull request number"}
+                Button {text:"Attach issue";enabled:!core.loading && existingNumber.acceptableInput && !panel.publication.issueNumber;onClicked:panel.recover("attach_issue",Number(existingNumber.text))}
+                Button {text:"Attach PR";enabled:!core.loading && existingNumber.acceptableInput && ["approved","publication_pending"].indexOf(panel.revision.state)>=0;onClicked:panel.recover("attach_pr",Number(existingNumber.text))}
+            }
             TextField {id:withdrawReason;placeholderText:"Reason for withdrawing";Layout.fillWidth:true;maximumLength:2000;Accessible.name:"Withdrawal reason"}
-            Button {text:"Withdraw revision";enabled:!core.loading && withdrawReason.text.length>0 && ["submitted","checking","in_review","needs_changes","approved"].indexOf(panel.revision.state)>=0;onClicked:panel.command({command:"withdraw_revision",id:panel.revision.id,version:panel.revision.version,reason:withdrawReason.text})}
+            Button {text:"Withdraw revision";enabled:!core.loading && withdrawReason.text.length>0 && ["submitted","checking","in_review","needs_changes","approved","publication_pending"].indexOf(panel.revision.state)>=0;onClicked:panel.command({command:"withdraw_revision",id:panel.revision.id,version:panel.revision.version,reason:withdrawReason.text})}
         }
     }
+    FileDialog { id:publicationFile;title:"Export exact publication files";fileMode:FileDialog.SaveFile;nameFilters:["Publication manifest (*.json)"];defaultSuffix:"json";onAccepted:core.workspaceAction("publication.export",{id:panel.revision.id,file:selectedFile.toString()}) }
     FileDialog { id:mediaFile;title:"Choose listing media";fileMode:FileDialog.OpenFile;nameFilters:["Images and video (*.png *.jpg *.jpeg *.webp *.mp4 *.webm)"];onAccepted:core.workspaceAction("media.upload",{draftId:panel.draft.id,version:panel.draft.version,kind:mediaKind.currentText,alt:mediaAlt.text,rights:mediaRights.text,file:selectedFile.toString()}) }
     Dialog {
         id:preview

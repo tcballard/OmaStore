@@ -180,6 +180,21 @@ int main(int argc, char *argv[]) {
                         press(findItem(window->contentItem(),"approveReview"));
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
                         check(core.workspaceReply().value("state").toString()=="approved","independent sample approval");
+                        const auto approvedRevision=core.workspaceReply().value("id");
+                        core.workspaceAction("auth.sandbox",{{"name","author"}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"authorWorkspaceTab"));
+                        core.workspaceAction("revisions.get",{{"id",approvedRevision}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"requestPublication"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("state").toString()=="publication_pending","publication requested");
+                        press(findItem(window->contentItem(),"samplePublication"));
+                        for(int i=0;i<80 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("state").toString()=="published","local provider delivery observed");
+                        core.refresh();
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+
                     }
                     auto *localTab=findItem(window->contentItem(),"localWorksheetTab");
                     if (localTab) {localTab->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}

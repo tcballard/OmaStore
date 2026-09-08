@@ -135,7 +135,7 @@ void CoreBridge::fail(const QString &message) {
 }
 void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
 void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
-    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence"};
+    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export"};
     if (!m_ready || !actions.contains(action)) return;
     request("workspace."+action,params);
 }

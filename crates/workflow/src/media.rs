@@ -409,7 +409,7 @@ impl Store {
             let raw:String=t.query_row("SELECT candidate FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;let mut candidate:Value=serde_json::from_str(&raw)?;
             let list=candidate["apps"][0]["media"].as_array_mut().ok_or(Error::new(422,"draft_needs_app_fields"))?;
             let id=t.query_row("SELECT id FROM media WHERE draft_id=?1 AND digest=?2 AND kind=?3",params![upload.draft_id,sha,upload.kind],|r|r.get::<_,String>(0)).optional()?.unwrap_or(nonce()?);
-            let item=json!({"kind":upload.kind,"url":format!("https://raw.githubusercontent.com/tcballard/OmaStore/main/media/{object_key}"),"alt":upload.alt,"rights":upload.rights,"sha256":sha});list.push(item.clone());
+            let item=json!({"kind":upload.kind,"url":format!("https://raw.githubusercontent.com/tcballard/OmaStore/catalogue-live/media/{object_key}"),"alt":upload.alt,"rights":upload.rights,"sha256":sha});list.push(item.clone());
             let candidate=serde_json::to_string(&candidate)?;if candidate.len()>crate::drafts::MAX_DRAFT_BYTES {return Err(Error::new(413,"candidate_too_large"));}
             t.execute("INSERT OR IGNORE INTO media VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,NULL)",params![id,upload.draft_id,actor.id,upload.kind,sha,asset.content_type,asset.bytes.len() as i64,asset.width,asset.height,asset.duration_ms,upload.alt,upload.rights,now])?;
             t.execute("UPDATE drafts SET candidate=?2,version=version+1,updated_at=?3,expiry_notice_at=NULL WHERE id=?1",params![upload.draft_id,candidate,now])?;
