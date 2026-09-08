@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
                         QFile feed(feedPath);check(feed.open(QIODevice::ReadOnly),"native RSS export");
                         QXmlStreamReader rss(feed.readAll());int entries=0;
-                        while(!rss.atEnd()){rss.readNext();if(rss.isStartElement() && rss.name()=="item")++entries;}
+                        while(!rss.atEnd()){rss.readNext();if(rss.isStartElement() && rss.name().toString()==QStringLiteral("item"))++entries;}
                         check(!rss.hasError() && entries==1,"observed release RSS parses once");
                         core.workspaceAction("auth.sandbox",{{"name","operator"}});
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);

@@ -16,6 +16,8 @@ Rollback: revert the B04a implementation and retain private database files for r
 
 ## Marketplace continuation receipts
 
+CI follow-up: B10b's ordinary Qt 6.4 build caught an ambiguous QStringView/ASCII comparison in the QA RSS parser (run 34275044638). The comparison now uses QString/QStringLiteral, preserving compatibility with the declared minimum SDK. Local B10 evidence above remains Qt 6.8.3; the updated CI run must verify the older SDK. B11a is published as `da92184fc35006a595f1998fbb1df2dc15c83012`, matching local `a8b4244bf6e4e375b91336fc5e8127bf41d50a2a` and tree `a2ab6ce0c72e37ef43a89b68b11ae1f56bef30c7`.
+
 B11a adds bounded setup metadata/dependency/conflict validation, selective dependency closure, separated/unknown price estimates, stable identity export/import and exact recipe media/review/publication. A local end-to-end test normalises a setup icon, rejects premature reviewer access, freezes app context, independently approves and observes publication without creating component release-feed entries. Proprietary app submissions now require the publisher-domain challenge; control of a source fork cannot substitute. All 45 Rust tests and workspace Clippy with warnings denied pass. Native setup selection follows in B11b.
 
 B10b is published as `5d41ae738c7a5e2de9e284ea045ca60bb8ea91d7`, matching local `ece33add6c8af1d021c508a6db43089535b56d28` and tree `103119a0ccc4b278c2daf5934bfe4d483fe1c991`. The standalone DHH conversation starter is in DHH_NOTE.md; it is a draft and has not been sent. Its wording distinguishes the running development workflows from the remaining build.
