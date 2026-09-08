@@ -235,6 +235,9 @@ fn sandbox_command(work: &Path) -> Result<Command> {
             "--ro-bind",
             "/usr",
             "/usr",
+            "--ro-bind",
+            "/etc/ld.so.cache",
+            "/etc/ld.so.cache",
             "--symlink",
             "usr/bin",
             "/bin",
@@ -696,6 +699,22 @@ mod sandbox_tests {
             probe.status.success(),
             "Sandbox startup failed: {}",
             String::from_utf8_lossy(&probe.stderr[..probe.stderr.len().min(4096)])
+        );
+        let binary = sandbox_command(work.path())
+            .unwrap()
+            .args([
+                "--as=1073741824",
+                "--cpu=15",
+                "--",
+                "/usr/bin/ffprobe",
+                "-version",
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            binary.status.success(),
+            "Isolated decoder startup failed: {}",
+            String::from_utf8_lossy(&binary.stderr[..binary.stderr.len().min(4096)])
         );
         let env = decoder("/usr/bin/env", &[], 4096, work.path()).unwrap();
         let env = String::from_utf8(env).unwrap();

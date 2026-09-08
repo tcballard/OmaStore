@@ -40,3 +40,5 @@ The 8 September dependency audit initially reported [RUSTSEC-2023-0071](https://
 
 
 The mandatory `isolated-media` CI job uses Ubuntu 22.04, where unprivileged namespaces are supported. Native builds remain on Ubuntu 24.04. Run 34290845779 identified the 24.04 worker startup failure as `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`, consistent with Ubuntu's restricted unprivileged-user-namespace policy. We do not relax AppArmor or global sysctls. Deploy the media worker only on a host that permits its namespace confinement, and run the positive sandbox test there. Unsupported hosts reject video processing; there is no unsandboxed fallback. This CI job remains a required release check.
+
+The sandbox exposes only the fixed system dynamic-loader cache (`/etc/ld.so.cache`) read-only in addition to `/usr`. FFmpeg distribution packages may depend on libraries in cache-resolved subdirectories. The rest of `/etc`, service state, host temporary files, home directories and network remain unavailable. The positive test diagnoses fixed FFprobe startup separately from user-media parsing.
