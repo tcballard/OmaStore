@@ -13,7 +13,7 @@ ColumnLayout {
     property var claim: ({})
     function refresh() { requested = true; core.workspaceAction("state", {}); }
     function message(code) {
-        const messages = {"sign_in_unconfigured":"GitHub sign-in is not configured for this author service yet.","workspace_unconfigured":"The author service is not configured. You can still prepare and export a local worksheet.","workspace_unavailable":"Could not reach the author service. Your local worksheet is still available.","sign_in_required":"Your session has expired. Sign in again to continue.","claim_proof_mismatch":"The published proof does not match this account, project and challenge.","claim_challenge_unavailable":"This challenge expired or was already used. Create a new one.","sample_claim_has_no_public_proof":"Sample mode does not claim real projects. You can inspect the challenge format here.","browser_unavailable":"The system browser could not open. Check your default browser and try again.","role_required":"This account no longer has the role needed for that action.","rate_limited":"Too many requests. Wait a minute, then try again.","candidate_invalid":"Some required listing facts are missing or invalid. Review the exact preview for field errors.","stale_revision":"This record changed. Your edits remain on this device; compare the server copy before syncing.","media_count_exceeded":"This draft has reached the limit for that media kind.","candidate_cannot_self_verify":"Compatibility tests and control claims are assigned during independent review."};
+        const messages = {"stale_monitor_status":"An observation or operator changed this record. Refresh before deciding.","fresh_upstream_observation_required":"Refresh upstream evidence before restoring distribution.","artifact_mismatch_unresolved":"The observed artifact digest still differs. Distribution remains suspended.","listing_steward_required":"Only the recorded listing steward can appeal here; you can still send a private report.","delivery_in_progress":"Delivery is being reconciled. Refresh its status before withdrawing.","publication_busy":"The publication worker is active. Refresh status before retrying.","sign_in_unconfigured":"GitHub sign-in is not configured for this author service yet.","workspace_unconfigured":"The author service is not configured. You can still prepare and export a local worksheet.","workspace_unavailable":"Could not reach the author service. Your local worksheet is still available.","sign_in_required":"Your session has expired. Sign in again to continue.","claim_proof_mismatch":"The published proof does not match this account, project and challenge.","claim_challenge_unavailable":"This challenge expired or was already used. Create a new one.","sample_claim_has_no_public_proof":"Sample mode does not claim real projects. You can inspect the challenge format here.","browser_unavailable":"The system browser could not open. Check your default browser and try again.","role_required":"This account no longer has the role needed for that action.","rate_limited":"Too many requests. Wait a minute, then try again.","candidate_invalid":"Some required listing facts are missing or invalid. Review the exact preview for field errors.","stale_revision":"This record changed. Your edits remain on this device; compare the server copy before syncing.","media_count_exceeded":"This draft has reached the limit for that media kind.","candidate_cannot_self_verify":"Compatibility tests and control claims are assigned during independent review."};
         return messages[code] || "The action could not be completed. Refresh the workspace before retrying.";
     }
     Component.onCompleted: if (core.ready) refresh()
@@ -29,6 +29,7 @@ ColumnLayout {
         TabButton { objectName: "authorWorkspaceTab"; text: "Author workspace" }
         TabButton { objectName: "localWorksheetTab"; text: "Local worksheet" }
         TabButton { objectName: "reviewWorkspaceTab"; text: "Review" }
+        TabButton {objectName:"operationsWorkspaceTab";text:"Operations"}
     }
     StackLayout {
         currentIndex: tabs.currentIndex
@@ -107,5 +108,6 @@ ColumnLayout {
         }
         SubmitPage { core: page.core; theme: page.theme; worksheet: page.worksheet }
         ScrollView {id:reviewScroll;clip:true;contentWidth:availableWidth;ReviewPanel {width:reviewScroll.availableWidth;core:page.core;theme:page.theme}}
+        ScrollView {id:operationsScroll;clip:true;contentWidth:availableWidth;MonitoringPanel {width:operationsScroll.availableWidth;core:page.core;theme:page.theme}}
     }
 }

@@ -1,3 +1,4 @@
+pub mod monitoring;
 pub mod publication;
 mod workspace;
 use axum::{
@@ -72,6 +73,8 @@ pub type ApiResult<T> = std::result::Result<T, ApiError>;
 
 pub fn router(state: AppState) -> Router {
     Router::new()
+        .route("/api/v1/status", get(monitoring::status))
+        .route("/api/v1/monitoring", get(monitoring::queue))
         .route("/api/v1/auth/info", get(auth_info))
         .route("/api/v1/auth/start", post(auth_start))
         .route("/api/v1/auth/callback", get(auth_callback))

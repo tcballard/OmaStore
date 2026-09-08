@@ -192,6 +192,23 @@ int main(int argc, char *argv[]) {
                         press(findItem(window->contentItem(),"samplePublication"));
                         for(int i=0;i<80 && core.loading();++i) QTest::qWait(50);
                         check(core.workspaceReply().value("state").toString()=="published","local provider delivery observed");
+                        core.workspaceAction("auth.sandbox",{{"name","operator"}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"operationsWorkspaceTab"));
+                        press(findItem(window->contentItem(),"loadMonitoringQueue"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"sampleMonitoring"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        auto *monitorReason=findItem(window->contentItem(),"monitoringReason");
+                        if(monitorReason){monitorReason->forceActiveFocus();for(const auto character:QByteArray("Simulated operator review"))QTest::keyClick(window,character);}
+                        press(findItem(window->contentItem(),"suspendDistribution"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(!core.workspaceReply().value("holds").toList().isEmpty(),"audited distribution suspension");
+                        press(findItem(window->contentItem(),"monitoringAcknowledgement"));
+                        press(findItem(window->contentItem(),"restoreDistribution"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("holds").toList().isEmpty(),"reviewed distribution restoration");
+
                         core.refresh();
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
 

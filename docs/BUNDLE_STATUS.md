@@ -14,7 +14,7 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B06 | Bounded checks and evidence intake | B05 | implemented; lease/replay tests pass; live disposable-VM report remains an external gate |
 | B07 | Review workflow and approval records | B06 | implemented; 27 Rust tests and 8 native checks pass, including sample submission through independent approval |
 | B08 | GitHub publication bridge | B02, B07 | implemented; 33 Rust tests and 8 native checks pass, including publication rehearsal; live App/deployment gate pending |
-| B09 | Release monitoring and suspensions | B08 | not_started |
+| B09 | Release monitoring and suspensions | B08 | implemented; 36 Rust tests and 8 native checks pass; configured upstream observation remains an external gate |
 | B10 | Makers, editorial selection and RSS | B03, B04, B08 | not_started |
 | B11 | Setup catalogue and selective recipes | B03, B08 | not_started |
 | B12 | Read-only installation planner | B02, B09 | not_started |

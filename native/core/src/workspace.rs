@@ -129,6 +129,12 @@ impl Client {
                 "evidence_invalid" => "evidence_invalid",
                 "evidence_identity_mismatch" => "evidence_identity_mismatch",
                 "evidence_candidate_mismatch" => "evidence_candidate_mismatch",
+                "stale_monitor_status" => "stale_monitor_status",
+                "fresh_upstream_observation_required" => "fresh_upstream_observation_required",
+                "artifact_mismatch_unresolved" => "artifact_mismatch_unresolved",
+                "listing_steward_required" => "listing_steward_required",
+                "delivery_in_progress" => "delivery_in_progress",
+                "publication_busy" => "publication_busy",
                 "invalid_fields" => "invalid_fields",
                 _ => "workspace_request_failed",
             };
@@ -193,6 +199,32 @@ impl Client {
         Ok(value)
     }
     pub fn dispatch(&mut self, method: &str, params: Value) -> Result<Value> {
+        if method == "status.get" {
+            let ids: Vec<String> = serde_json::from_value(params["ids"].clone())?;
+            if ids.len() > 100 || ids.iter().any(|id| !omastore_catalogue::token(id)) {
+                return Err(Error::new(422, "invalid_status_ids"));
+            }
+            #[cfg(feature = "development-catalogue")]
+            let sample = if let Some(store) = &self.sandbox {
+                let catalogue = crate::catalogue::Client::new(true).catalogue;
+                store.sync_monitor_catalogue(&catalogue, omastore_workflow::now())?;
+                Some(store.public_status(&catalogue, &ids, omastore_workflow::now())?)
+            } else {
+                None
+            };
+            #[cfg(not(feature = "development-catalogue"))]
+            let sample: Option<Value> = None;
+            let value = match sample {
+                Some(v) => v,
+                None => self.http(
+                    "GET",
+                    &format!("/api/v1/status?ids={}", ids.join(",")),
+                    &json!({}),
+                )?,
+            };
+            return Ok(json!({"value":value,"workspace":self.cached}));
+        }
+
         let result = match method {
             "state" if params == json!({}) => json!({}),
             "command" => self.command(params)?,
@@ -307,6 +339,68 @@ impl Client {
                 )?
             }
             "publication.export" => self.export_publication(&params)?,
+            "monitor.queue" => {
+                #[cfg(feature = "development-catalogue")]
+                let sample = if let Some(store) = &self.sandbox {
+                    let actor = store.actor(
+                        self.token.as_deref().unwrap_or(""),
+                        omastore_workflow::now(),
+                    )?;
+                    store.sync_monitor_catalogue(
+                        &crate::catalogue::Client::new(true).catalogue,
+                        omastore_workflow::now(),
+                    )?;
+                    Some(store.monitoring_queue(&actor)?)
+                } else {
+                    None
+                };
+                #[cfg(not(feature = "development-catalogue"))]
+                let sample: Option<Value> = None;
+                match sample {
+                    Some(v) => v,
+                    None => self.http("GET", "/api/v1/monitoring", &json!({}))?,
+                }
+            }
+            #[cfg(feature = "development-catalogue")]
+            "monitor.sample" => {
+                let store = self
+                    .sandbox
+                    .as_ref()
+                    .ok_or(Error::new(403, "sample_mode_required"))?;
+                let actor = store.actor(
+                    self.token.as_deref().unwrap_or(""),
+                    omastore_workflow::now(),
+                )?;
+                actor.require("operator")?;
+                store.sync_monitor_catalogue(
+                    &crate::catalogue::Client::new(true).catalogue,
+                    omastore_workflow::now(),
+                )?;
+                for _ in 0..100 {
+                    let Some(lease) = store.lease_monitor(omastore_workflow::now())? else {
+                        break;
+                    };
+                    let sha = if let omastore_catalogue::ReleaseIdentity::BinaryArtifact {
+                        sha256,
+                        ..
+                    } = &lease.app.current_release().identity
+                    {
+                        Some(sha256.clone())
+                    } else {
+                        None
+                    };
+                    let observation = omastore_workflow::monitor::Observation {
+                        declared_identity_available: true,
+                        owner_identity: Some("fictional-owner".into()),
+                        latest_version: Some(lease.app.current_release().version.clone()),
+                        artifact_sha256: sha,
+                        source: "local_simulation".into(),
+                    };
+                    store.finish_monitor(&lease, Ok(&observation), omastore_workflow::now())?;
+                }
+                json!({"simulated":true,"notice":"Fictional observations recorded locally. No upstream repository was checked."})
+            }
+
             "drafts.cache" => {
                 let id = record_id(&params)?;
                 let bytes = serde_json::to_vec(&params)?;

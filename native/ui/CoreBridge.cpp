@@ -1,3 +1,4 @@
+#include <QDateTime>
 #include "CoreBridge.h"
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -99,6 +100,24 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         m_workspace = result.value("workspace").toMap();
         m_workspaceReply = result.value("value").toMap();
         m_workspaceReply.insert("action",pending.method.mid(10));
+        if (pending.method == "workspace.status.get") {
+            const auto items=m_workspaceReply.value("items").toList();
+            for(const auto &value:items) {
+                const auto item=value.toMap();
+                if(item.value("appId").toString()==m_detailRequested) {
+                    m_distribution=item;
+                    const auto now=QDateTime::currentSecsSinceEpoch();
+                    const auto generated=m_workspaceReply.value("generatedAt").toLongLong();
+                    m_distributionUntil=m_workspaceReply.value("validUntil").toLongLong();
+                    if(generated>now+30 || generated<now-300 || m_distributionUntil>generated+300 || m_workspaceReply.value("catalogueSnapshot").toString()!=m_catalogue.value("snapshot").toString()) m_distributionUntil=0;
+                    m_distributionExpiry.setSingleShot(true);
+                    m_distributionExpiry.disconnect(this);
+                    connect(&m_distributionExpiry,&QTimer::timeout,this,[this](){emit distributionChanged();});
+                    m_distributionExpiry.start(static_cast<int>(qMax<qint64>(1,m_distributionUntil-now)*1000));
+                    emit distributionChanged();
+                }
+            }
+        }
         if (pending.method == "workspace.auth.start") {
             const QUrl url(m_workspaceReply.value("authorizationUrl").toString(),QUrl::StrictMode);
             if (url.scheme()=="https" && url.host()=="github.com" && url.path()=="/login/oauth/authorize" && url.userInfo().isEmpty()) {
@@ -135,7 +154,7 @@ void CoreBridge::fail(const QString &message) {
 }
 void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
 void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
-    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export"};
+    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export","status.get","monitor.queue","monitor.sample"};
     if (!m_ready || !actions.contains(action)) return;
     request("workspace."+action,params);
 }
@@ -152,7 +171,7 @@ void CoreBridge::setFilter(const QString &key, const QString &value) {
 void CoreBridge::clearFilters() { m_query.clear(); ++m_generation; persistQuery(); emit queryChanged(); search(); }
 void CoreBridge::search() { if (!m_ready) return; m_error.clear(); m_cursor.clear(); ++m_generation; request("apps.list", m_query); }
 void CoreBridge::nextPage() { if (!m_ready || loading() || m_cursor.isEmpty()) return; auto params = m_query; params.insert("cursor", m_cursor); request("apps.list", params); }
-void CoreBridge::showApp(const QString &id) { if (!m_ready) return; m_error.clear(); m_detailRequested = id; request("apps.get", {{"id", id}}); }
+void CoreBridge::showApp(const QString &id) { if (!m_ready) return; m_error.clear(); m_detailRequested = id; m_distribution.clear();m_distributionUntil=0;emit distributionChanged();request("apps.get", {{"id", id}});workspaceAction("status.get",{{"ids",QVariantList{id}}}); }
 void CoreBridge::closeDetail() { m_detailRequested.clear(); m_detail.clear(); emit detailChanged(); }
 bool CoreBridge::isSaved(const QString &id) const { for (const auto &entry : m_saved) if (entry.toMap().value("id").toString() == id) return true; return false; }
 void CoreBridge::removeSaved(const QString &id) {
@@ -173,7 +192,7 @@ bool CoreBridge::openLink(const QString &kind, int index) {
     // QML selects a known field; it cannot pass a command, URL or executable.
     const auto app = m_detail.value("app").toMap(); QString destination;
     if (kind == "source" || kind == "support" || kind == "homepage") destination = app.value(kind).toString();
-    else if (kind == "acquisition") destination = m_detail.value("acquisition").toMap().value("url").toString();
+    else if (kind == "acquisition") {if(!distributionCurrent() || m_distribution.value("distribution").toString()=="suspended") return false;destination = m_detail.value("acquisition").toMap().value("url").toString();}
     else if (kind == "offer" || kind == "refund" || kind == "terms" || kind == "cancellation") {
         const auto offers = app.value("offers").toList(); if (index >= 0 && index < offers.size()) destination = offers[index].toMap().value(kind == "offer" ? "url" : kind).toString();
     } else if (kind == "media") {
@@ -187,3 +206,5 @@ bool CoreBridge::openLink(const QString &kind, int index) {
     if (!opened) { m_error = "The system browser could not open this link."; emit stateChanged(); }
     return opened;
 }
+
+bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() && m_distributionUntil>QDateTime::currentSecsSinceEpoch();}

@@ -72,13 +72,47 @@ impl Store {
             "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = c.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if version > 5 {
+        if version > 6 {
             return Err(Error::new(500, "unsupported_database_version"));
+        }
+        if version > 0 {
+            let expected = if development {
+                "development"
+            } else {
+                "production"
+            };
+            let actual: Option<String> = c
+                .query_row(
+                    "SELECT value FROM metadata WHERE key='environment'",
+                    [],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            if actual.as_deref() != Some(expected) {
+                return Err(Error::new(500, "database_environment_mismatch"));
+            }
         }
         if version == 0 {
             let t = c.transaction()?;
             t.execute_batch(include_str!("../migrations/001_identity.sql"))?;
             t.commit()?;
+        }
+        let environment = if development {
+            "development"
+        } else {
+            "production"
+        };
+        c.execute(
+            "INSERT OR IGNORE INTO metadata VALUES('environment',?1)",
+            [environment],
+        )?;
+        let actual: String = c.query_row(
+            "SELECT value FROM metadata WHERE key='environment'",
+            [],
+            |r| r.get(0),
+        )?;
+        if actual != environment {
+            return Err(Error::new(500, "database_environment_mismatch"));
         }
         if version < 2 {
             let t = c.transaction()?;
@@ -100,22 +134,10 @@ impl Store {
             t.execute_batch(include_str!("../migrations/005_publication.sql"))?;
             t.commit()?;
         }
-        let environment = if development {
-            "development"
-        } else {
-            "production"
-        };
-        c.execute(
-            "INSERT OR IGNORE INTO metadata VALUES('environment',?1)",
-            [environment],
-        )?;
-        let actual: String = c.query_row(
-            "SELECT value FROM metadata WHERE key='environment'",
-            [],
-            |r| r.get(0),
-        )?;
-        if actual != environment {
-            return Err(Error::new(500, "database_environment_mismatch"));
+        if version < 6 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/006_monitoring.sql"))?;
+            t.commit()?;
         }
         Ok(Self {
             db: Arc::new(Mutex::new(c)),

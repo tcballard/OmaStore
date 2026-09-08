@@ -93,6 +93,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         None
     };
     state.read_catalogue()?;
+    let monitoring_worker = if state.store.is_some()
+        && !state.sandbox
+        && std::env::var("OMASTORE_MONITORING_PAUSED").ok().as_deref() != Some("1")
+    {
+        Some(omastore_service::monitoring::start_worker(state.clone()))
+    } else {
+        None
+    };
     let worker = if state.store.is_some()
         && !state.sandbox
         && std::env::var("OMASTORE_CHECKS_PAUSED").ok().as_deref() != Some("1")
@@ -112,6 +120,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         worker.abort();
     }
     if let Some(worker) = publication_worker {
+        worker.abort();
+    }
+    if let Some(worker) = monitoring_worker {
         worker.abort();
     }
     Ok(())

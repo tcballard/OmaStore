@@ -4,6 +4,8 @@ pub mod checks;
 pub mod drafts;
 pub mod github;
 pub mod media;
+pub mod monitor;
+pub mod monitor_probe;
 pub mod net;
 pub mod publication;
 pub mod publisher;
