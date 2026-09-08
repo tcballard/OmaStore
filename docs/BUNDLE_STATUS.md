@@ -9,7 +9,7 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B02 | Native catalogue client, cache and read API | B01 | local and CI checks passed, including actual HTTP/core parity |
 | B03 | Native discovery and truthful app details | B02 | local and CI native offscreen checks passed; real Omarchy pending |
 | B03b | Local author preparation, validation and export | B01, B03 | local and CI checks passed; native portal exercise pending |
-| B04 | Publisher identity and persistent workspaces | B01 | not_started |
+| B04 | Publisher identity and persistent workspaces | B01 | in_progress; B04a identity/claim authority, service/native wiring follows |
 | B05 | Submission drafts, media and preview | B04 | not_started |
 | B06 | Bounded checks and evidence intake | B05 | not_started |
 | B07 | Review workflow and approval records | B06 | not_started |
