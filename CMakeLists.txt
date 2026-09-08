@@ -12,19 +12,28 @@ find_program(CARGO_EXECUTABLE cargo REQUIRED)
 qt_standard_project_setup()
 
 set(CORE_BINARY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-core")
-add_custom_command(
-    OUTPUT "${CORE_BINARY}"
+option(OMASTORE_DEVELOPMENT_DATA "Embed explicitly synthetic development listings" OFF)
+set(CARGO_FEATURE_ARGS "")
+if(OMASTORE_DEVELOPMENT_DATA)
+    list(APPEND CARGO_FEATURE_ARGS --features omastore-core/development-catalogue,omastore-service/development-catalogue)
+endif()
+# Invoke Cargo each time: it owns incremental tracking for every Rust module.
+add_custom_target(omastore-core ALL
     COMMAND "${CARGO_EXECUTABLE}" build --locked --release
         --manifest-path "${CMAKE_SOURCE_DIR}/Cargo.toml"
         --target-dir "${CMAKE_BINARY_DIR}/cargo"
+        ${CARGO_FEATURE_ARGS}
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
         "${CMAKE_BINARY_DIR}/cargo/release/omastore-core" "${CORE_BINARY}"
-    DEPENDS Cargo.toml Cargo.lock native/core/Cargo.toml native/core/src/main.rs
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${CMAKE_BINARY_DIR}/cargo/release/omastore-service" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-service"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${CMAKE_BINARY_DIR}/cargo/release/omastore-validate" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-validate"
+    BYPRODUCTS "${CORE_BINARY}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     VERBATIM
 )
-add_custom_target(omastore-core ALL DEPENDS "${CORE_BINARY}")
 
 qt_add_executable(omastore
     native/ui/main.cpp
@@ -42,6 +51,9 @@ target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2
 )
 add_dependencies(omastore omastore-core)
+if(OMASTORE_DEVELOPMENT_DATA)
+    target_compile_definitions(omastore PRIVATE OMASTORE_DEVELOPMENT_DATA)
+endif()
 
 install(TARGETS omastore RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(PROGRAMS "${CORE_BINARY}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
@@ -53,6 +65,14 @@ if(BUILD_TESTING)
     add_test(NAME core-process-contract
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/core_process.py" "${CORE_BINARY}")
     add_test(NAME native-startup COMMAND omastore --smoke-test)
+    if(OMASTORE_DEVELOPMENT_DATA)
+        add_test(NAME catalogue-http COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/http_process.py"
+            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-service" "${CORE_BINARY}" "${CMAKE_SOURCE_DIR}/tests/fixtures/catalogue.json" --demo)
+    else()
+        add_test(NAME catalogue-http COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/http_process.py"
+            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-service" "${CORE_BINARY}" "${CMAKE_SOURCE_DIR}/data/registry.json")
+    endif()
+    set_tests_properties(catalogue-http PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
     set_tests_properties(core-process-contract native-startup PROPERTIES TIMEOUT 20)
     set_tests_properties(native-startup PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")

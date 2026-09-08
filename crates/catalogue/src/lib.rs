@@ -5,6 +5,9 @@ use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use url::Url;
 
+pub mod http;
+pub mod query;
+
 pub const MAX_CATALOGUE_BYTES: usize = 8 * 1024 * 1024;
 
 macro_rules! vocabulary {

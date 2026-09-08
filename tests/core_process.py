@@ -19,7 +19,19 @@ class CoreProcessTests(unittest.TestCase):
         replies = self.run_core(payload)
         self.assertEqual([r["id"] for r in replies], ["first", "second"])
         self.assertTrue(all(r["ok"] for r in replies))
-        self.assertEqual(replies[0]["result"]["capabilities"], ["core.info"])
+        self.assertIn("apps.list", replies[0]["result"]["capabilities"])
+        self.assertNotIn("install", replies[0]["result"]["capabilities"])
+
+    def test_public_catalogue_and_unknown_filters(self):
+        requests = [
+            {"protocol_version": 1, "id": "catalogue", "method": "catalogue.info"},
+            {"protocol_version": 1, "id": "apps", "method": "apps.list", "params": {"price": "cheap"}},
+            {"protocol_version": 1, "id": "next", "method": "apps.list"},
+        ]
+        replies = self.run_core(b"\n".join(json.dumps(r).encode() for r in requests) + b"\n")
+        self.assertFalse(replies[0]["result"]["demo"])
+        self.assertEqual(replies[1]["error"]["code"], "invalid_filter")
+        self.assertTrue(replies[2]["ok"])
 
     def test_invalid_protocol_and_unknown_fields_are_rejected(self):
         requests = [

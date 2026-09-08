@@ -1,0 +1,13 @@
+# Public read and native process contracts
+
+Build `omastore-service` through Cargo or CMake. Run `omastore-service data/registry.json 127.0.0.1:8080`; put an operator-managed HTTPS proxy in front of it before offering remote access. It does not provide author authentication or installation eligibility.
+
+GET `/api/v1/catalogue` returns the validated public snapshot. GET `/api/v1/apps` accepts `q`, `category`, `appType`, `licence`, `price`, `architecture`, `offline`, `evidence`, `profile`, `limit` (1–50, default 20) and `cursor`. Enum values come from the catalogue contract. Unknown/duplicate parameters fail with 400. Exact ID/name and name prefix lead search, followed by text match and known compatibility with an explicitly selected environment profile, then stable lowercase name/ID. Editorial entries do not affect search.
+
+App pages return `snapshot`, `asOf`, `total`, `items`, `nextCursor`. Repeat identical filters and limit with the returned cursor. A changed snapshot returns 409 `snapshot_changed`; expired evaluation time returns 409 `cursor_expired`; restart from page one. Cursors last at most 24 hours. GET `/api/v1/apps/:id`, `/makers/:id`, `/setups/:id` accepts stable ID or slug. Missing objects return 404. Only GET is supported (405 otherwise). Successful representations have ETags and honour `If-None-Match`; invalid on-disk content returns 503, never a partial snapshot.
+
+The native core accepts one JSON object per line with `protocol_version: 1`, a bounded `id`, `method` and optional `params` object. `core.info`, `catalogue.info` and `catalogue.refresh` accept no parameters. `apps.list` accepts the same query object as HTTP. `apps.get` accepts `{ "id": "stable-id-or-slug" }`. Replies preserve request IDs and carry `ok` plus `result` or a bounded `error.code`. Requests/replies are capped at 256 KiB. There are no executable command or install messages.
+
+Catalogue info identifies `bundled`, `cached`, `live`, `stale` or `development` source, last successful fetch, content revision and a bounded warning code. Browser links are explicit user actions. Opening a listing or refreshing data does not start installations, obtain seller rights or upload local inventory.
+
+Run `cargo test --workspace --locked` for contract/cache cases. CTest's `catalogue-http` starts the real service and core, compares their query results and exercises replacement/errors. A local environment that forbids listening sockets reports this check as skipped; CI must execute it. TLS delivery and proxy operations remain a separate deployment exercise.

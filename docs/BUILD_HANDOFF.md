@@ -2,6 +2,10 @@
 
 Date: 8 September 2026. Current change series: native discovery.
 
+## B02 catalogue delivery
+
+Implemented shared search, typed public HTTP routes, bounded filters and snapshot/time-bound pagination; native HTTPS refresh and atomic validated XDG cache; independent read-only loopback service. Query/cache contract checks pass locally. Actual HTTP service/core parity is wired into CTest; local listening sockets are unavailable, so CI must supply this evidence. No auth/status/install endpoints exist. Next: B03 native discovery.
+
 ## B01 catalogue contract
 
 Implemented shared Rust public types, bounded validation CLI, immutable release variants, offer/currency fields, evidence identity/freshness, recipe references/cycle checks, empty public data and separate synthetic examples. Four catalogue contract tests cover positive and negative cases, deterministic snapshots and changed/stale evidence; the existing three core tests are retained. Rust formatting and Clippy pass. Native compilation/CI will be rerun for the completed discovery series. B01 structural validation is not publication approval. Next: B02 shared queries, native cache and read service.
