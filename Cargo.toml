@@ -19,4 +19,5 @@ omastore-workflow = { path = "crates/workflow" }
 rusqlite = { version = "0.40.2", features = ["bundled", "backup"] }
 base64 = "0.22"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "signal", "sync"] }
-reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "json", "form", "gzip", "stream"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "json", "form", "gzip", "stream"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }

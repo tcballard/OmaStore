@@ -125,19 +125,21 @@ ScrollView {
     }
     Dialog {
         id: reloadDialog
+        parent: Overlay.overlay
         anchors.centerIn: Overlay.overlay
-        width: Math.min(460, page.width - 32)
+        width: Math.min(460, Math.max(320, Overlay.overlay.width - 32))
         modal: true
         title: "Reload the saved worksheet?"
         standardButtons: Dialog.Ok | Dialog.Cancel
-        Label { width: parent.width; text: "This replaces the fields in this window with the last saved version. Unsaved edits will be discarded."; wrapMode: Text.Wrap }
+        contentItem: Label { text: "This replaces the fields in this window with the last saved version. Unsaved edits will be discarded."; wrapMode: Text.Wrap }
         onAccepted: worksheet.reload()
     }
     Dialog {
         id: exportPreview
+        parent: Overlay.overlay
         anchors.centerIn: Overlay.overlay
-        width: Math.min(720, page.width - 32)
-        height: Math.min(620, page.height - 32)
+        width: Math.min(720, Math.max(320, Overlay.overlay.width - 32))
+        height: Math.min(620, Math.max(240, Overlay.overlay.height - 32))
         modal: true
         title: "Review the candidate export"
         standardButtons: Dialog.Close

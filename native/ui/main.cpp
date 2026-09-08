@@ -60,6 +60,7 @@ int main(int argc, char *argv[]) {
     QTemporaryDir testSettings;
     if (parser.isSet(smokeTest) || parser.isSet(uiTest) || parser.isSet(screenshot)) {
         dataDirectory = testSettings.filePath("data");
+        qputenv("XDG_DATA_HOME",testSettings.filePath("xdg-data").toUtf8());
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, testSettings.path());
     }
@@ -139,6 +140,16 @@ int main(int argc, char *argv[]) {
                     auto *submit = findItem(window->contentItem(), "navSubmit");
                     if (submit) { submit->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
                     QTest::qWait(150);
+                    if (demo) {
+                        for (int i=0;i<40 && core.loading();++i) QTest::qWait(50);
+                        auto *sampleSignIn=findItem(window->contentItem(),"sampleSignIn");
+                        if (sampleSignIn) {sampleSignIn->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for (int i=0;i<40 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspace().value("actor").toMap().value("id").toString()=="development:author","sample author sign-in");
+                    }
+                    auto *localTab=findItem(window->contentItem(),"localWorksheetTab");
+                    if (localTab) {localTab->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                    QTest::qWait(100);
                     auto *name = findItem(window->contentItem(), "field-name");
                     if (name) {
                         name->forceActiveFocus();

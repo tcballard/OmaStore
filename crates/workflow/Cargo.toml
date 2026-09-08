@@ -17,6 +17,7 @@ rusqlite.workspace = true
 base64.workspace = true
 tokio.workspace = true
 reqwest.workspace = true
+rustls.workspace = true
 omastore-catalogue.workspace = true
 
 [dev-dependencies]

@@ -1,5 +1,21 @@
 # Build handoff
 
+## Full-scope continuation
+
+Tom authorised implementing all scoped bundles on 8 September 2026, making engineering decisions autonomously and committing regularly. The restored starting revision is `1bc14e0edd512c21af364a42e5c180193f40ad9d`; work continues on `build/author-workflows`. The earlier preview receipt below remains historical evidence, not a description of the full implementation's completion.
+
+B04a adds the private SQLite identity/role/session/claim authority, GitHub authorization-code/PKCE adapter, desktop proof binding, single-use callbacks, expiring scoped control challenges, DNS-pinned bounded public reads and a production/development database boundary. Four focused tests pass, including populated-database restart, cross-account/replay rejection and session/role revocation. Formatting and Clippy with all features and warnings denied pass. Native/service wiring follows in B04b. A registered provider and real callback remain live integration evidence; they do not block subsequent implementation.
+
+B04a implementation commit: local `c33c6f4e025d5d336d278ab4b730863aa8fd05cc`, published as `c5d8dab4dde416bd63ffee087544eead616d0ea3`; both have tree `eafd7fa4d2c755f9063461df4092f886c35ef601`.
+
+B04b starts from B04a and adds the Axum HTTP boundary, bounded request handling, authenticated claim actions, operator role CLI and the native author workspace. The Qt bridge never receives tokens; Secret Service storage has an explicit session-only fallback. The separate sample build supports fictional local role sessions in a development-marked SQLite database. QA isolates that database as well as preferences. A reusable Cargo cache path and a single Ring TLS provider keep native/core/service builds consistent.
+
+B04b validation: all 19 Rust tests pass (plus the previously separate performance sample), full-workspace Clippy with all features and warnings denied passes, and all 8 demo CTest checks pass. These include actual HTTP/core parity, the native sample-author sign-in, worksheet keyboard flow, three logical sizes and 200% scaling. A dialog sizing loop introduced by the nested author tabs was found and fixed. The local SDK is Qt 6.8.3; CMake/Cargo build resources were bounded after recovering a damaged generated dependency artifact. Real GitHub callback/keyring/Omarchy evidence is still outstanding. Next implementation: B05.
+
+Rollback: revert the B04a implementation and retain private database files for recovery. No external provider registration, author account, machine package or desktop setting has been changed.
+
+## Earlier native preview receipt
+
 Date: 8 September 2026. Branch: `build/native-discovery`. Scope: B01, B02, B03 and bounded extension B03b, followed by the executed-byte evidence correction. Review: [draft PR #1](https://github.com/tcballard/OmaStore/pull/1).
 
 Verified implementation: [`887d44947beee29ca45c89b7ff5f6888542d3ae6`](https://github.com/tcballard/OmaStore/commit/887d44947beee29ca45c89b7ff5f6888542d3ae6), with Git tree `3ddb5cd7b037d8838d3dd72fab187700109e633f`. The published tree exactly matches the locally checked tree. The following documentation receipt commit does not change implementation files.

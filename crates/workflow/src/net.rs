@@ -58,6 +58,7 @@ pub fn public_url(input: &str) -> Result<Url> {
     Ok(u)
 }
 pub async fn client_for(u: &Url) -> Result<Client> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let host = u.host_str().ok_or(Error::new(422, "unsafe_url"))?;
     let addresses: Vec<SocketAddr> =
         tokio::time::timeout(Duration::from_secs(3), tokio::net::lookup_host((host, 443)))

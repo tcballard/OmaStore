@@ -20,6 +20,8 @@ class CoreBridge final : public QObject {
     Q_PROPERTY(QVariantList saved READ saved NOTIFY savedChanged)
     Q_PROPERTY(int total READ total NOTIFY dataChanged)
     Q_PROPERTY(bool hasMore READ hasMore NOTIFY dataChanged)
+    Q_PROPERTY(QVariantMap workspace READ workspace NOTIFY workspaceChanged)
+    Q_PROPERTY(QVariantMap workspaceReply READ workspaceReply NOTIFY workspaceChanged)
 public:
     explicit CoreBridge(bool demo = false, QObject *parent = nullptr);
     ~CoreBridge() override;
@@ -34,6 +36,7 @@ public:
     Q_INVOKABLE void removeSaved(const QString &id);
     Q_INVOKABLE bool isSaved(const QString &id) const;
     Q_INVOKABLE bool openLink(const QString &kind, int index = 0);
+    Q_INVOKABLE void workspaceAction(const QString &action, const QVariantMap &params = {});
     void prepareCandidate(const QVariantMap &fields) { request("candidate.prepare", fields); }
     bool ready() const { return m_ready; }
     bool loading() const { return !m_pending.isEmpty(); }
@@ -47,6 +50,8 @@ public:
     QVariantList saved() const { return m_saved; }
     int total() const { return m_total; }
     bool hasMore() const { return !m_cursor.isEmpty(); }
+    QVariantMap workspace() const { return m_workspace; }
+    QVariantMap workspaceReply() const { return m_workspaceReply; }
 signals:
     void stateChanged();
     void dataChanged();
@@ -54,6 +59,7 @@ signals:
     void queryChanged();
     void savedChanged();
     void candidatePrepared(const QVariantMap &result);
+    void workspaceChanged();
 private:
     struct Pending { QString method; qint64 since; int generation; bool append; };
     void request(const QString &method, const QVariantMap &params = {});
@@ -72,5 +78,6 @@ private:
     int m_generation = 0, m_total = 0;
     QString m_version, m_error, m_cursor, m_detailRequested, m_candidateRequest;
     QVariantMap m_catalogue, m_detail, m_query;
+    QVariantMap m_workspace, m_workspaceReply;
     QVariantList m_apps, m_saved;
 };

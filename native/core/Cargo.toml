@@ -6,12 +6,14 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-development-catalogue = []
+development-catalogue = ["omastore-workflow/development-workflow"]
 
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
 omastore-catalogue.workspace = true
 chrono.workspace = true
-ureq = { version = "3.4", default-features = false, features = ["rustls", "gzip"] }
+ureq = { version = "3.4", default-features = false, features = ["rustls", "gzip", "json"] }
 tempfile = "3.23"
+omastore-workflow.workspace = true
+url.workspace = true

@@ -247,7 +247,7 @@ ApplicationWindow {
         id: detailPage
         DetailPage { details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
     }
-    Component { id: submitPage; SubmitPage { worksheet: window.worksheet; core: window.core; theme: storeTheme } }
+    Component { id: submitPage; WorkspacePage { worksheet: window.worksheet; core: window.core; theme: storeTheme } }
     Dialog {
         id: unsaved
         anchors.centerIn: parent

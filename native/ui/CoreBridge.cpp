@@ -76,6 +76,11 @@ void CoreBridge::acceptReply(const QByteArray &line) {
     const auto pending = m_pending.take(id);
     if (!reply.value("ok").toBool()) {
         const auto code = reply.value("error").toObject().value("code").toString();
+        if (pending.method.startsWith("workspace.")) {
+            m_workspaceReply = {{"action",pending.method.mid(10)},{"error",code}};
+            if (pending.method == "workspace.auth.poll") m_workspace.insert("signingIn",false);
+            emit workspaceChanged(); emit stateChanged(); return;
+        }
         if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
             emit candidatePrepared({{"valid", false}, {"errors", QVariantList{QVariantMap{{"path", "fields"}, {"code", "invalid_or_unsupported_fields"}}}}});
             emit stateChanged(); return;
@@ -88,7 +93,18 @@ void CoreBridge::acceptReply(const QByteArray &line) {
     }
     if (!reply.value("result").isObject()) { fail("The local service sent an invalid result."); return; }
     const auto result = reply.value("result").toObject().toVariantMap();
-    if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
+    if (pending.method.startsWith("workspace.")) {
+        m_workspace = result.value("workspace").toMap();
+        m_workspaceReply = result.value("value").toMap();
+        m_workspaceReply.insert("action",pending.method.mid(10));
+        if (pending.method == "workspace.auth.start") {
+            const QUrl url(m_workspaceReply.value("authorizationUrl").toString(),QUrl::StrictMode);
+            if (url.scheme()=="https" && url.host()=="github.com" && url.path()=="/login/oauth/authorize" && url.userInfo().isEmpty()) {
+                if (!QDesktopServices::openUrl(url)) m_workspaceReply.insert("error","browser_unavailable");
+            }
+        }
+        emit workspaceChanged();
+    } else if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
         emit candidatePrepared(result);
     } else if (pending.method == "core.info") {
         if (result.value("service").toString() != "omastore-core" || result.value("version").toString().isEmpty()) { fail("Unsupported local service."); return; }
@@ -110,6 +126,11 @@ void CoreBridge::fail(const QString &message) {
     emit stateChanged();
 }
 void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
+void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
+    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke"};
+    if (!m_ready || !actions.contains(action)) return;
+    request("workspace."+action,params);
+}
 void CoreBridge::persistQuery() {
     QSettings settings; settings.setValue("browse/query", QJsonDocument(QJsonObject::fromVariantMap(m_query)).toJson(QJsonDocument::Compact)); settings.sync();
     if (settings.status() != QSettings::NoError) { m_error = "Could not save your browsing preferences."; emit stateChanged(); }
