@@ -16,6 +16,10 @@ Rollback: revert the B04a implementation and retain private database files for r
 
 ## Author continuation receipts
 
+B06 adds a durable SQLite checks queue, expiring leases, bounded source/link/provenance reads, explicit unavailable findings, retry commands and immutable independent VM-report intake. The service dispatcher and pause mechanism are documented in REVIEW_OPERATIONS.md. Sample checks use the same leases and completion transitions in a development-only database. Seven workflow tests pass, including stale-worker rejection and lease recovery; no actual submitted program has been executed as a check. B05b is published as `d6f1aaa9246d58ac532b71ac9ea4c3812518083b`, matching local `0e2ad5a6b86da6b17b2ef93a04490e349bc496c2` and tree `7d4b94867f0e9482313c73894bb2a4fdb210c1bf`.
+
+
+
 B05b adds the native full-field draft editor, local recovery scoped to account and service, optimistic server sync, an explicit conflict merge acknowledgement, media selection, exact preview, submission and revision status. HTTP mutation retries use a persisted key; a failed subsequent refresh cannot misreport a committed action. Expired login polling clears correctly. Local edits survive network failure without becoming public. The template contains empty author facts, not demo claims.
 
 B05a commit: `79129ba`. B05b verification: all 22 Rust tests passed, including authenticated HTTP upload/private-access checks; all 8 native CTest checks passed in 15.40 seconds, including creating a draft, keyboard typing and private autosave at three sizes and 200% scale. The recursive native editor uses dynamic QML loading after the runtime rejected static recursion. Media replacement retains historical bytes and counts the current draft selection. The checked UI is offscreen Linux; real Omarchy accessibility/media-dialog evidence remains outstanding.

@@ -75,6 +75,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     }
     state.read_catalogue()?;
+    let worker = if state.store.is_some()
+        && !state.sandbox
+        && std::env::var("OMASTORE_CHECKS_PAUSED").ok().as_deref() != Some("1")
+    {
+        Some(omastore_service::start_checks_worker(state.clone()))
+    } else {
+        None
+    };
     let listener = tokio::net::TcpListener::bind(addr).await?;
     println!("LISTENING {}", listener.local_addr()?);
     axum::serve(listener, router(state))
@@ -82,5 +90,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let _ = tokio::signal::ctrl_c().await;
         })
         .await?;
+    if let Some(worker) = worker {
+        worker.abort();
+    }
     Ok(())
 }

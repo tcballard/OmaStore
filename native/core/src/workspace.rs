@@ -186,12 +186,22 @@ impl Client {
         let result = match method {
             "state" if params == json!({}) => json!({}),
             "command" => self.command(params)?,
+            #[cfg(feature = "development-catalogue")]
+            "drafts.sample" => {
+                if self.sandbox.is_none() {
+                    return Err(Error::new(403, "sample_mode_required"));
+                }
+                let candidate: Value =
+                    serde_json::from_str(include_str!("../../../docs/examples/submission.json"))?;
+                self.command(json!({"command":"create_draft","kind":"app","candidate":candidate,"base_revision":null}))?
+            }
             "drafts.new" => {
                 let raw = include_str!("../../../crates/workflow/templates/app.json")
                     .replace("APP_ID", &format!("app-{}", &nonce()?[..12]))
                     .replace("MAKER_ID", &format!("maker-{}", &nonce()?[..12]));
                 let mut candidate: Value = serde_json::from_str(&raw)?;
-                candidate["generatedAt"] = json!(chrono::Utc::now().to_rfc3339());
+                candidate["generatedAt"] =
+                    json!(chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
                 self.command(json!({"command":"create_draft","kind":"app","candidate":candidate,"base_revision":null}))?
             }
             "drafts.preview" => {
@@ -228,6 +238,35 @@ impl Client {
                 return Ok(json!({"value":{"id":id,"localSaved":true},"workspace":self.cached}));
             }
             "media.upload" => self.upload(params)?,
+            #[cfg(feature = "development-catalogue")]
+            "checks.run_sample" => {
+                let store = self
+                    .sandbox
+                    .as_ref()
+                    .ok_or(Error::new(403, "sample_mode_required"))?;
+                store.actor(
+                    self.token.as_deref().unwrap_or(""),
+                    omastore_workflow::now(),
+                )?;
+                store.sample_checks(omastore_workflow::now())?
+            }
+            "evidence.import" => {
+                let path = params["file"]
+                    .as_str()
+                    .and_then(|p| Url::parse(p).ok())
+                    .and_then(|u| u.to_file_path().ok())
+                    .ok_or(Error::new(422, "local_file_required"))?;
+                let mut bytes = Vec::new();
+                std::fs::File::open(path)?
+                    .take(80 * 1024 + 1)
+                    .read_to_end(&mut bytes)?;
+                if bytes.len() > 80 * 1024 {
+                    return Err(Error::new(413, "evidence_too_large"));
+                }
+                let evidence: omastore_workflow::checks::RuntimeEvidence =
+                    serde_json::from_slice(&bytes)?;
+                self.command(json!({"command":"record_runtime","evidence":evidence}))?
+            }
             "auth.start" if params == json!({}) => {
                 let verifier = nonce()?;
                 let value = self.http(

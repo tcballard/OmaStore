@@ -12,6 +12,13 @@ pub const MAX_DRAFT_BYTES: usize = 80 * 1024;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    RecordRuntime {
+        evidence: Box<crate::checks::RuntimeEvidence>,
+    },
+    RetryChecks {
+        id: String,
+        version: i64,
+    },
     CreateDraft {
         kind: String,
         candidate: Value,
@@ -35,7 +42,10 @@ pub enum Command {
 }
 impl Command {
     pub fn role(&self) -> &'static str {
-        "author"
+        match self {
+            Self::RecordRuntime { .. } => "reviewer",
+            _ => "author",
+        }
     }
 }
 
@@ -126,6 +136,10 @@ impl Store {
 }
 fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Result<Value> {
     match command {
+        Command::RecordRuntime { evidence } => {
+            crate::checks::record_runtime(t, actor, &evidence, now)
+        }
+        Command::RetryChecks { id, version } => crate::checks::retry(t, actor, &id, version, now),
         Command::CreateDraft {
             kind,
             candidate,

@@ -382,6 +382,29 @@ async fn public_read(
     builder.body(Body::from(result.body)).unwrap()
 }
 
+/// One bounded worker per service process; SQLite leases coordinate replicas/restarts.
+pub fn start_checks_worker(state: AppState) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            let job = match db(&state, |store| store.lease_checks(now())).await {
+                Ok(Some(job)) => job,
+                _ => continue,
+            };
+            let Some(store) = state.store.as_ref() else {
+                break;
+            };
+            let findings = omastore_workflow::checks::run(store, &job).await;
+            let _ = db(&state, move |store| {
+                store.finish_checks(&job, &findings, now())
+            })
+            .await;
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

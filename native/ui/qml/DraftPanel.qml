@@ -40,7 +40,7 @@ ColumnLayout {
                     panel.notice=r.localRecovery.version === r.version ? "Recovered unsynced edits from this device." : "Recovered local edits. The server changed too; compare the server copy before saving.";
                     if (r.localRecovery.version !== r.version) panel.draft.version=r.localRecovery.version;
                 }
-            } else if ((r.action === "command" || r.action === "drafts.new") && r.command === "create_draft") panel.open(r.id);
+            } else if ((r.action === "command" || r.action === "drafts.new" || r.action === "drafts.sample") && r.command === "create_draft") panel.open(r.id);
             else if (r.action === "command" && r.command === "save_draft") {panel.draft.version=r.version;panel.dirty=false;panel.notice="Saved to your private workspace.";}
             else if (r.action === "drafts.cache") panel.localSaved=true;
             else if (r.action === "drafts.preview") {panel.errors=r.errors || [];panel.previewReady=true;preview.open();}
@@ -60,6 +60,7 @@ ColumnLayout {
         Button { objectName:"newDraft"; text:"New listing"; enabled:!core.loading; onClicked:core.workspaceAction("drafts.new",{}) }
         Button { text:"From worksheet"; enabled:!core.loading && !!worksheet.result.candidate; onClicked:panel.command({command:"create_draft",kind:"app",candidate:worksheet.result.candidate,base_revision:null}) }
     }
+    Button { visible:!!core.workspace.sandbox;text:"Use a filled fictional listing to try submission";enabled:!core.loading;onClicked:core.workspaceAction("drafts.sample",{}) }
     Label { visible:!(core.workspace.drafts || []).length; text:"Start with a few facts. Drafts stay private until you confirm the exact submission preview."; Layout.fillWidth:true; wrapMode:Text.Wrap }
     Repeater {
         model:core.workspace.drafts || []
@@ -96,7 +97,11 @@ ColumnLayout {
             Button {text:"Choose file and upload";enabled:!panel.dirty && !core.loading && mediaAlt.text.length>0 && mediaRights.text.length>0;onClicked:mediaFile.open()}
         }
     }
-    Label {text:"Submitted revisions";font.bold:true;font.pixelSize:22*theme.scale}
+    RowLayout {
+        Layout.fillWidth:true
+        Label {text:"Submitted revisions";font.bold:true;font.pixelSize:22*theme.scale;Layout.fillWidth:true}
+        Button {visible:!!core.workspace.sandbox;text:"Run sample checks";enabled:!core.loading;onClicked:core.workspaceAction("checks.run_sample",{})}
+    }
     Repeater {
         model:core.workspace.revisions || []
         RowLayout {
