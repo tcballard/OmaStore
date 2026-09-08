@@ -68,7 +68,7 @@ pub fn summary(app: &App, now: DateTime<Utc>) -> Value {
     let (evidence, evidence_label) = app.evidence(now);
     json!({"id": app.id, "slug": app.slug, "name": app.name, "summary": app.summary,
         "category": app.category, "appType": app.app_type, "maturity": app.maturity,
-        "licence": app.licence, "makerIds": app.maker_ids, "priceLabel": price_label(app),
+        "licence": app.licence, "makerIds": app.maker_ids, "currentReleaseId":app.current_release_id, "priceLabel": price_label(app),
         "evidence": evidence, "evidenceLabel": evidence_label, "offline": release.offline,
         "routeLabel": release.route.label(), "architectures": release.architectures})
 }

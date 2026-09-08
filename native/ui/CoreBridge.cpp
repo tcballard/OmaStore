@@ -1,5 +1,7 @@
 #include <QDateTime>
 #include "CoreBridge.h"
+#include <QGuiApplication>
+#include <QClipboard>
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDir>
@@ -53,7 +55,7 @@ void CoreBridge::start() {
 void CoreBridge::request(const QString &method, const QVariantMap &params) {
     if (m_process.state() != QProcess::Running || m_pending.size() >= 16) return;
     const QString id = QString::number(++m_sequence);
-    if (method.startsWith("makers.") || method.startsWith("editorial.")) m_communityRequests[method]=id;
+    if (method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick") m_communityRequests[method]=id;
     if (method == "candidate.prepare") m_candidateRequest = id;
     m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor")});
     const QJsonObject envelope{{"protocol_version", 1}, {"id", id}, {"method", method}, {"params", QJsonObject::fromVariantMap(params)}};
@@ -88,6 +90,11 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
             emit candidatePrepared({{"valid", false}, {"errors", QVariantList{QVariantMap{{"path", "fields"}, {"code", "invalid_or_unsupported_fields"}}}}});
             emit stateChanged(); return;
+        }
+        if(m_communityRequests.value(pending.method)==id) {
+            m_community.insert(pending.method,QVariantMap{{"error",code}});emit communityChanged();
+            m_error=code=="snapshot_changed"?"The catalogue changed. Reload the selection before continuing.":"This selection is unavailable or no longer matches the catalogue.";
+            emit stateChanged();return;
         }
         if (code == "snapshot_changed" || code == "cursor_expired") { m_cursor.clear(); search(); }
         else if (code == "not_found") m_error = "This listing is no longer in the current catalogue.";
@@ -133,14 +140,14 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         }
         emit workspaceChanged();
     } else if (m_communityRequests.value(pending.method)==id) {
-        m_community.insert(pending.method,result); emit communityChanged();
+        m_community.insert(pending.method=="setups.import"?"setups.select":pending.method,result); emit communityChanged();
     } else if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
         emit candidatePrepared(result);
     } else if (pending.method == "core.info") {
         if (result.value("service").toString() != "omastore-core" || result.value("version").toString().isEmpty()) { fail("Unsupported local service."); return; }
         m_ready = true; m_version = result.value("version").toString(); request("catalogue.info");
     } else if (pending.method == "catalogue.info" || pending.method == "catalogue.refresh") {
-        m_catalogue = result; search(); communityAction("makers.list"); communityAction("editorial.list"); emit dataChanged();
+        m_catalogue = result; search(); communityAction("makers.list"); communityAction("editorial.list"); communityAction("setups.list"); emit dataChanged();
         if (!m_detailRequested.isEmpty()) showApp(m_detailRequested);
     } else if (pending.method == "apps.list" && pending.generation == m_generation) {
         if (pending.append) m_apps.append(result.value("items").toList()); else m_apps = result.value("items").toList();
@@ -213,11 +220,24 @@ bool CoreBridge::openLink(const QString &kind, int index) {
 bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() && m_distributionUntil>QDateTime::currentSecsSinceEpoch();}
 
 void CoreBridge::communityAction(const QString &method,const QVariantMap &params) {
-    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get"};
+    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick"};
     if(m_ready && methods.contains(method)) request(method,params);
 }
 bool CoreBridge::openMakerLink(const QString &kind) {
     if(kind!="homepage" && kind!="support") return false;
     const QUrl url(m_community.value("makers.get").toMap().value(kind).toString(),QUrl::StrictMode);
     return url.isValid() && url.scheme()=="https" && !url.host().isEmpty() && url.userInfo().isEmpty() && QDesktopServices::openUrl(url);
+}
+
+bool CoreBridge::openSetupLink(const QString &kind,int index) {
+    const auto setup=m_community.value("setups.select").toMap();QString raw;
+    if(kind=="support" || kind=="homepage") raw=setup.value("maker").toMap().value(kind).toString();
+    else if(kind=="offer") {const auto rows=setup.value("components").toList();if(index<0 || index>=rows.size())return false;raw=rows[index].toMap().value("offer").toMap().value("url").toString();}
+    else if(kind=="media") {const auto rows=setup.value("recipe").toMap().value("media").toList();if(index<0 || index>=rows.size())return false;raw=rows[index].toMap().value("url").toString();}
+    else return false;
+    const QUrl url(raw,QUrl::StrictMode);return url.isValid() && url.scheme()=="https" && !url.host().isEmpty() && url.userInfo().isEmpty() && QDesktopServices::openUrl(url);
+}
+void CoreBridge::copySetupLink() {
+    const auto uri=m_community.value("setups.select").toMap().value("shareUri").toString();
+    if(uri.startsWith("omastore://setup/") && uri.size()<300) QGuiApplication::clipboard()->setText(uri);
 }

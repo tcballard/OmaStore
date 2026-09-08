@@ -16,8 +16,8 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B08 | GitHub publication bridge | B02, B07 | implemented; 33 Rust tests and 8 native checks pass, including publication rehearsal; live App/deployment gate pending |
 | B09 | Release monitoring and suspensions | B08 | implemented; 36 Rust tests and 8 native checks pass; configured upstream observation remains an external gate |
 | B10 | Makers, editorial selection and RSS | B03, B04, B08 | implemented; 40 Rust tests and 8 native keyboard/feed checks pass; real Omarchy/editorial operations remain external gates |
-| B11 | Setup catalogue and selective recipes | B03, B08 | in_progress; B11a models and recipe media/review/publication pass 45 Rust tests; native selection follows |
-| B12 | Read-only installation planner | B02, B09 | not_started |
+| B11 | Setup catalogue and selective recipes | B03, B08 | implemented; 45 Rust tests and 8 native checks pass, including selective setup export/import; real recipes and Omarchy dialogs remain external gates |
+| B12 | Read-only installation planner | B02, B09 | in_progress |
 | B13 | Native library and identity handoff | B12 | not_started |
 | B14 | Supported package execution | B12, B13 | not_started |
 | B15 | Journal reconciliation and lifecycle | B11, B14 | not_started |

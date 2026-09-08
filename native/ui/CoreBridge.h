@@ -40,6 +40,8 @@ public:
     Q_INVOKABLE bool isSaved(const QString &id) const;
     Q_INVOKABLE bool openLink(const QString &kind, int index = 0);
     Q_INVOKABLE void communityAction(const QString &method, const QVariantMap &params = {});
+    Q_INVOKABLE bool openSetupLink(const QString &kind, int index=0);
+    Q_INVOKABLE void copySetupLink();
     Q_INVOKABLE bool openMakerLink(const QString &kind);
     Q_INVOKABLE void workspaceAction(const QString &action, const QVariantMap &params = {});
     void prepareCandidate(const QVariantMap &fields) { request("candidate.prepare", fields); }

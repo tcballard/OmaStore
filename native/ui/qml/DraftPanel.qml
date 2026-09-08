@@ -66,6 +66,7 @@ ColumnLayout {
         Button { text:"From worksheet"; enabled:!core.loading && !!worksheet.result.candidate; onClicked:panel.command({command:"create_draft",kind:"app",candidate:worksheet.result.candidate,base_revision:null}) }
     }
         Button {text:"New story / pick";enabled:!core.loading;onClicked:core.workspaceAction("drafts.new",{kind:"editorial"})}
+    Button {text:"New setup";objectName:"newSetupDraft";enabled:!core.loading;onClicked:core.workspaceAction("drafts.new",{kind:"setup"})}
     Button { visible:!!core.workspace.sandbox;text:"Use a filled fictional listing to try submission";enabled:!core.loading;onClicked:core.workspaceAction("drafts.sample",{}) }
     Label { visible:!(core.workspace.drafts || []).length; text:"Start with a few facts. Drafts stay private until you confirm the exact submission preview."; Layout.fillWidth:true; wrapMode:Text.Wrap }
     Repeater {
@@ -94,10 +95,27 @@ ColumnLayout {
                 Button {text:"Preview submission";enabled:!panel.dirty && !core.loading;onClicked:panel.command({command:"prepare_draft",id:panel.draft.id,version:panel.draft.version})}
             }
             Label {text:"Purpose, release identity, acquisition route and price are separate facts. Expand each section to edit. Public test results and verified control are assigned during review.";Layout.fillWidth:true;wrapMode:Text.Wrap}
-            ColumnLayout {
-                visible:panel.draft.kind==="editorial";Layout.fillWidth:true
-                Label {text:"Link published apps, then choose a UTC publish date and optional end date. Editorial selection is reviewed independently.";Layout.fillWidth:true;wrapMode:Text.Wrap}
-                Repeater {model:panel.draft.kind==="editorial" ? core.apps : [];CheckBox {required property var modelData;text:modelData.name;checked:(((panel.candidate.stories || [])[0] || {}).appIds || []).indexOf(modelData.id)>=0;onToggled:{let ids=panel.candidate.stories[0].appIds.filter(x=>x!==modelData.id);if(checked)ids.push(modelData.id);panel.change(["stories","0","appIds"],ids);panel.change(["apps"],[]);}}}
+            Loader {
+                active:panel.draft.kind==="editorial" || panel.draft.kind==="setup";Layout.fillWidth:true
+                sourceComponent:ColumnLayout {
+                    Label {text:panel.draft.kind==="setup"?"Link components here, then set required/optional choices, dependencies, conflicts, attribution and sharing rights below.":"Link published apps, then choose a UTC publish date and optional end date. Editorial selection is reviewed independently.";Layout.fillWidth:true;wrapMode:Text.Wrap}
+                    CataloguePicker {
+                        core:panel.core
+                        selectedIds:panel.draft.kind==="setup" ? (((panel.candidate.recipes || [])[0] || {}).components || []).map(p=>p.appId) : (((panel.candidate.stories || [])[0] || {}).appIds || [])
+                        onToggled:(appId,releaseId,on)=>{
+                            if(panel.draft.kind==="setup") {
+                                let items=panel.candidate.recipes[0].components.filter(p=>p.appId!==appId);
+                                if(on)items.push({appId:appId,releaseId:releaseId,optional:true,dependsOn:[],conflicts:[]});
+                                panel.change(["recipes","0","components"],items);
+                            } else {
+                                let ids=panel.candidate.stories[0].appIds.filter(id=>id!==appId);if(on)ids.push(appId);panel.change(["stories","0","appIds"],ids);
+                            }
+                            const makerId=panel.draft.kind==="setup"?panel.candidate.recipes[0].makerId:panel.candidate.stories[0].authorMakerId;
+                            panel.change(["makers"],panel.candidate.makers.filter(m=>m.id===makerId));
+                            panel.change(["apps"],[]);
+                        }
+                    }
+                }
             }
             ValueEditor { value:panel.candidate;field:"Listing fields";theme:panel.theme;onEdited:(path,value)=>panel.change(path,value) }
             Label {text:"Upload media";font.bold:true}

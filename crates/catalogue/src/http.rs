@@ -44,7 +44,7 @@ pub fn handle(
                 serde_json::from_value(Value::Object(params)).map_err(|_| "invalid_filter")?;
             return query::list(catalogue, &q, now);
         }
-        if path == "/api/v1/makers" {
+        if path == "/api/v1/makers" || path == "/api/v1/setups" {
             let mut params = serde_json::Map::new();
             for (key, value) in url::form_urlencoded::parse(raw.as_bytes()) {
                 let val = if key == "offset" {
@@ -57,7 +57,11 @@ pub fn handle(
                 }
             }
             let q = serde_json::from_value(Value::Object(params)).map_err(|_| "invalid_filter")?;
-            return crate::editorial::makers(catalogue, &q, now);
+            return if path.ends_with("makers") {
+                crate::editorial::makers(catalogue, &q, now)
+            } else {
+                crate::setups::list(catalogue, &q)
+            };
         }
         if !raw.is_empty() {
             return Err("invalid_filter");

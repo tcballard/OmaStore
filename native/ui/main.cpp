@@ -153,6 +153,29 @@ int main(int argc, char *argv[]) {
                             check(core.community().value("makers.get").toMap().value("claim").toString()=="unclaimed","fictional maker remains unclaimed");
                         }
                     }
+                    if(demo) {
+                        auto pressSetup=[window](QQuickItem *item){if(item){item->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}};
+                        pressSetup(findItem(window->contentItem(),"navSetups"));QTest::qWait(100);
+                        pressSetup(findItem(window->contentItem(),"setup-demo-writing-desk"));
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        auto selection=core.community().value("setups.select").toMap();
+                        check(selection.value("recipe").toMap().value("id").toString()=="demo-writing-desk","native setup detail");
+                        auto *required=findItem(window->contentItem(),"component-demo-fieldnotes");
+                        check(required && !required->isEnabled() && required->property("checked").toBool(),"required setup component cannot be deselected");
+                        pressSetup(findItem(window->contentItem(),"component-demo-papertrail"));
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        selection=core.community().value("setups.select").toMap();check(selection.value("selected").toList().size()==2,"select optional setup component");
+                        QTemporaryDir selectionDirectory;const auto selectionFile=QUrl::fromLocalFile(selectionDirectory.filePath("selection.json")).toString();
+                        const QVariantMap intent{{"id","demo-writing-desk"},{"revision","1"},{"chosen",selection.value("requested")}};
+                        core.communityAction("setups.export",{{"selection",intent},{"snapshot",selection.value("snapshot")},{"file",selectionFile}});
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        check(core.community().value("setups.export").toMap().value("exported").toBool(),"native selection file export");
+                        core.communityAction("setups.import",{{"file",selectionFile}});
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        check(core.community().value("setups.select").toMap().value("selected").toList().size()==2,"native selection identity round trip");
+                        QTest::keyClick(window,Qt::Key_Escape);QTest::qWait(50);
+                        check(window->property("setupSelection").toString().isEmpty(),"back from setup selection");
+                    }
                     auto *submit = findItem(window->contentItem(), "navSubmit");
                     if (submit) { submit->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
                     QTest::qWait(150);

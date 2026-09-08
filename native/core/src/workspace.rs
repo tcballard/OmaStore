@@ -264,6 +264,9 @@ impl Client {
                 if kind == "editorial" {
                     candidate["apps"] = json!([]);
                     candidate["stories"] = json!([{"id":format!("story-{}",&nonce()?[..12]),"revision":"r1","kind":"story","title":"","summary":"","body":"","authorMakerId":candidate["makers"][0]["id"],"appIds":[],"publishAt":candidate["generatedAt"],"endAt":null,"rights":""}]);
+                } else if kind == "setup" {
+                    candidate["apps"] = json!([]);
+                    candidate["recipes"] = json!([{"id":format!("setup-{}",&nonce()?[..12]),"slug":"","name":"","summary":"","description":"","revision":"1","makerId":candidate["makers"][0]["id"],"parent":null,"parentRevision":null,"rights":"","components":[],"media":[],"settings":[]}]);
                 } else if kind != "app" {
                     return Err(Error::new(422, "invalid_draft_kind"));
                 }

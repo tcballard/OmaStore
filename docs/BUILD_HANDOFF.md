@@ -1,5 +1,9 @@
 # Build handoff
 
+B11b completes native setup browsing, optional component selection/dependency explanations, price grouping, current status, creator/media actions, exact selection preview, native import/export and published-app selection in author drafts. All 45 Rust tests, workspace Clippy and 8 native checks pass (21.24 seconds), including keyboard selection and export/import at three sizes and 200% scaling. Portal dialogs and three real tested recipes still require Omarchy/content evidence. B12 read-only planning is next; no package writes were performed.
+
+The separate Qt 6.4 RSS comparison correction is published as `a62a621bfc5289ffca080dd25e328d00f52cedbc`, matching local `ad1e23c8075de8218758945d5b5f34836a0cd666` and tree `006414ced999984bf93a0803bab87035fe7a2c49`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34277144978), including the ordinary and demo native suites.
+
 ## Full-scope continuation
 
 Tom authorised implementing all scoped bundles on 8 September 2026, making engineering decisions autonomously and committing regularly. The restored starting revision is `1bc14e0edd512c21af364a42e5c180193f40ad9d`; B04–B09 are on `build/author-workflows`; the next stack continues on `build/native-marketplace`. The earlier preview receipt below remains historical evidence, not a description of the full implementation's completion.

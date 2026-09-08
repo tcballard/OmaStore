@@ -9,6 +9,10 @@ ApplicationWindow {
     required property var mediaPreview
     required property var worksheet
     property bool discardClose: false
+    property string setupSelection:""
+    property string setupRevision:""
+    readonly property bool showingSubpage:showingDetail || (section===2 && !!setupSelection) || (section===4 && !!makerSelection)
+    function back(){if(showingDetail)core.closeDetail();else if(section===2){setupSelection="";setupRevision="";}else if(section===4)makerSelection="";}
     property string makerSelection: ""
     function showMaker(id) { makerSelection=id; navigate(4); core.communityAction("makers.get",{id:id}); }
     property int section: 0
@@ -53,8 +57,8 @@ ApplicationWindow {
     function focusSearch() { navigate(1); searchField.forceActiveFocus(); searchField.selectAll(); }
     Shortcut { sequence: "Ctrl+K"; onActivated: window.focusSearch() }
     Shortcut { sequence: "Ctrl+F"; onActivated: window.focusSearch() }
-    Shortcut { sequence: "Alt+Left"; enabled: window.showingDetail; onActivated: core.closeDetail() }
-    Shortcut { sequence: "Escape"; enabled: window.showingDetail; onActivated: core.closeDetail() }
+    Shortcut { sequence: "Alt+Left"; enabled: window.showingSubpage; onActivated: window.back() }
+    Shortcut { sequence: "Escape"; enabled: window.showingSubpage; onActivated: window.back() }
     Shortcut { sequence: "Ctrl+R"; onActivated: core.refresh() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
 
@@ -107,7 +111,7 @@ ApplicationWindow {
                 background: Rectangle { color: storeTheme.page }
                 RowLayout {
                     anchors.fill: parent
-                    ToolButton { objectName: "backButton"; text: "← Back"; visible: window.showingDetail; onClicked: core.closeDetail() }
+                    ToolButton { objectName: "backButton"; text: "← Back"; visible: window.showingSubpage; onClicked: window.back() }
                     TextField {
                         id: searchField
                         objectName: "searchField"
@@ -149,7 +153,7 @@ ApplicationWindow {
                 id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : (window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
+                sourceComponent: window.showingDetail ? detailPage : (window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             RowLayout {
@@ -250,6 +254,7 @@ ApplicationWindow {
         id: detailPage
         DetailPage { onMakerChosen:(id)=>window.showMaker(id); details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
     }
+    Component {id:setupsPage;SetupsPage {core:window.core;theme:storeTheme;mediaPreview:window.mediaPreview;selectedId:window.setupSelection;selectedRevision:window.setupRevision;onChosen:(id,revision)=>{window.setupSelection=id;window.setupRevision=revision;};onMakerChosen:(id)=>window.showMaker(id)}}
     Component {id:makersPage;MakersPage {core:window.core;theme:storeTheme;selectedId:window.makerSelection;onChosen:(id)=>window.makerSelection=id;onBrowseApps:(id)=>{window.navigate(1);core.clearFilters();core.setFilter("makerId",id);}}}
     Component { id: submitPage; WorkspacePage { worksheet: window.worksheet; core: window.core; theme: storeTheme } }
     Dialog {
@@ -308,7 +313,7 @@ ApplicationWindow {
             spacing: 16
             Label { text: "An independent community storefront for Omarchy.\nQt Quick interface · Rust catalogue core " + core.version; Layout.fillWidth: true; wrapMode: Text.Wrap }
             Label { text: "Ctrl+K / Ctrl+F   Search\nAlt+Left / Escape   Back from an app\nCtrl+R   Refresh catalogue\nCtrl+Q   Quit"; font.family: storeTheme.mono; Layout.fillWidth: true; wrapMode: Text.Wrap }
-            Label { text: "This preview browses listings and saves a local shortlist. Package installation, author accounts and managed checkout are still to come."; Layout.fillWidth: true; wrapMode: Text.Wrap }
+            Label { text: "Development build. App and setup discovery, private submissions and review workflows are available. Sample sessions and publication rehearsals are explicitly fictional. See the repository handoff for current verification."; Layout.fillWidth: true; wrapMode: Text.Wrap }
         }
     }
 }

@@ -1,4 +1,5 @@
 mod catalogue;
+mod setups;
 mod workspace;
 struct Runtime {
     catalogue: catalogue::Client,
@@ -74,11 +75,26 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
         "apps.list" => serde_json::from_value::<query::Query>(request.params)
+            .map_err(|_| "invalid_filter")
+            .and_then(|q| query::list(&client.catalogue, &q, now)),
+        "setups.list" => {
+            serde_json::from_value::<omastore_catalogue::editorial::Browse>(request.params)
+                .map_err(|_| "invalid_filter")
+                .and_then(|q| omastore_catalogue::setups::list(&client.catalogue, &q))
+        }
+        "setups.select" => {
+            serde_json::from_value::<omastore_catalogue::setups::Selection>(request.params)
+                .map_err(|_| "invalid_request")
+                .and_then(|q| omastore_catalogue::setups::select(&client.catalogue, &q, now))
+        }
+        "setups.export" => setups::export(&client.catalogue, request.params),
+        "setups.import" => setups::import(&client.catalogue, request.params),
+        "apps.pick" => serde_json::from_value::<query::Query>(request.params)
             .map_err(|_| "invalid_filter")
             .and_then(|q| query::list(&client.catalogue, &q, now)),
         "makers.list" => {
