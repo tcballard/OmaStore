@@ -1,5 +1,7 @@
 # Build handoff
 
+B16d moves the mandatory isolated-video integration to a supported Ubuntu 22.04 worker host while retaining native Ubuntu 24.04 coverage. B16c CI 34290845779 diagnosed namespace loopback setup as the failure before any decoder ran. No host AppArmor/sysctl policy is weakened and no test is skipped. The replacement job must pass before media isolation is accepted. B16c remote `40306e78fc3c9a96378dfb617310ab7ca82212ae` matches local `9383c28c18f46fbe21349ea91134427ef560d814`, tree `c255f3d1f945978724447472c208b235003565c5`.
+
 B16c removes the advisory-bearing RustCrypto RSA dependency by selecting jsonwebtoken's supported AWS-LC backend. The actual GitHub App RS256 signing/verification/tamper test passes with a generated temporary key. cargo-audit 0.22.2 reports zero vulnerabilities/warnings across 249 dependencies against advisory database `bf25f6575a93a35f30796c65c0ed91bee7fa19fd`; the source credential-format scan has zero matches. The receipt binds the lockfile digest. B16b CI run 34288947027 failed at sandbox startup before the video test; the positive test now emits a bounded fixed-program startup diagnostic so the environment failure can be resolved without weakening the sandbox.
 
 B16b is published as `ce41725a28a36db35ec7037c0122230c7a1287be`, matching local `dae59d81a4d561b9ce18134f133ed8234d42fd4b` and tree `d44d05aed303b42c5b53a5d83904bed1b19a2ca4`. B17 settings work is in progress separately.
