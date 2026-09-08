@@ -318,29 +318,32 @@ fn files(
         format!("data/approvals/{}.json", approval.revision),
         serde_json::to_vec_pretty(&receipt)?,
     );
-    for app in &approval.payload.apps {
-        if context.contains(&app.id) {
-            continue;
+    for media in approval
+        .payload
+        .apps
+        .iter()
+        .filter(|a| !context.contains(&a.id))
+        .flat_map(|a| a.media.iter())
+        .chain(approval.payload.recipes.iter().flat_map(|r| r.media.iter()))
+    {
+        let key = url::Url::parse(&media.url)
+            .ok()
+            .and_then(|u| {
+                u.path_segments()
+                    .and_then(|mut s| s.next_back())
+                    .map(str::to_owned)
+            })
+            .ok_or(Error::new(422, "media_reference_invalid"))?;
+        if !key.starts_with(&media.sha256) {
+            return Err(Error::new(422, "media_reference_invalid"));
         }
-        for media in &app.media {
-            let key = url::Url::parse(&media.url)
-                .ok()
-                .and_then(|u| {
-                    u.path_segments()
-                        .and_then(|mut s| s.next_back())
-                        .map(str::to_owned)
-                })
-                .ok_or(Error::new(422, "media_reference_invalid"))?;
-            if !key.starts_with(&media.sha256) {
-                return Err(Error::new(422, "media_reference_invalid"));
-            }
-            let bytes = objects.read_private(&key, VIDEO_LIMIT)?;
-            if digest(&bytes) != media.sha256 {
-                return Err(Error::new(409, "media_digest_mismatch"));
-            }
-            files.insert(format!("media/{key}"), bytes);
+        let bytes = objects.read_private(&key, VIDEO_LIMIT)?;
+        if digest(&bytes) != media.sha256 {
+            return Err(Error::new(409, "media_digest_mismatch"));
         }
+        files.insert(format!("media/{key}"), bytes);
     }
+
     Ok(files)
 }
 async fn commit_files(

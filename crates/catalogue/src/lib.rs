@@ -9,6 +9,7 @@ pub mod editorial;
 pub mod http;
 pub mod preparation;
 pub mod query;
+pub mod setups;
 
 pub const MAX_CATALOGUE_BYTES: usize = 8 * 1024 * 1024;
 
@@ -293,6 +294,14 @@ pub struct Recipe {
     pub parent: Option<String>,
     pub rights: String,
     pub components: Vec<Component>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub media: Vec<Media>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub settings: Vec<setups::SettingReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_revision: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -302,6 +311,8 @@ pub struct Component {
     pub release_id: String,
     pub optional: bool,
     pub depends_on: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conflicts: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -682,6 +693,13 @@ impl Catalogue {
         }
         slugs.clear();
         for (recipe_index, recipe) in self.recipes.iter().enumerate() {
+            for error in setups::validate(recipe) {
+                check(
+                    false,
+                    format!("recipes.{recipe_index}.{}", error.path),
+                    &error.code,
+                );
+            }
             let p = format!("recipes.{recipe_index}");
             check(
                 token(&recipe.id) && ids.insert(recipe.id.clone()) && token(&recipe.revision),

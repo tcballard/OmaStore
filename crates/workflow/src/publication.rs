@@ -390,7 +390,17 @@ impl Store {
             }
         }
         for proposed in &approval.payload.recipes {
+            if let Some(maker) = base.makers.iter().find(|m| m.id == proposed.maker_id) {
+                if !owns_entity(&c, &approval.owner, "maker", &maker.id)?
+                    && !controls(&c, &approval.owner, &maker.homepage, now)?
+                {
+                    return Err(Error::new(403, "setup_author_control_required"));
+                }
+            }
             if let Some(old) = base.recipes.iter().find(|r| r.id == proposed.id) {
+                if old != proposed && old.revision == proposed.revision {
+                    return Err(Error::new(409, "setup_revision_reused"));
+                }
                 if old != proposed && !owns_entity(&c, &approval.owner, "setup", &old.id)? {
                     return Err(Error::new(403, "existing_setup_control_required"));
                 }

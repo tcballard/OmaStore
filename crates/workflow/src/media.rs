@@ -403,11 +403,14 @@ impl Store {
             if total+asset.bytes.len() as i64>200*1024*1024 {return Err(Error::new(422,"media_quota_exceeded"));}
             let raw:String=t.query_row("SELECT candidate FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;
             let draft:Value=serde_json::from_str(&raw)?;
-            let count=draft["apps"][0]["media"].as_array().map(|m|m.iter().filter(|m|m["kind"]==upload.kind).count()).unwrap_or(0);
+            let kind:String=t.query_row("SELECT kind FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;
+            let collection=match kind.as_str(){"app"=>"apps","setup"=>"recipes",_=>return Err(Error::new(422,"media_not_supported_for_draft"))};
+            let count=draft[collection][0]["media"].as_array().map(|m|m.iter().filter(|m|m["kind"]==upload.kind).count()).unwrap_or(0);
             if count>=if upload.kind=="screenshot"{5}else{1} {return Err(Error::new(422,"media_count_exceeded"));}
             objects.put_private(&object_key,&asset.bytes)?;
             let raw:String=t.query_row("SELECT candidate FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;let mut candidate:Value=serde_json::from_str(&raw)?;
-            let list=candidate["apps"][0]["media"].as_array_mut().ok_or(Error::new(422,"draft_needs_app_fields"))?;
+            if candidate[collection][0]["media"].is_null(){candidate[collection][0]["media"]=json!([]);}
+            let list=candidate[collection][0]["media"].as_array_mut().ok_or(Error::new(422,"draft_needs_media_fields"))?;
             let id=t.query_row("SELECT id FROM media WHERE draft_id=?1 AND digest=?2 AND kind=?3",params![upload.draft_id,sha,upload.kind],|r|r.get::<_,String>(0)).optional()?.unwrap_or(nonce()?);
             let item=json!({"kind":upload.kind,"url":format!("https://raw.githubusercontent.com/tcballard/OmaStore/catalogue-live/media/{object_key}"),"alt":upload.alt,"rights":upload.rights,"sha256":sha});list.push(item.clone());
             let candidate=serde_json::to_string(&candidate)?;if candidate.len()>crate::drafts::MAX_DRAFT_BYTES {return Err(Error::new(413,"candidate_too_large"));}
@@ -441,7 +444,7 @@ impl Store {
             if recheck(&c, actor, "reviewer").is_err() {
                 return Err(Error::new(404, "media_unavailable"));
             }
-            let submitted:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM revisions r,json_each(r.candidate,'$.apps') a,json_each(a.value,'$.media') m WHERE r.draft_id=?1 AND json_extract(m.value,'$.sha256')=?2)",params![draft,sha],|r|r.get(0))?;
+            let submitted:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM revisions r,json_each(r.candidate,'$.apps') a,json_each(a.value,'$.media') m WHERE r.draft_id=?1 AND json_extract(m.value,'$.sha256')=?2) OR EXISTS(SELECT 1 FROM revisions r,json_each(r.candidate,'$.recipes') a,json_each(a.value,'$.media') m WHERE r.draft_id=?1 AND json_extract(m.value,'$.sha256')=?2)",params![draft,sha],|r|r.get(0))?;
             if !submitted {
                 return Err(Error::new(404, "media_unavailable"));
             }
@@ -478,5 +481,157 @@ mod tests {
         let mut bytes = Cursor::new(Vec::new());
         too_large.write_to(&mut bytes, ImageFormat::Png).unwrap();
         assert!(normalize("icon", bytes.get_ref(), &objects).is_err());
+    }
+}
+
+#[cfg(all(test, feature = "development-workflow"))]
+mod setup_tests {
+    use super::*;
+    use crate::drafts::Command;
+    #[test]
+    fn recipe_media_stays_private_until_submission_and_reuses_published_app_context() {
+        let dir = tempfile::tempdir().unwrap();
+        let s = Store::development(&dir.path().join("workflow.db")).unwrap();
+        let objects = LocalObjects::new(&dir.path().join("objects")).unwrap();
+        let now = crate::now();
+        let login = s.development_login("author", now).unwrap();
+        let author = s.actor(login["token"].as_str().unwrap(), now).unwrap();
+        let login = s.development_login("reviewer", now).unwrap();
+        let reviewer = s.actor(login["token"].as_str().unwrap(), now).unwrap();
+        let base: omastore_catalogue::Catalogue =
+            serde_json::from_str(include_str!("../../../tests/fixtures/catalogue.json")).unwrap();
+        s.seed_sample_context(&base).unwrap();
+        let mut candidate = base.clone();
+        candidate.apps.clear();
+        candidate.stories.clear();
+        candidate.makers[0].id = "setup-author".into();
+        candidate.makers[0].slug = "setup-author".into();
+        candidate.recipes[0].id = "sample-setup".into();
+        candidate.recipes[0].slug = "sample-setup".into();
+        candidate.recipes[0].maker_id = "setup-author".into();
+        let draft = s
+            .command(
+                &author,
+                &nonce().unwrap(),
+                Command::CreateDraft {
+                    kind: "setup".into(),
+                    candidate: json!(candidate),
+                    base_revision: None,
+                },
+                now,
+            )
+            .unwrap();
+        let id = draft["id"].as_str().unwrap();
+        let mut png = Cursor::new(Vec::new());
+        image::DynamicImage::new_rgba8(4, 4)
+            .write_to(&mut png, ImageFormat::Png)
+            .unwrap();
+        let asset = normalize("icon", png.get_ref(), &objects).unwrap();
+        let media = s
+            .attach_media(
+                &author,
+                Upload {
+                    draft_id: id,
+                    version: 1,
+                    kind: "icon",
+                    alt: "Fictional setup icon",
+                    rights: "Test fixture",
+                    key: &nonce().unwrap(),
+                },
+                &asset,
+                &objects,
+                now,
+            )
+            .unwrap();
+        let mid = media["id"].as_str().unwrap();
+        assert!(s.private_media_key(&reviewer, mid).is_err());
+        let preview = s
+            .command(
+                &author,
+                &nonce().unwrap(),
+                Command::PrepareDraft {
+                    id: id.into(),
+                    version: 2,
+                },
+                now,
+            )
+            .unwrap();
+        assert_eq!(preview["errors"], json!([]));
+        assert_eq!(
+            preview["candidate"]["recipes"][0]["media"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(preview["candidate"]["apps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|a| a["media"].as_array().unwrap().is_empty()));
+        let revision = s
+            .command(
+                &author,
+                &nonce().unwrap(),
+                Command::SubmitDraft {
+                    id: id.into(),
+                    version: 3,
+                    confirm_public_preview: true,
+                },
+                now,
+            )
+            .unwrap();
+        let rid = revision["id"].as_str().unwrap();
+        assert!(s.private_media_key(&reviewer, mid).is_ok());
+        let job = s.lease_checks(now).unwrap().unwrap();
+        assert!(matches!(
+            s.media_findings(&job).unwrap().result,
+            crate::checks::Outcome::Pass
+        ));
+        let findings = ["schema", "links", "media"].map(|name| crate::checks::Finding {
+            check: name.into(),
+            result: crate::checks::Outcome::Pass,
+            code: "fixture_review".into(),
+            detail: "Explicit local fixture observation.".into(),
+            private: false,
+        });
+        s.finish_checks(&job, &findings, now).unwrap();
+        let version = s.revision(&author, rid).unwrap()["version"]
+            .as_i64()
+            .unwrap();
+        let approved = s
+            .command(
+                &reviewer,
+                &nonce().unwrap(),
+                Command::ReviewDecision {
+                    id: rid.into(),
+                    version,
+                    decision: "approve".into(),
+                    reason: "Reviewed fictional setup rights and selective components".into(),
+                    acknowledge_limits: true,
+                },
+                now,
+            )
+            .unwrap();
+        s.command(
+            &author,
+            &nonce().unwrap(),
+            Command::RequestPublication {
+                id: rid.into(),
+                version: approved["version"].as_i64().unwrap(),
+            },
+            now,
+        )
+        .unwrap();
+        crate::sample_publication::rehearse(
+            &s,
+            &author,
+            rid,
+            &objects,
+            &dir.path().join("catalogue.json"),
+        )
+        .unwrap();
+        assert!(!s.release_feed(None).unwrap().contains("<item>"));
+        assert_eq!(s.delivered_catalogue().unwrap().unwrap().recipes.len(), 2);
     }
 }

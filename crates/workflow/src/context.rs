@@ -151,16 +151,13 @@ pub(crate) fn prepare(
             .iter()
             .any(|a| a.licence.class == LicenceClass::Proprietary)
     {
-        // Require current author control of this project, independently of public maker labels.
+        // Proprietary submissions require the publisher-domain challenge. A fork's source proof cannot substitute.
         for app in &c.apps {
-            let target = project_target(&app.homepage);
-            let source = app
-                .source
-                .as_ref()
-                .and_then(|s| crate::auth::claim_target(s).ok())
-                .map(|v| v.0)
+            let target = url::Url::parse(&app.homepage)
+                .ok()
+                .map(|u| u.origin().ascii_serialization())
                 .unwrap_or_default();
-            let owns:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM claims WHERE user_id=?1 AND target IN (?2,?3) AND revoked_at IS NULL AND expires_at>?4)",params![actor.id,target,source,now],|r|r.get(0))?;
+            let owns:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM claims WHERE user_id=?1 AND target=?2 AND revoked_at IS NULL AND expires_at>?3)",params![actor.id,target,now],|r|r.get(0))?;
             if !owns {
                 return Err(Error::new(403, "verified_project_control_required"));
             }
@@ -468,6 +465,36 @@ mod tests {
             .unwrap()
             .code,
             "candidate_cannot_self_verify"
+        );
+    }
+    #[test]
+    fn proprietary_submission_requires_publisher_domain_even_with_source_control() {
+        let s = Store::memory().unwrap();
+        let now = crate::now();
+        let (a, _) = crate::auth::test_actor(&s, "author", now);
+        let mut c: Value =
+            serde_json::from_str(include_str!("../../../docs/examples/submission.json")).unwrap();
+        c["apps"][0]["licence"]["class"] = json!("proprietary");
+        c["apps"][0]["source"] = json!("https://github.com/example/project");
+        s.connection()
+            .unwrap()
+            .execute(
+                "INSERT INTO claims VALUES(?1,?2,?3,?4,?5,NULL)",
+                params![
+                    "https://github.com/example/project",
+                    a.id,
+                    "https://example.com/proof",
+                    now,
+                    now + 30 * 86400
+                ],
+            )
+            .unwrap();
+        assert_eq!(
+            prepare(&s.connection().unwrap(), &a, c, "app", now)
+                .err()
+                .unwrap()
+                .code,
+            "verified_project_control_required"
         );
     }
 }

@@ -181,20 +181,24 @@ impl Store {
             detail["runtimeEvidence"] = json!([]);
         }
         let mut media = Vec::new();
-        for app in &candidate.apps {
-            for asset in &app.media {
-                if let Some(media_id) = c
-                    .query_row(
-                        "SELECT id FROM media WHERE owner=?1 AND digest=?2 LIMIT 1",
-                        params![detail["owner"].as_str().unwrap_or(""), asset.sha256],
-                        |r| r.get::<_, String>(0),
-                    )
-                    .optional()?
-                {
-                    media.push(json!({"id":media_id,"kind":asset.kind,"alt":asset.alt,"rights":asset.rights,"sha256":asset.sha256}));
-                }
+        for asset in candidate
+            .apps
+            .iter()
+            .flat_map(|a| a.media.iter())
+            .chain(candidate.recipes.iter().flat_map(|r| r.media.iter()))
+        {
+            if let Some(media_id) = c
+                .query_row(
+                    "SELECT id FROM media WHERE owner=?1 AND digest=?2 LIMIT 1",
+                    params![detail["owner"].as_str().unwrap_or(""), asset.sha256],
+                    |r| r.get::<_, String>(0),
+                )
+                .optional()?
+            {
+                media.push(json!({"id":media_id,"kind":asset.kind,"alt":asset.alt,"rights":asset.rights,"sha256":asset.sha256}));
             }
         }
+
         detail["media"] = json!(media);
         // Compare against the immediate prior immutable revision of this author's draft.
         let prior:Option<String>=c.query_row("SELECT p.candidate FROM revisions p JOIN revisions r ON p.draft_id=r.draft_id WHERE r.id=?1 AND p.number<r.number ORDER BY p.number DESC LIMIT 1",[id],|r|r.get(0)).optional()?;
