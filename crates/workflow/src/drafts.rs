@@ -367,7 +367,11 @@ pub fn validate_candidate(bytes: &[u8], kind: &str) -> Result<Catalogue> {
         return Err(Error::new(413, "candidate_too_large"));
     }
     let mut c = Catalogue::parse(bytes, true).map_err(|_| Error::new(422, "candidate_invalid"))?;
-    if (kind == "app" && (c.apps.len() != 1 || !c.recipes.is_empty() || !c.editorial.is_empty()))
+    if (kind == "app"
+        && (c.apps.len() != 1
+            || !c.recipes.is_empty()
+            || !c.editorial.is_empty()
+            || !c.stories.is_empty()))
         || (kind == "setup" && c.recipes.len() != 1)
         || c.makers.len() > 10
         || (kind != "app" && kind != "setup" && kind != "editorial")
@@ -375,9 +379,12 @@ pub fn validate_candidate(bytes: &[u8], kind: &str) -> Result<Catalogue> {
         return Err(Error::new(422, "candidate_scope_invalid"));
     }
     if c.apps.iter().any(|a| !a.tests.is_empty())
-        || c.makers
-            .iter()
-            .any(|m| m.claim != omastore_catalogue::Claim::Unclaimed || m.claim_evidence.is_some())
+        || c.makers.iter().any(|m| {
+            m.claim != omastore_catalogue::Claim::Unclaimed
+                || m.claim_evidence.is_some()
+                || m.claim_verified_at.is_some()
+                || m.claim_expires_at.is_some()
+        })
     {
         return Err(Error::new(422, "candidate_cannot_self_verify"));
     }
@@ -386,9 +393,12 @@ pub fn validate_candidate(bytes: &[u8], kind: &str) -> Result<Catalogue> {
 }
 pub fn candidate_digest(c: &Catalogue) -> Result<String> {
     // All publishable content is bound. Delivery timestamps/revisions are assigned by the publisher.
-    Ok(digest(serde_json::to_vec(
-        &json!({"apps":c.apps,"makers":c.makers,"recipes":c.recipes,"editorial":c.editorial}),
-    )?))
+    let mut value =
+        json!({"apps":c.apps,"makers":c.makers,"recipes":c.recipes,"editorial":c.editorial});
+    if !c.stories.is_empty() {
+        value["stories"] = json!(c.stories);
+    }
+    Ok(digest(serde_json::to_vec(&value)?))
 }
 
 #[cfg(test)]

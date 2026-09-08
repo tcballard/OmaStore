@@ -2,7 +2,7 @@
 
 ## Full-scope continuation
 
-Tom authorised implementing all scoped bundles on 8 September 2026, making engineering decisions autonomously and committing regularly. The restored starting revision is `1bc14e0edd512c21af364a42e5c180193f40ad9d`; work continues on `build/author-workflows`. The earlier preview receipt below remains historical evidence, not a description of the full implementation's completion.
+Tom authorised implementing all scoped bundles on 8 September 2026, making engineering decisions autonomously and committing regularly. The restored starting revision is `1bc14e0edd512c21af364a42e5c180193f40ad9d`; B04–B09 are on `build/author-workflows`; the next stack continues on `build/native-marketplace`. The earlier preview receipt below remains historical evidence, not a description of the full implementation's completion.
 
 B04a adds the private SQLite identity/role/session/claim authority, GitHub authorization-code/PKCE adapter, desktop proof binding, single-use callbacks, expiring scoped control challenges, DNS-pinned bounded public reads and a production/development database boundary. Four focused tests pass, including populated-database restart, cross-account/replay rejection and session/role revocation. Formatting and Clippy with all features and warnings denied pass. Native/service wiring follows in B04b. A registered provider and real callback remain live integration evidence; they do not block subsequent implementation.
 
@@ -13,6 +13,12 @@ B04b starts from B04a and adds the Axum HTTP boundary, bounded request handling,
 B04b validation: all 19 Rust tests pass (plus the previously separate performance sample), full-workspace Clippy with all features and warnings denied passes, and all 8 demo CTest checks pass. These include actual HTTP/core parity, the native sample-author sign-in, worksheet keyboard flow, three logical sizes and 200% scaling. A dialog sizing loop introduced by the nested author tabs was found and fixed. The local SDK is Qt 6.8.3; CMake/Cargo build resources were bounded after recovering a damaged generated dependency artifact. Real GitHub callback/keyring/Omarchy evidence is still outstanding. Next implementation: B05.
 
 Rollback: revert the B04a implementation and retain private database files for recovery. No external provider registration, author account, machine package or desktop setting has been changed.
+
+## Marketplace continuation receipts
+
+B10a adds bounded maker profiles, scoped claim labels with expiry, scheduled editorial records, independent editor approval checks, and delivered-release RSS. Release title corrections retain their original GUID and first delivery date. No feed entry is created by approval, PR creation or an unavailable public deployment. Existing catalogue and approval bytes remain stable when the new optional fields are absent. All 38 Rust tests and workspace Clippy with warnings denied pass. Native maker/editorial authoring and frozen published context follow in B10b.
+
+B09 is published as `7a55710df30bce03f8e88e19a7681411a8354495`, matching local `9fe06645236976d2928d1b1bda79918640c6bccf` and tree `eefe47cde5e29163785f4b3907abf2dd23255adf`.
 
 ## Author continuation receipts
 

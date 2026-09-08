@@ -252,6 +252,9 @@ pub(crate) fn decide(
         return Err(Error::new(409, "transition_unavailable"));
     }
     let candidate: Catalogue = serde_json::from_str(&raw)?;
+    if !candidate.stories.is_empty() || !candidate.editorial.is_empty() {
+        recheck(t, actor, "editor")?;
+    }
     independent(t, actor, &owner, &candidate, now)?;
     let payload = if decision == "approve" {
         if !acknowledge {

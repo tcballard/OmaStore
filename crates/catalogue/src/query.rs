@@ -153,7 +153,7 @@ pub fn app_detail(
     };
     Ok(json!({"snapshot": catalogue.snapshot_id(), "app": app,
         "release": app.current_release(), "summary": summary(app, now),
-        "makers": catalogue.makers.iter().filter(|m| app.maker_ids.contains(&m.id)).collect::<Vec<_>>(),
+        "makers": catalogue.makers.iter().filter(|m| app.maker_ids.contains(&m.id)).map(|m|crate::editorial::maker_summary(m,now)).collect::<Vec<_>>(),
         "acquisition": {"kind": "external", "label": label, "url": if paid { app.offers[0].url.as_str() } else { app.current_release().route.url() },
             "reason": "Managed installation is not available in this preview."}}))
 }

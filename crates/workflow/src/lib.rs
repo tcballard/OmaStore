@@ -2,6 +2,7 @@
 pub mod auth;
 pub mod checks;
 pub mod drafts;
+pub mod feeds;
 pub mod github;
 pub mod media;
 pub mod monitor;

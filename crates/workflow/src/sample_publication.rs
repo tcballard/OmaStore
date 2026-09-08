@@ -410,6 +410,7 @@ mod tests {
             Catalogue::parse(&std::fs::read(&path).unwrap(), true).unwrap(),
             base
         );
+        assert!(!s.release_feed(None).unwrap().contains("<item>"));
         api.merge(1).unwrap();
         api.state.lock().unwrap().public_unavailable = true;
         assert_eq!(
@@ -421,6 +422,7 @@ mod tests {
         );
         assert_eq!(s.publication(&a, &id).unwrap()["state"], "merged");
         assert_eq!(s.revision(&a, &id).unwrap()["state"], "publication_pending");
+        assert!(!s.release_feed(None).unwrap().contains("<item>"));
         api.state.lock().unwrap().public_unavailable = false;
         publisher::reconcile(&s, &api, &objects, &target, &id, &path)
             .await
@@ -432,6 +434,22 @@ mod tests {
             &s.approved(&id, now()).unwrap().payload
         ));
         assert_eq!(api.state.lock().unwrap().prs.len(), 1);
+        let feed = s.release_feed(None).unwrap();
+        assert_eq!(feed.matches("<item>").count(), 1);
+        let first = s.approved(&id, now()).unwrap().payload;
+        let guid = format!(
+            "urn:omastore:release:{}:{}",
+            first.apps[0].id, first.apps[0].current_release_id
+        );
+        assert!(feed.contains(&guid));
+        let mut corrected = first;
+        corrected.apps[0].name = "A & B <corrected>".into();
+        s.transaction(|t| crate::feeds::delivered(t, &id, &corrected, now() + 10))
+            .unwrap();
+        let feed = s.release_feed(None).unwrap();
+        assert_eq!(feed.matches("<item>").count(), 1);
+        assert!(feed.contains(&guid));
+        assert!(feed.contains("A &amp; B &lt;corrected&gt;"));
     }
     #[test]
     fn rehearsal_is_idempotent_local_and_never_accepts_a_production_database() {

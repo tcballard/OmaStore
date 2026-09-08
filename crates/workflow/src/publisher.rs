@@ -661,6 +661,10 @@ fn preserves_delivered(live: &Catalogue, next: &Catalogue, changed: &Catalogue) 
             .filter(|r| !changed.recipes.iter().any(|c| c.id == r.id))
             .all(|r| next.recipes.contains(r))
         && live.editorial.iter().all(|e| next.editorial.contains(e))
+        && live
+            .stories
+            .iter()
+            .all(|s| changed.stories.iter().any(|n| n.id == s.id) || next.stories.contains(s))
 }
 pub fn atomic_catalogue(path: &Path, catalogue: &Catalogue) -> Result<()> {
     use std::io::Write;

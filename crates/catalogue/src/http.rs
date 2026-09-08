@@ -47,6 +47,14 @@ pub fn handle(
         if !raw.is_empty() {
             return Err("invalid_filter");
         }
+        if path == "/api/v1/makers" {
+            return Ok(
+                json!({"items":catalogue.makers.iter().take(100).map(|m|crate::editorial::maker_summary(m,now)).collect::<Vec<_>>()}),
+            );
+        }
+        if path == "/api/v1/editorial" {
+            return Ok(crate::editorial::stories(catalogue, now));
+        }
         if path == "/api/v1/catalogue" {
             return Ok(serde_json::to_value(catalogue).unwrap());
         }
@@ -56,12 +64,7 @@ pub fn handle(
         }
         match parts[3] {
             "apps" => query::app_detail(catalogue, parts[4], now),
-            "makers" => catalogue
-                .makers
-                .iter()
-                .find(|m| m.id == parts[4] || m.slug == parts[4])
-                .map(|m| json!(m))
-                .ok_or("not_found"),
+            "makers" => crate::editorial::maker_detail(catalogue, parts[4], now),
             "setups" => catalogue
                 .recipes
                 .iter()
