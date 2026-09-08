@@ -1259,6 +1259,7 @@ dependencies = [
  "chrono",
  "omastore-catalogue",
  "omastore-workflow",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",

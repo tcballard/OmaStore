@@ -1,4 +1,6 @@
 mod catalogue;
+mod handoff;
+mod library;
 mod planner;
 mod platform;
 mod setups;
@@ -68,6 +70,17 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
             Err(e) => error(Some(&request.id), e.code),
         };
     }
+    if request.method.starts_with("library.")
+        || request.method.starts_with("operations.")
+        || request.method == "handoff.open"
+    {
+        return match local_request(runtime, &request.method, request.params) {
+            Ok(value) => {
+                json!({"protocol_version":PROTOCOL_VERSION,"id":request.id,"ok":true,"result":value})
+            }
+            Err(code) => error(Some(&request.id), code),
+        };
+    }
     if request.method == "system.probe" || request.method == "system.plan" {
         let result = if request.method == "system.probe" && request.params == json!({}) {
             Ok(platform::probe().summary())
@@ -94,7 +107,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
@@ -179,7 +192,7 @@ fn prepare_plan(runtime: &mut Runtime, params: Value) -> platform::Result<Value>
         let (host, status, packages) = planner::sample(
             &runtime.catalogue.catalogue,
             &selection,
-            Default::default(),
+            library::Store::open(true)?.sample_packages()?,
             now,
         )?;
         let plan = planner::build(
@@ -191,6 +204,7 @@ fn prepare_plan(runtime: &mut Runtime, params: Value) -> platform::Result<Value>
             now,
         )?;
         let value = serde_json::to_value(&plan).map_err(|_| "plan_invalid")?;
+        library::Store::open(runtime.demo)?.save_plan(&plan)?;
         runtime.plan = Some(plan);
         return Ok(value);
     }
@@ -217,8 +231,100 @@ fn prepare_plan(runtime: &mut Runtime, params: Value) -> platform::Result<Value>
         now,
     )?;
     let value = serde_json::to_value(&plan).map_err(|_| "plan_invalid")?;
+    library::Store::open(runtime.demo)?.save_plan(&plan)?;
     runtime.plan = Some(plan);
     Ok(value)
+}
+
+fn local_request(runtime: &mut Runtime, method: &str, params: Value) -> platform::Result<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Page {
+        #[serde(default)]
+        offset: u32,
+    }
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Lookup {
+        id: String,
+    }
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Events {
+        id: String,
+        #[serde(default)]
+        after: u64,
+    }
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Launch {
+        id: String,
+        desktop: String,
+    }
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Handoff {
+        uri: String,
+    }
+    if method == "handoff.open" {
+        let p: Handoff = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+        return handoff::open(&runtime.catalogue.catalogue, &p.uri);
+    }
+    let mut store = library::Store::open(runtime.demo)?;
+    match method {
+        "library.list" | "library.refresh" => {
+            let p: Page = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            let mut value = store.view(p.offset)?;
+            if method == "library.refresh" {
+                let host = local_host(runtime, &store)?;
+                store.observe(
+                    &runtime.catalogue.catalogue,
+                    &host,
+                    chrono::Utc::now().timestamp(),
+                )?;
+                value = store.view(p.offset)?;
+                value["host"] = host.summary();
+            }
+            Ok(value)
+        }
+        "library.launchers" => {
+            let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            Ok(json!({"id":p.id,"items":store.launchers(&p.id)?}))
+        }
+        "library.launch" => {
+            let p: Launch = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            store.launch(&p.id, &p.desktop)
+        }
+        "operations.get" => {
+            let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            let plan = store.plan(&p.id)?;
+            Ok(json!({"plan":plan,"events":store.events(&p.id,0)?}))
+        }
+        "operations.events" => {
+            let p: Events = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            if p.after > i64::MAX as u64 {
+                return Err("invalid_sequence");
+            }
+            store.events(&p.id, p.after as i64)
+        }
+        _ => Err("unknown_method"),
+    }
+}
+fn local_host(runtime: &Runtime, store: &library::Store) -> platform::Result<platform::Host> {
+    #[cfg(feature = "development-catalogue")]
+    if runtime.demo {
+        if let Some(app) = runtime.catalogue.catalogue.apps.first() {
+            return planner::sample(
+                &runtime.catalogue.catalogue,
+                &planner::Selection::App { id: app.id.clone() },
+                store.sample_packages()?,
+                chrono::Utc::now().timestamp(),
+            )
+            .map(|v| v.0);
+        }
+    }
+    let _ = (runtime, store);
+    Ok(platform::probe())
 }
 
 fn serve(mut input: impl BufRead, mut output: impl Write, runtime: &mut Runtime) -> io::Result<()> {

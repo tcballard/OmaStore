@@ -14,7 +14,7 @@ Dialog {
     standardButtons:Dialog.Close
     Connections {
         target:dialog.core
-        function onCommunityChanged(){if(dialog.plan.digest && dialog.plan.digest!==dialog.shownDigest){dialog.shownDigest=dialog.plan.digest;dialog.open();}}
+        function onCommunityChanged(){if(!dialog.plan.digest)dialog.shownDigest="";if(dialog.plan.digest && dialog.plan.digest!==dialog.shownDigest){dialog.shownDigest=dialog.plan.digest;dialog.open();}}
     }
     ScrollView {
         anchors.fill:parent;contentWidth:availableWidth;clip:true

@@ -29,6 +29,7 @@ public:
     explicit CoreBridge(bool demo = false, QObject *parent = nullptr);
     ~CoreBridge() override;
     Q_INVOKABLE void start();
+    void openHandoff(const QString &uri);
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void setFilter(const QString &key, const QString &value);
     Q_INVOKABLE void clearFilters();
@@ -72,6 +73,7 @@ signals:
     void candidatePrepared(const QVariantMap &result);
     void workspaceChanged();
     void communityChanged();
+    void handoffReady(const QVariantMap &identity);
 private:
     struct Pending { QString method; qint64 since; int generation; bool append; };
     void request(const QString &method, const QVariantMap &params = {});
@@ -92,6 +94,7 @@ private:
     QVariantMap m_catalogue, m_detail, m_query, m_distribution;
     qint64 m_distributionUntil=0;
     QTimer m_distributionExpiry;
+    QString m_pendingHandoff;
     QVariantMap m_community;
     QMap<QString,QString> m_communityRequests;
     QVariantMap m_workspace, m_workspaceReply;

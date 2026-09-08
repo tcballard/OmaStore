@@ -1,5 +1,9 @@
 # Build handoff
 
+B13 adds a private local SQLite library, persistent exact proposals/events, external installed-version observations, cached reads, package-owned desktop launcher selection, strict identity-only URI handling and a per-user single-window lock/session-bus handoff. All 49 Rust tests and ordinary/development Clippy pass. Eight native checks pass (23.14 seconds); the additional two-process D-Bus test skipped because this environment cannot create the isolated bus. CI must run that test. Real Omarchy focus/launcher/offline-launch evidence remains outstanding. B14–B15 consent, independent execution and recovery follow; no host package mutation occurred.
+
+B12 is published as `e90a4393322745a2e94d93699b6a6a7898ff7930`, matching local `82789a8c35d2728170bb78b25ec9db725f8cc28c` and tree `6bec1d582354017b9681d54eb332d13510727eb5`.
+
 B12 implements bounded read-only Omarchy/Arch probing, signature-policy checks, installed/update queries, dependency resolution, deterministic typed proposals and native plan review from app/setup details. Exact repository package versions are separate from display release versions. Unknown hosts, stale or changed status, signature exceptions, replacements/conflicts and system upgrades remain explicit blockers. All 47 Rust tests, ordinary/development Clippy and 8 native checks pass (22.00 seconds). A transient empty C++ object was rebuilt serially; the resulting full native suite passed. No real Omarchy package probe or package mutation was performed. B13 is next.
 
 B11b is published as `dbe284298e523cd6d21a822fc266c25b3db0b134`, matching local `8ee22d0777663e65f74cf1923bf1439c1d2d69c7` and tree `2374bd67937dbb253629a693e9a8fa7dd58b211f`.

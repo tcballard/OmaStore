@@ -25,7 +25,7 @@ CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(dem
     m_timeout.setInterval(1000);
     connect(&m_timeout, &QTimer::timeout, this, [this] {
         for (const auto &pending : m_pending) {
-            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("system.") ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
+            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("system.") || pending.method.startsWith("library.") ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
         }
     });
     connect(&m_process, &QProcess::started, this, [this] { request("core.info"); });
@@ -55,7 +55,7 @@ void CoreBridge::start() {
 void CoreBridge::request(const QString &method, const QVariantMap &params) {
     if (m_process.state() != QProcess::Running || m_pending.size() >= 16) return;
     const QString id = QString::number(++m_sequence);
-    if (method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick" || method.startsWith("system.")) m_communityRequests[method]=id;
+    if (method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick" || method.startsWith("system.") || method.startsWith("library.") || method.startsWith("operations.") || method=="handoff.open") m_communityRequests[method]=id;
     if (method == "candidate.prepare") m_candidateRequest = id;
     m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor")});
     const QJsonObject envelope{{"protocol_version", 1}, {"id", id}, {"method", method}, {"params", QJsonObject::fromVariantMap(params)}};
@@ -140,12 +140,20 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         }
         emit workspaceChanged();
     } else if (m_communityRequests.value(pending.method)==id) {
-        m_community.insert(pending.method=="setups.import"?"setups.select":pending.method,result); emit communityChanged();
+        m_community.insert(pending.method=="setups.import"?"setups.select":pending.method=="library.refresh"?"library.list":pending.method,result);
+        if(pending.method=="operations.get") m_community.insert("system.plan",result.value("plan").toMap());
+        emit communityChanged();
+        if(pending.method=="handoff.open") {
+            if(result.value("kind").toString()=="app")showApp(result.value("id").toString());
+            else communityAction("setups.select",{{"id",result.value("id")},{"revision",result.value("revision")}});
+            emit handoffReady(result);
+        }
     } else if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
         emit candidatePrepared(result);
     } else if (pending.method == "core.info") {
         if (result.value("service").toString() != "omastore-core" || result.value("version").toString().isEmpty()) { fail("Unsupported local service."); return; }
         m_ready = true; m_version = result.value("version").toString(); request("catalogue.info");
+        if(!m_pendingHandoff.isEmpty()) { const auto uri=m_pendingHandoff;m_pendingHandoff.clear();communityAction("handoff.open",{{"uri",uri}}); }
     } else if (pending.method == "catalogue.info" || pending.method == "catalogue.refresh") {
         m_catalogue = result; search(); communityAction("makers.list"); communityAction("editorial.list"); communityAction("setups.list"); emit dataChanged();
         if (!m_detailRequested.isEmpty()) showApp(m_detailRequested);
@@ -220,8 +228,8 @@ bool CoreBridge::openLink(const QString &kind, int index) {
 bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() && m_distributionUntil>QDateTime::currentSecsSinceEpoch();}
 
 void CoreBridge::communityAction(const QString &method,const QVariantMap &params) {
-    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan"};
-    if(m_ready && methods.contains(method)) { if(method=="system.plan") { m_community.remove(method); emit communityChanged(); } request(method,params); }
+    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan","library.list","library.refresh","library.launchers","library.launch","operations.get","operations.events","handoff.open"};
+    if(m_ready && methods.contains(method)) { if(method=="system.plan" || method=="operations.get") { m_community.remove("system.plan"); emit communityChanged(); } request(method,params); }
 }
 bool CoreBridge::openMakerLink(const QString &kind) {
     if(kind!="homepage" && kind!="support") return false;
@@ -241,3 +249,5 @@ void CoreBridge::copySetupLink() {
     const auto uri=m_community.value("setups.select").toMap().value("shareUri").toString();
     if(uri.startsWith("omastore://setup/") && uri.size()<300) QGuiApplication::clipboard()->setText(uri);
 }
+
+void CoreBridge::openHandoff(const QString &uri) { if(uri.isEmpty() || uri.size()>400)return;if(m_ready)communityAction("handoff.open",{{"uri",uri}});else m_pendingHandoff=uri; }

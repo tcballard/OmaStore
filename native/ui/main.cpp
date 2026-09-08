@@ -1,4 +1,5 @@
 #include "CoreBridge.h"
+#include "Instance.h"
 #include "DesktopSettings.h"
 #include "MediaPreview.h"
 #include "Preparation.h"
@@ -50,7 +51,11 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption demoOption("demo", "Show explicitly fictional development listings.");
     parser.addOption(demoOption);
 #endif
+    parser.addPositionalArgument("uri","Open an OmaStore app or exact setup revision.","[omastore://…]");
     parser.process(app);
+    if(parser.positionalArguments().size()>1)return 2;
+    const QString handoff=parser.positionalArguments().value(0);
+    if(handoff.size()>400 || (!handoff.isEmpty() && !handoff.startsWith("omastore://")))return 2;
 
     bool demo = false;
 #ifdef OMASTORE_DEVELOPMENT_DATA
@@ -63,10 +68,15 @@ int main(int argc, char *argv[]) {
     if (parser.isSet(smokeTest) || parser.isSet(uiTest) || parser.isSet(screenshot)) {
         dataDirectory = testSettings.filePath("data");
         qputenv("XDG_DATA_HOME",testSettings.filePath("xdg-data").toUtf8());
+        qputenv("XDG_STATE_HOME",testSettings.filePath("xdg-state").toUtf8());
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, testSettings.path());
     }
     #endif
+    Instance instance(demo);
+    const auto acquisition=instance.acquire(handoff);
+    if(acquisition==Instance::Forwarded)return 0;
+    if(acquisition==Instance::Unavailable){qWarning("OmaStore is already running but its window could not be reached.");return 2;}
     DesktopSettings desktop;
     const QFont baseFont = app.font();
     QObject::connect(&desktop, &DesktopSettings::changed, &app, [&] {
@@ -86,6 +96,8 @@ int main(int argc, char *argv[]) {
     engine.load(QUrl(QStringLiteral("qrc:/qt/qml/OmaStore/Main.qml")));
     if (engine.rootObjects().isEmpty()) return 1;
     auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+    QObject::connect(&instance,&Instance::requested,&app,[&](const QString &uri){window->show();window->raise();window->requestActivate();core.openHandoff(uri);});
+    instance.ready();
     if (!window) return 1;
 #ifdef OMASTORE_QA
     if (parser.isSet(size)) {
@@ -183,6 +195,18 @@ int main(int argc, char *argv[]) {
                         check(core.community().value("setups.select").toMap().value("selected").toList().size()==2,"native selection identity round trip");
                         QTest::keyClick(window,Qt::Key_Escape);QTest::qWait(50);
                         check(window->property("setupSelection").toString().isEmpty(),"back from setup selection");
+                    }
+                    if(demo) {
+                        auto *library=findItem(window->contentItem(),"navLibrary");
+                        if(library){library->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        const auto local=core.community().value("library.list").toMap();
+                        check(local.value("items").toList().isEmpty(),"proposal is never labelled installed");
+                        check(!local.value("operations").toList().isEmpty(),"proposal survives in the local journal");
+                        core.openHandoff("omastore://setup/demo-writing-desk?revision=1");
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        check(window->property("setupSelection").toString()=="demo-writing-desk","identity handoff opens exact setup");
+                        QTest::keyClick(window,Qt::Key_Escape);QTest::qWait(50);
                     }
                     auto *submit = findItem(window->contentItem(), "navSubmit");
                     if (submit) { submit->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }

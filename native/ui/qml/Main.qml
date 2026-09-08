@@ -62,6 +62,11 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+R"; onActivated: core.refresh() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
 
+    Connections {
+        target:window.core
+        function onHandoffReady(identity){if(identity.kind==="setup"){window.setupSelection=identity.id;window.setupRevision=identity.revision;window.navigate(2);}}
+    }
+    Component {id:libraryPage;LibraryPage {core:window.core;theme:storeTheme}}
     PlanDialog {id:planDialog;core:window.core;theme:storeTheme}
 
     RowLayout {
@@ -155,7 +160,7 @@ ApplicationWindow {
                 id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : (window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
+                sourceComponent: window.showingDetail ? detailPage : (window.section === 3 ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             RowLayout {
