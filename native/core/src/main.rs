@@ -7,6 +7,7 @@ mod planner;
 mod platform;
 mod recovery;
 mod settings;
+mod settings_apply;
 mod setups;
 mod workspace;
 struct Runtime {
@@ -113,7 +114,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["settings.adapters","settings.preview","settings.get","workspace.operations.dashboard","workspace.feed.info","operations.reconcile", "operations.replan", "operations.diagnostics", "operations.diagnostics.export", "library.setups", "library.detach_setup", "library.remember_setup","operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["settings.apply","settings.history","settings.restore_preview","settings.restore","settings.reconcile","settings.adapters","settings.preview","settings.get","workspace.operations.dashboard","workspace.feed.info","operations.reconcile", "operations.replan", "operations.diagnostics", "operations.diagnostics.export", "library.setups", "library.detach_setup", "library.remember_setup","operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),

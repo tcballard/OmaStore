@@ -228,6 +228,15 @@ int main(int argc, char *argv[]) {
                         auto *clockSetting=findItem(window->contentItem(),"settingEnabled-omarchy-clock-placement");check(clockSetting!=nullptr,"native supported settings choices");if(clockSetting){clockSetting->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         auto *previewSettings=findItem(window->contentItem(),"previewSettings");if(previewSettings){previewSettings->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
                         const auto settingsPlan=core.community().value("settings.preview").toMap();check(settingsPlan.value("canApply").toBool()&&settingsPlan.value("simulated").toBool(),"native settings diff remains an explicit fictional proposal");
+                        auto *applySettings=findItem(window->contentItem(),"applySettings");check(applySettings&&applySettings->isVisible()&&!applySettings->isEnabled(),"setting changes require a visible separate consent flow");
+                        auto *settingsConsent=findItem(window->contentItem(),"settingsConsent");if(settingsConsent){settingsConsent->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        if(applySettings){applySettings->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        auto settingsHistory=core.community().value("settings.apply").toMap().value("items").toList();check(!settingsHistory.isEmpty()&&settingsHistory.first().toMap().value("steps").toList().first().toMap().value("state").toString()=="applied","native setting apply records the sample file outcome");
+                        auto *previewRestore=findItem(window->contentItem(),"previewRestore-"+settingsPlan.value("digest").toString());if(previewRestore){previewRestore->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        check(core.community().value("settings.restore_preview").toMap().value("canRestore").toBool(),"native conflict-aware restoration preview");
+                        auto *restoreConsent=findItem(window->contentItem(),"settingsRestoreConsent");if(restoreConsent){restoreConsent->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        auto *restoreSettings=findItem(window->contentItem(),"restoreSettings");if(restoreSettings){restoreSettings->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        settingsHistory=core.community().value("settings.restore").toMap().value("items").toList();check(!settingsHistory.isEmpty()&&settingsHistory.first().toMap().value("steps").toList().first().toMap().value("state").toString()=="restored","native restoration preserves a durable result");
                         auto *closeSettings=findItem(window->contentItem(),"closeSettings");if(closeSettings){closeSettings->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
 
 

@@ -69,6 +69,7 @@ pub struct Environment {
 pub struct Snapshot {
     pub value: Value,
     pub fingerprint: String,
+    pub mode: u32,
 }
 pub fn directory(store: &Store) -> Result<PathBuf> {
     store
@@ -96,7 +97,7 @@ pub fn environment(store: &Store) -> Result<Environment> {
         root,
         simulated: false,
         version: host.omarchy_version.unwrap_or_else(|| "unknown".into()),
-        supported: host.state == "supported",
+        supported: host.state == "supported" && !host.locked,
     })
 }
 pub fn path(env: &Environment, choice: &Choice) -> PathBuf {
@@ -128,16 +129,63 @@ pub fn safe_path(path: &Path) -> Result<()> {
     }
     Ok(())
 }
+pub fn open_parent(path: &Path) -> Result<fs::File> {
+    use std::os::fd::{AsRawFd, FromRawFd};
+    if !path.is_absolute() {
+        return Err("unsafe_settings_path");
+    }
+    let mut dir = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW)
+        .open("/")
+        .map_err(|_| "settings_read_failed")?;
+    for component in path.parent().ok_or("unsafe_settings_path")?.components() {
+        match component {
+            std::path::Component::RootDir => {}
+            std::path::Component::Normal(part) => {
+                let name = std::ffi::CString::new(part.as_encoded_bytes())
+                    .map_err(|_| "unsafe_settings_path")?;
+                let fd = unsafe {
+                    libc::openat(
+                        dir.as_raw_fd(),
+                        name.as_ptr(),
+                        libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+                    )
+                };
+                if fd < 0 {
+                    return Err("unsafe_settings_path");
+                }
+                dir = unsafe { fs::File::from_raw_fd(fd) };
+            }
+            _ => return Err("unsafe_settings_path"),
+        }
+    }
+    Ok(dir)
+}
 pub fn snapshot(env: &Environment, choice: &Choice) -> Result<Snapshot> {
     let path = path(env, choice);
     safe_path(&path)?;
     let existed = path.try_exists().map_err(|_| "settings_read_failed")?;
-    let (body, _mode, identity) = if existed {
-        let mut f = fs::OpenOptions::new()
-            .read(true)
-            .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
-            .open(&path)
-            .map_err(|_| "settings_read_failed")?;
+    let (body, mode, identity) = if existed {
+        use std::os::fd::{AsRawFd, FromRawFd};
+        let dir = open_parent(&path)?;
+        let name = std::ffi::CString::new(
+            path.file_name()
+                .ok_or("unsafe_settings_path")?
+                .as_encoded_bytes(),
+        )
+        .map_err(|_| "unsafe_settings_path")?;
+        let fd = unsafe {
+            libc::openat(
+                dir.as_raw_fd(),
+                name.as_ptr(),
+                libc::O_RDONLY | libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC,
+            )
+        };
+        if fd < 0 {
+            return Err("settings_read_failed");
+        }
+        let mut f = unsafe { fs::File::from_raw_fd(fd) };
         let m = f.metadata().map_err(|_| "settings_read_failed")?;
         if !m.is_file()
             || m.len() > 128 * 1024
@@ -188,7 +236,11 @@ pub fn snapshot(env: &Environment, choice: &Choice) -> Result<Snapshot> {
     let fingerprint = platform::hash(
         &json!({"bytes":platform::digest(&body),"identity":identity,"existed":existed,"version":env.version,"simulated":env.simulated}),
     );
-    Ok(Snapshot { value, fingerprint })
+    Ok(Snapshot {
+        value,
+        fingerprint,
+        mode,
+    })
 }
 pub fn layout(value: &Value) -> Result<&Value> {
     if value["version"] != 1
@@ -249,7 +301,10 @@ pub fn build(request: Request, env: &Environment, now: i64) -> Result<Plan> {
         };
         let observed = snapshot(env, &choice).and_then(|s| {
             let before = match choice {
-                Choice::Theme { .. } => s.value["theme"].clone(),
+                Choice::Theme { .. } => json!(s.value["theme"]
+                    .as_str()
+                    .filter(|v| omastore_catalogue::token(v))
+                    .ok_or("malformed_settings")?),
                 Choice::ClockPlacement { .. } => clock(&s.value)?,
             };
             Ok((s, before))
@@ -319,13 +374,13 @@ pub fn build(request: Request, env: &Environment, now: i64) -> Result<Plan> {
 }
 pub fn save(store: &Store, plan: &Plan) -> Result<Value> {
     db(store.connection.execute(
-        "DELETE FROM settings_plans WHERE created_at<?1",
+        "DELETE FROM settings_plans WHERE created_at<?1 AND NOT EXISTS(SELECT 1 FROM setting_steps s WHERE s.plan_id=settings_plans.id)",
         [plan.created_at - 7 * 86400],
     ))?;
     let count: i64 =
         db(store
             .connection
-            .query_row("SELECT count(*) FROM settings_plans", [], |r| r.get(0)))?;
+            .query_row("SELECT count(*) FROM settings_plans p WHERE NOT EXISTS(SELECT 1 FROM setting_steps s WHERE s.plan_id=p.id)", [], |r| r.get(0)))?;
     if count >= 100 {
         return Err("settings_plan_limit");
     }
@@ -375,7 +430,7 @@ pub fn request(store: &Store, method: &str, params: Value, now: i64) -> Result<V
                 serde_json::from_value(params).map_err(|_| "invalid_settings_request")?;
             serde_json::to_value(stored(store, &p.id)?).map_err(|_| "settings_unavailable")
         }
-        _ => Err("unsupported_method"),
+        _ => crate::settings_apply::request(store, method, params, now),
     }
 }
 
