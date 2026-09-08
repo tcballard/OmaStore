@@ -36,6 +36,33 @@ pub fn working_days(start: i64, end: i64) -> u32 {
     }
     count
 }
+pub(crate) fn start(
+    t: &Transaction<'_>,
+    actor: &Actor,
+    id: &str,
+    version: i64,
+    now: i64,
+) -> Result<Value> {
+    recheck(t, actor, "reviewer")?;
+    let row: Option<(String, String, i64, String)> = t
+        .query_row(
+            "SELECT owner,candidate,version,state FROM revisions WHERE id=?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .optional()?;
+    let (owner, body, current, state) = row.ok_or(Error::new(404, "revision_unavailable"))?;
+    if version != current {
+        return Err(Error::new(409, "stale_revision"));
+    }
+    if !["submitted", "checking", "in_review"].contains(&state.as_str()) {
+        return Err(Error::new(409, "transition_unavailable"));
+    }
+    independent(t, actor, &owner, &serde_json::from_str(&body)?, now)?;
+    t.execute("UPDATE revisions SET state='in_review',first_response_at=COALESCE(first_response_at,?2),version=version+1 WHERE id=?1",params![id,now])?;
+    audit(t, &actor.id, "review_started", id, now, &json!({}))?;
+    Ok(json!({"id":id,"version":version+1,"state":"in_review"}))
+}
 pub fn required_reviewers(c: &Catalogue) -> usize {
     if c.apps.iter().any(|app| {
         matches!(app.app_type, AppType::ShellPlugin)

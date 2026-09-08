@@ -1,5 +1,9 @@
 # Build handoff
 
+B16a adds operator queue/readiness projections, current-role evidence intake, actual first-response tracking, consecutive-week expansion pause, draft notice/grace retention, active-selection media quota, and private database/object backup and restoration to new paths. All 60 Rust tests and all-feature Clippy pass. Populated backup restoration, public object recovery, environment isolation, tamper rejection, retention and revoked roles are exercised. Native dashboard, hourly worker and media sandbox hardening follow in B16b.
+
+B15 is published as `fb07b56045f51875be3fc3c4fd9ebf571d58909d`, matching local `eb1fa84ca478392a3cf76786bfef7ed4bd493685` and tree `b3eb52436b8986e6f9564cad1125bf252753da09`.
+
 B15 completes read-only interruption reconciliation, fresh partial-setup replanning, shared-reference-aware removal, safe setup detachment and exact-preview diagnostic export. All 56 Rust tests and both Clippy modes pass. Nine native checks pass in 27.54 seconds; the bus test skips locally. The real subprocess test now covers install, coordinator loss, recovery, explicit removal and replay. Real Omarchy lifecycle evidence remains an external gate; no host package or settings changed. Next: B16 operations and readiness, then B17–B22.
 
 B14 is published as `37f053021c800ca3f12c0c230e73c3658f167809`, matching local `6f4e57228dc316fd13a38e43ba7714eadaff85b7` and tree `01da93a3aaf2d154cd57252eae657bc6d28ae381`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34284929806).

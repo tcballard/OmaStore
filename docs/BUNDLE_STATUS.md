@@ -21,7 +21,7 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B13 | Native library and identity handoff | B12 | implemented_unverified; 49 Rust and 8 native checks pass; local bus test skipped, CI/real Omarchy pending |
 | B14 | Supported package execution | B12, B13 | implemented_unverified; 52 Rust and 9 native checks pass; real Omarchy execution gate remains closed |
 | B15 | Journal reconciliation and lifecycle | B11, B14 | implemented_unverified; recovery, partial retries, removal and diagnostic checks pass; real Omarchy lifecycle gate remains external |
-| B16 | Pilot operations and release readiness | B09, B10, B11, B15 | next implementation |
+| B16 | Pilot operations and release readiness | B09, B10, B11, B15 | in_progress; B16a operator/retention/backup authority passes 60 Rust tests |
 | B17 | Supported settings schema and diffs | B11, B15, B16 | not_started |
 | B18 | Setting apply, conflict and restore | B17 | not_started |
 | B19 | Recipe remix and private-data-safe export | B18 | not_started |

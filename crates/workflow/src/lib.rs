@@ -9,6 +9,7 @@ pub mod media;
 pub mod monitor;
 pub mod monitor_probe;
 pub mod net;
+pub mod operations;
 pub mod publication;
 pub mod publisher;
 pub mod review;

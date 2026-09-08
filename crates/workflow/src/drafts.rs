@@ -12,6 +12,13 @@ pub const MAX_DRAFT_BYTES: usize = 80 * 1024;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    ReleaseEvidence {
+        evidence: crate::operations::Evidence,
+    },
+    StartReview {
+        id: String,
+        version: i64,
+    },
     Distribution {
         operation: Box<crate::monitor::Action>,
     },
@@ -67,6 +74,8 @@ pub enum Command {
 impl Command {
     pub fn role(&self) -> &'static str {
         match self {
+            Self::ReleaseEvidence { .. } => "operator",
+            Self::StartReview { .. } => "reviewer",
             Self::Distribution { operation }
                 if matches!(
                     operation.as_ref(),
@@ -173,6 +182,10 @@ impl Store {
 }
 fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Result<Value> {
     match command {
+        Command::ReleaseEvidence { evidence } => {
+            crate::operations::evidence(t, actor, evidence, now)
+        }
+        Command::StartReview { id, version } => crate::review::start(t, actor, &id, version, now),
         Command::Distribution { operation } => crate::monitor::act(t, actor, *operation, now),
         Command::RecoverPublication {
             id,
@@ -320,6 +333,15 @@ fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Re
             let existing=t.query_row("SELECT id,state,version FROM revisions WHERE draft_id=?1 AND digest=?2",params![id,hash],|r|Ok(json!({"id":r.get::<_,String>(0)?,"state":r.get::<_,String>(1)?,"version":r.get::<_,i64>(2)?}))).optional()?;
             if let Some(prior) = existing {
                 return Ok(prior);
+            }
+            if crate::operations::expansion_paused(t)?
+                && !t.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM entity_owners WHERE owner=?1)",
+                    [&actor.id],
+                    |r| r.get::<_, bool>(0),
+                )?
+            {
+                return Err(Error::new(409, "new_publisher_intake_paused"));
             }
             let revision = nonce()?;
             let number: i64 = t.query_row(

@@ -399,7 +399,7 @@ impl Store {
             let prior=t.query_row("SELECT digest,response FROM request_keys WHERE actor=?1 AND key=?2",params![actor.id,upload.key],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?))).optional()?;
             if let Some((old,response))=prior {if old!=hash {return Err(Error::new(409,"idempotency_key_reused"));}return Ok(serde_json::from_str(&response)?);}
             crate::drafts::owned_version(t,actor,upload.draft_id,upload.version)?;
-            let total:i64=t.query_row("SELECT COALESCE(SUM(bytes),0) FROM media WHERE owner=?1",[&actor.id],|r|r.get(0))?;
+            let total=crate::operations::active_media_bytes(t,&actor.id,&sha)?;
             if total+asset.bytes.len() as i64>200*1024*1024 {return Err(Error::new(422,"media_quota_exceeded"));}
             let raw:String=t.query_row("SELECT candidate FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;
             let draft:Value=serde_json::from_str(&raw)?;
