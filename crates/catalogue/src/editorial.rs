@@ -79,16 +79,21 @@ pub fn maker_detail(c: &Catalogue, id: &str, now: DateTime<Utc>) -> Result<Value
         .apps
         .iter()
         .filter(|a| a.maker_ids.contains(&maker.id))
-        .take(100)
+        .take(30)
         .map(|a| query::summary(a, now))
         .collect::<Vec<_>>();
     let stories = c
         .stories
         .iter()
         .filter(|s| s.author_maker_id == maker.id && s.visible(now))
-        .take(20)
+        .take(10)
         .collect::<Vec<_>>();
     let mut value = maker_summary(maker, now);
+    value["appCount"] = json!(c
+        .apps
+        .iter()
+        .filter(|a| a.maker_ids.contains(&maker.id))
+        .count());
     value["apps"] = json!(apps);
     value["stories"] = json!(stories);
     value["notice"] = json!(
@@ -154,4 +159,60 @@ mod tests {
         c.stories[0].app_ids = vec!["missing-app".into()];
         assert!(!c.validate(true).is_empty());
     }
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Browse {
+    #[serde(default)]
+    pub q: String,
+    #[serde(default)]
+    pub offset: usize,
+    pub snapshot: Option<String>,
+}
+pub fn makers(c: &Catalogue, q: &Browse, now: DateTime<Utc>) -> Result<Value, &'static str> {
+    if q.q.len() > 200 || q.offset > 10000 {
+        return Err("invalid_filter");
+    }
+    let snapshot = c.snapshot_id();
+    if q.offset > 0 && q.snapshot.as_deref() != Some(&snapshot) {
+        return Err("snapshot_changed");
+    }
+    let needle = q.q.to_lowercase();
+    let mut found = c
+        .makers
+        .iter()
+        .filter(|m| {
+            needle.is_empty()
+                || format!("{} {}", m.name, m.bio)
+                    .to_lowercase()
+                    .contains(&needle)
+        })
+        .collect::<Vec<_>>();
+    found.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then(a.id.cmp(&b.id))
+    });
+    let total = found.len();
+    let items = found
+        .into_iter()
+        .skip(q.offset)
+        .take(30)
+        .map(|m| maker_summary(m, now))
+        .collect::<Vec<_>>();
+    Ok(
+        json!({"items":items,"total":total,"offset":q.offset,"nextOffset":if q.offset+30<total{Some(q.offset+30)}else{None},"snapshot":snapshot}),
+    )
+}
+pub fn story(c: &Catalogue, id: &str, now: DateTime<Utc>) -> Result<Value, &'static str> {
+    let s = c
+        .stories
+        .iter()
+        .find(|s| s.id == id && s.visible(now))
+        .ok_or("not_found")?;
+    Ok(
+        json!({"story":s,"maker":c.makers.iter().find(|m|m.id==s.author_maker_id).map(|m|maker_summary(m,now)),"apps":c.apps.iter().filter(|a|s.app_ids.contains(&a.id)).map(|a|query::summary(a,now)).collect::<Vec<_>>()}),
+    )
 }

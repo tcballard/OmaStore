@@ -11,6 +11,10 @@ pub(crate) fn delivered(
     now: i64,
 ) -> Result<()> {
     for app in &payload.apps {
+        let context:bool=t.query_row("SELECT EXISTS(SELECT 1 FROM revision_context, json_each(revision_context.apps) WHERE revision_id=?1 AND value=?2)",params![revision,app.id],|r|r.get(0))?;
+        if context {
+            continue;
+        }
         let release = app.current_release();
         let guid = format!("urn:omastore:release:{}:{}", app.id, release.id);
         t.execute("INSERT INTO feed_entries VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9) ON CONFLICT(app_id,release_id) DO UPDATE SET name=excluded.name,summary=excluded.summary,version=excluded.version,maker_ids=excluded.maker_ids,latest_revision=excluded.latest_revision",params![guid,app.id,release.id,app.name,app.summary,release.version,serde_json::to_string(&app.maker_ids)?,now,revision])?;

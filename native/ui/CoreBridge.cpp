@@ -53,6 +53,7 @@ void CoreBridge::start() {
 void CoreBridge::request(const QString &method, const QVariantMap &params) {
     if (m_process.state() != QProcess::Running || m_pending.size() >= 16) return;
     const QString id = QString::number(++m_sequence);
+    if (method.startsWith("makers.") || method.startsWith("editorial.")) m_communityRequests[method]=id;
     if (method == "candidate.prepare") m_candidateRequest = id;
     m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor")});
     const QJsonObject envelope{{"protocol_version", 1}, {"id", id}, {"method", method}, {"params", QJsonObject::fromVariantMap(params)}};
@@ -131,13 +132,15 @@ void CoreBridge::acceptReply(const QByteArray &line) {
             if (!url.isLocalFile() || file.absolutePath()!=owned.absolutePath() || !file.fileName().startsWith("review-media-") || !QDesktopServices::openUrl(url)) m_workspaceReply.insert("error","media_player_unavailable");
         }
         emit workspaceChanged();
+    } else if (m_communityRequests.value(pending.method)==id) {
+        m_community.insert(pending.method,result); emit communityChanged();
     } else if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
         emit candidatePrepared(result);
     } else if (pending.method == "core.info") {
         if (result.value("service").toString() != "omastore-core" || result.value("version").toString().isEmpty()) { fail("Unsupported local service."); return; }
         m_ready = true; m_version = result.value("version").toString(); request("catalogue.info");
     } else if (pending.method == "catalogue.info" || pending.method == "catalogue.refresh") {
-        m_catalogue = result; search(); emit dataChanged();
+        m_catalogue = result; search(); communityAction("makers.list"); communityAction("editorial.list"); emit dataChanged();
         if (!m_detailRequested.isEmpty()) showApp(m_detailRequested);
     } else if (pending.method == "apps.list" && pending.generation == m_generation) {
         if (pending.append) m_apps.append(result.value("items").toList()); else m_apps = result.value("items").toList();
@@ -154,7 +157,7 @@ void CoreBridge::fail(const QString &message) {
 }
 void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
 void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
-    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export","status.get","monitor.queue","monitor.sample"};
+    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export","status.get","monitor.queue","monitor.sample","feed.export"};
     if (!m_ready || !actions.contains(action)) return;
     request("workspace."+action,params);
 }
@@ -163,7 +166,7 @@ void CoreBridge::persistQuery() {
     if (settings.status() != QSettings::NoError) { m_error = "Could not save your browsing preferences."; emit stateChanged(); }
 }
 void CoreBridge::setFilter(const QString &key, const QString &value) {
-    static const QStringList keys{"q", "category", "appType", "licence", "price", "architecture", "offline", "evidence"};
+    static const QStringList keys{"q", "makerId", "category", "appType", "licence", "price", "architecture", "offline", "evidence"};
     if (!keys.contains(key) || value.size() > 200) return;
     if (value.isEmpty()) m_query.remove(key); else m_query.insert(key, value);
     ++m_generation; persistQuery(); emit queryChanged(); m_searchDebounce.start();
@@ -208,3 +211,13 @@ bool CoreBridge::openLink(const QString &kind, int index) {
 }
 
 bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() && m_distributionUntil>QDateTime::currentSecsSinceEpoch();}
+
+void CoreBridge::communityAction(const QString &method,const QVariantMap &params) {
+    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get"};
+    if(m_ready && methods.contains(method)) request(method,params);
+}
+bool CoreBridge::openMakerLink(const QString &kind) {
+    if(kind!="homepage" && kind!="support") return false;
+    const QUrl url(m_community.value("makers.get").toMap().value(kind).toString(),QUrl::StrictMode);
+    return url.isValid() && url.scheme()=="https" && !url.host().isEmpty() && url.userInfo().isEmpty() && QDesktopServices::openUrl(url);
+}

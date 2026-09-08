@@ -188,7 +188,12 @@ async fn publish(
         store.validate_publication_scope(&approval, &base, crate::now())?;
         let catalogue =
             crate::publication::merge_catalogue(&base, &approval, &base_sha, target.development)?;
-        let files = files(&approval, &catalogue, objects)?;
+        let files = files(
+            &approval,
+            &catalogue,
+            objects,
+            &store.context_apps(&approval.revision)?,
+        )?;
         let hashes = files
             .iter()
             .map(|(path, bytes)| (path.clone(), digest(bytes)))
@@ -304,6 +309,7 @@ fn files(
     approval: &Approved,
     catalogue: &Catalogue,
     objects: &LocalObjects,
+    context: &[String],
 ) -> Result<BTreeMap<String, Vec<u8>>> {
     let mut files = BTreeMap::new();
     files.insert("data/registry.json".into(), catalogue.canonical_bytes());
@@ -313,6 +319,9 @@ fn files(
         serde_json::to_vec_pretty(&receipt)?,
     );
     for app in &approval.payload.apps {
+        if context.contains(&app.id) {
+            continue;
+        }
         for media in &app.media {
             let key = url::Url::parse(&media.url)
                 .ok()
@@ -586,7 +595,12 @@ pub async fn reconcile(
                 )?;
             }
         }
-        let files = files(&approved, &expected, objects)?;
+        let files = files(
+            &approved,
+            &expected,
+            objects,
+            &store.context_apps(&approved.revision)?,
+        )?;
         let commit = commit_files(
             api,
             &root,
@@ -823,7 +837,7 @@ mod tests {
         let base = Catalogue::parse(include_bytes!("../../../data/registry.json"), false).unwrap();
         let next = publication::merge_catalogue(&base, &approved, &"a".repeat(40), true).unwrap();
         let objects = LocalObjects::new(&dir.path().join("objects")).unwrap();
-        let expected = files(&approved, &next, &objects)
+        let expected = files(&approved, &next, &objects, &[])
             .unwrap()
             .into_iter()
             .map(|(k, v)| (k, digest(v)))

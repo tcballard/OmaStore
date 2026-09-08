@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 pub struct Query {
     pub q: String,
     pub category: Option<String>,
+    pub maker_id: Option<String>,
     pub app_type: Option<AppType>,
     pub licence: Option<LicenceClass>,
     pub price: Option<OfferModel>,
@@ -21,6 +22,7 @@ impl Default for Query {
         Self {
             q: String::new(),
             category: None,
+            maker_id: None,
             app_type: None,
             licence: None,
             price: None,
@@ -38,6 +40,7 @@ impl Query {
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.q.len() > 200
             || !(1..=50).contains(&self.limit)
+            || self.maker_id.as_deref().is_some_and(|m| !token(m))
             || self.category.as_deref().is_some_and(|c| !token(c))
             || self
                 .architecture
@@ -191,7 +194,11 @@ pub fn list(
     let mut scored = Vec::new();
     for app in &catalogue.apps {
         let r = app.current_release();
-        if query.category.as_ref().is_some_and(|v| v != &app.category)
+        if query
+            .maker_id
+            .as_ref()
+            .is_some_and(|m| !app.maker_ids.contains(m))
+            || query.category.as_ref().is_some_and(|v| v != &app.category)
             || query.app_type.as_ref().is_some_and(|v| v != &app.app_type)
             || query
                 .licence

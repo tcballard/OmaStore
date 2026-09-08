@@ -314,11 +314,25 @@ impl Store {
         now: i64,
     ) -> Result<()> {
         let c = self.connection()?;
-        let known: bool = c.query_row(
+        let mut known: bool = c.query_row(
             "SELECT EXISTS(SELECT 1 FROM publications WHERE expected_registry=?1) OR EXISTS(SELECT 1 FROM metadata WHERE key='delivered_catalogue' AND value=?1)",
             [serde_json::to_string(base)?],
             |r| r.get(0),
         )?;
+        // Provider reads use canonical array ordering. Equivalent observed content is the same authority.
+        if !known {
+            let delivered: Option<String> = c
+                .query_row(
+                    "SELECT value FROM metadata WHERE key='delivered_catalogue'",
+                    [],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            known = delivered
+                .as_ref()
+                .and_then(|s| serde_json::from_str::<Catalogue>(s).ok())
+                .is_some_and(|c| c.snapshot_id() == base.snapshot_id());
+        }
         let prior: bool = c.query_row(
             "SELECT EXISTS(SELECT 1 FROM metadata WHERE key='delivered_catalogue')",
             [],

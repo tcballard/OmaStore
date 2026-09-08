@@ -2,9 +2,9 @@
 
 A native community application storefront for Omarchy. Discover useful software, understand what it needs and support the people who make it.
 
-OmaStore runs in its own Qt Quick window with a Rust core. The current preview includes search and filters, app details, source and seller links, evidence labels, cached browsing, a local saved list and a submission worksheet that can be checked and exported. Desktop colour scheme and text scaling follow the settings portal.
+OmaStore runs in its own Qt Quick window with a Rust core. The current preview includes search, app and maker pages, editorial stories, release-feed export, evidence labels, cached browsing and a local saved list. The native author workspace supports private drafts, media, exact previews, independent review and publication recovery. Desktop colour scheme and text scaling follow the settings portal.
 
-**Development preview.** The public catalogue is empty until genuine listings are reviewed. A separate demo build contains six explicitly fictional listings for exercising the interface. Author accounts, public submission/review, setup adoption, installed-app management and checkout are not implemented yet.
+**Development preview.** The public catalogue is empty until genuine listings are reviewed. A separate demo build contains six explicitly fictional listings for exercising the interface. The demo also supports fictional author/reviewer/operator sessions and a local publication rehearsal. Real provider integration and Omarchy desktop evidence remain release gates; setup adoption, installed-app management and checkout are the next bundles.
 
 ![Actual native preview showing explicitly fictional development listings](docs/qa/native-discovery.png)
 
@@ -26,15 +26,17 @@ For the ordinary build, with no synthetic catalogue embedded:
 ./build/bin/omastore
 ```
 
-Both executables, `omastore` and `omastore-core`, must stay together. No browser runtime, web frontend, local server or cloud account is required to open the app. External seller/source actions open the system browser. Refresh reads only the configured public catalogue origin; a failed refresh keeps the last valid view. The Git origin will serve the new catalogue once this change is merged to `main`.
+Both executables, `omastore` and `omastore-core`, must stay together. No browser runtime, web frontend, local server or cloud account is required to open the app. External seller/source actions open the system browser. Refresh reads only the configured public catalogue origin; a failed refresh keeps the last valid view. Public delivery uses the separate `catalogue-live` branch after the publication authority verifies the exact approved content.
 
 `Ctrl+K` or `Ctrl+F` focuses search, `Alt+Left`/`Escape` leaves app detail, `Ctrl+R` refreshes and `Ctrl+Q` quits. App cards and actions support keyboard focus/Space activation. Filters and saved items persist locally; sample mode uses separate preferences.
 
 ## Prepare a listing
 
-Open **Submit** to prepare one local worksheet. Save partial work on this device, check fields, inspect the exact candidate and export through the native file dialog. Another window's edits cannot be silently overwritten. Closing with unsaved work asks whether to save or discard it.
+Open **Submit → Author workspace** for private versioned drafts, media uploads, exact preview and independent review. The demo provides fictional sessions to exercise this flow locally. Configure the optional service for real accounts; see [author service](docs/AUTHOR_SERVICE.md), [review operations](docs/REVIEW_OPERATIONS.md) and [publication](docs/PUBLICATION.md).
 
-An export is a development candidate, with an unclaimed maker and no compatibility evidence. It is not submitted, approved or published. The initial form prepares one external route and one offer; real media, declared capabilities, release notes and evidence remain later author/reviewer work. Free submissions and 0% OmaStore fees on external author sales/support remain the product policy.
+The **Local worksheet** tab prepares one local worksheet. Save partial work on this device, check fields, inspect the exact candidate and export through the native file dialog. Another window's edits cannot be silently overwritten. Closing with unsaved work asks whether to save or discard it.
+
+An export is a development candidate, with an unclaimed maker and no compatibility evidence. It is not submitted, approved or published. The initial form prepares one external route and one offer; the author workspace handles media, full listing fields, immutable revisions and review evidence. Free submissions and 0% OmaStore fees on external author sales/support remain the product policy.
 
 ## Verify and package
 
@@ -48,7 +50,7 @@ Checks cover catalogue/price/evidence contracts, cache preservation, actual Rust
 
 `packaging/PKGBUILD` is a local source-checkout recipe: run `makepkg` from `packaging` on Arch after reviewing it. It has not been built on Arch here and does not imply AUR or Omarchy repository inclusion. CMake installs the app/core, desktop entry, AppStream metadata and licence. `BUILD_TESTING=OFF` excludes the Qt test harness; development data is off by default. The standard `system-software-install` theme icon remains provisional.
 
-The optional read service can be run with `./build/bin/omastore-service data/registry.json 127.0.0.1:8080`. It serves only public GET routes and needs an operator-managed HTTPS proxy before remote deployment. See [API and cache contracts](docs/API.md).
+The optional read service can be run with `./build/bin/omastore-service data/registry.json 127.0.0.1:8080`. Without a private database it serves public catalogue reads. Add the documented workspace/provider configuration for authenticated workflows, release feeds and operational status. Remote deployment needs an operator-managed HTTPS proxy. See [API and cache contracts](docs/API.md).
 
 ## Continue the build
 
@@ -59,6 +61,6 @@ The optional read service can be run with `./build/bin/omastore-service data/reg
 - [Local author preparation](docs/adr/0003-local-author-preparation.md): scope and the boundary with future authenticated submissions.
 - [Contributing](CONTRIBUTING.md) and [submissions](SUBMISSION.md).
 
-Next server bundle: B04, publisher identity and private workspaces. Keep the existing native window and Rust core. Managed installs must wait for B09/B12–B15's status, planning, confirmation and durable lifecycle gates.
+B04–B09 are implemented; B10 connects makers, editorial discovery and delivered-release feeds. Work continues with selective setups and the local installation lifecycle. Keep the existing native window and Rust core. Managed installs must wait for B09/B12–B15's status, planning, confirmation and durable lifecycle gates.
 
 Independent community project. No official Omarchy endorsement is implied. Project code is MIT licensed; Qt, upstream applications and media retain their own licences.

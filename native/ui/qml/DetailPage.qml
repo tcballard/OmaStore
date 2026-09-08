@@ -8,6 +8,7 @@ ScrollView {
     required property var theme
     required property var core
     required property var mediaPreview
+    signal makerChosen(string id)
     property int savedRevision: 0
     readonly property var app: details.app || ({})
     readonly property var release: details.release || ({})
@@ -34,6 +35,7 @@ ScrollView {
                     Label { required property string modelData; text: modelData; padding: 8; color: theme.ink; textFormat: Text.PlainText; background: Rectangle { color: theme.wash; radius: 4 } }
                 }
             }
+            Flow {Layout.fillWidth:true;spacing:8;Repeater {model:page.details.makers || [];Button {required property var modelData;text:"Meet "+modelData.name;onClicked:page.makerChosen(modelData.id)}}}
             Label { text: (page.details.makers || []).map(function(m) { return m.name + " · " + (m.claimLabel || m.claim); }).join("\n"); color: theme.muted; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
             Label { text: page.summary.priceLabel || "Price not supplied"; font.pixelSize: 22 * theme.scale; font.bold: true; textFormat: Text.PlainText; Layout.fillWidth: true }
             Flow {

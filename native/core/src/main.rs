@@ -74,13 +74,40 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
         "apps.list" => serde_json::from_value::<query::Query>(request.params)
             .map_err(|_| "invalid_filter")
             .and_then(|q| query::list(&client.catalogue, &q, now)),
+        "makers.list" => {
+            serde_json::from_value::<omastore_catalogue::editorial::Browse>(request.params)
+                .map_err(|_| "invalid_filter")
+                .and_then(|q| omastore_catalogue::editorial::makers(&client.catalogue, &q, now))
+        }
+        "editorial.list" if request.params == json!({}) => Ok(
+            omastore_catalogue::editorial::stories(&client.catalogue, now),
+        ),
+        "makers.get" | "editorial.get" => {
+            #[derive(Deserialize)]
+            #[serde(deny_unknown_fields)]
+            struct Lookup {
+                id: String,
+            }
+            serde_json::from_value::<Lookup>(request.params)
+                .map_err(|_| "invalid_request")
+                .and_then(|p| {
+                    if !omastore_catalogue::token(&p.id) {
+                        return Err("invalid_id");
+                    }
+                    if request.method == "makers.get" {
+                        omastore_catalogue::editorial::maker_detail(&client.catalogue, &p.id, now)
+                    } else {
+                        omastore_catalogue::editorial::story(&client.catalogue, &p.id, now)
+                    }
+                })
+        }
         "apps.get" => {
             #[derive(Deserialize)]
             #[serde(deny_unknown_fields)]

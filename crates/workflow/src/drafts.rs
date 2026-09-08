@@ -49,6 +49,10 @@ pub enum Command {
         version: i64,
         candidate: Value,
     },
+    PrepareDraft {
+        id: String,
+        version: i64,
+    },
     SubmitDraft {
         id: String,
         version: i64,
@@ -119,7 +123,7 @@ impl Store {
         let mut s=c.prepare("SELECT id,kind,candidate,version,updated_at,expiry_notice_at FROM drafts WHERE owner=?1 AND archived_at IS NULL ORDER BY updated_at DESC,id LIMIT 40")?;
         let rows=s.query_map([&actor.id],|r|{
             let candidate:Value=serde_json::from_str(&r.get::<_,String>(2)?).unwrap_or(Value::Null);
-            Ok(json!({"id":r.get::<_,String>(0)?,"kind":r.get::<_,String>(1)?,"name":candidate["apps"][0]["name"].as_str().or_else(||candidate["recipes"][0]["name"].as_str()).unwrap_or("Untitled listing").chars().take(160).collect::<String>(),"version":r.get::<_,i64>(3)?,"updatedAt":r.get::<_,i64>(4)?,"expiryNoticeAt":r.get::<_,Option<i64>>(5)?}))
+            Ok(json!({"id":r.get::<_,String>(0)?,"kind":r.get::<_,String>(1)?,"name":candidate["apps"][0]["name"].as_str().or_else(||candidate["recipes"][0]["name"].as_str()).or_else(||candidate["stories"][0]["title"].as_str()).unwrap_or("Untitled listing").chars().take(160).collect::<String>(),"version":r.get::<_,i64>(3)?,"updatedAt":r.get::<_,i64>(4)?,"expiryNoticeAt":r.get::<_,Option<i64>>(5)?}))
         })?.collect::<std::result::Result<Vec<_>,_>>()?;
         let mut s=c.prepare("SELECT id,draft_id,number,digest,state,version,submitted_at FROM revisions WHERE owner=?1 ORDER BY submitted_at DESC,id LIMIT 40")?;
         let revisions=s.query_map([&actor.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"draftId":r.get::<_,String>(1)?,"number":r.get::<_,i64>(2)?,"digest":r.get::<_,String>(3)?,"state":r.get::<_,String>(4)?,"version":r.get::<_,i64>(5)?,"submittedAt":r.get::<_,i64>(6)?})))?.collect::<std::result::Result<Vec<_>,_>>()?;
@@ -251,6 +255,46 @@ fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Re
             )?;
             Ok(json!({"id":id,"version":version+1}))
         }
+        Command::PrepareDraft { id, version } => {
+            owned_version(t, actor, &id, version)?;
+            let (body, kind): (String, String) = t.query_row(
+                "SELECT candidate,kind FROM drafts WHERE id=?1",
+                [&id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )?;
+            let value: Value = serde_json::from_str(&body)?;
+            let prepared = match crate::context::prepare(t, actor, value.clone(), &kind, now) {
+                Ok(p) => p,
+                Err(e)
+                    if e.status == 422 || e.status == 409 || e.status == 403 || e.status == 413 =>
+                {
+                    let mut errors = serde_json::from_value::<Catalogue>(value.clone())
+                        .map(|c| json!(c.validate(true)))
+                        .unwrap_or(json!([]));
+                    errors
+                        .as_array_mut()
+                        .unwrap()
+                        .push(json!({"path":"candidate","code":e.code}));
+                    return Ok(
+                        json!({"id":id,"version":version,"candidate":value,"errors":errors}),
+                    );
+                }
+                Err(e) => return Err(e),
+            };
+            let candidate = json!(prepared.catalogue);
+            t.execute("UPDATE drafts SET candidate=?2,version=version+1,updated_at=?3,expiry_notice_at=NULL WHERE id=?1",params![id,candidate.to_string(),now])?;
+            audit(
+                t,
+                &actor.id,
+                "draft_preview_prepared",
+                &id,
+                now,
+                &json!({"snapshot":prepared.snapshot,"digest":candidate_digest(&prepared.catalogue)?}),
+            )?;
+            Ok(
+                json!({"id":id,"version":version+1,"candidate":candidate,"errors":[],"contextSnapshot":prepared.snapshot}),
+            )
+        }
         Command::SubmitDraft {
             id,
             version,
@@ -265,7 +309,13 @@ fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Re
                 [&id],
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )?;
-            let c = validate_candidate(body.as_bytes(), &kind)?;
+            let input: Catalogue =
+                serde_json::from_str(&body).map_err(|_| Error::new(422, "candidate_invalid"))?;
+            let prepared = crate::context::prepare(t, actor, json!(input), &kind, now)?;
+            if candidate_digest(&input)? != candidate_digest(&prepared.catalogue)? {
+                return Err(Error::new(409, "public_preview_refresh_required"));
+            }
+            let c = prepared.catalogue;
             let hash = candidate_digest(&c)?;
             let existing=t.query_row("SELECT id,state,version FROM revisions WHERE draft_id=?1 AND digest=?2",params![id,hash],|r|Ok(json!({"id":r.get::<_,String>(0)?,"state":r.get::<_,String>(1)?,"version":r.get::<_,i64>(2)?}))).optional()?;
             if let Some(prior) = existing {
@@ -278,6 +328,15 @@ fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Re
                 |r| r.get(0),
             )?;
             t.execute("INSERT INTO revisions(id,draft_id,owner,number,candidate,digest,state,version,submitted_at) VALUES(?1,?2,?3,?4,?5,?6,'submitted',1,?7)",params![revision,id,actor.id,number,serde_json::to_string(&c)?,hash,now])?;
+            t.execute(
+                "INSERT INTO revision_context VALUES(?1,?2,?3,?4)",
+                params![
+                    revision,
+                    prepared.snapshot,
+                    serde_json::to_string(&prepared.apps)?,
+                    serde_json::to_string(&prepared.makers)?
+                ],
+            )?;
             t.execute("INSERT INTO jobs(id,revision_id,kind,state,due_at) VALUES(?1,?2,'checks','queued',?3)",params![nonce()?,revision,now])?;
             audit(
                 t,

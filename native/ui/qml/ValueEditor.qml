@@ -69,7 +69,7 @@ ColumnLayout {
                     text: "Add"
                     onClicked: {
                         const copy = JSON.parse(JSON.stringify(editor.value));
-                        const samples = {media:{kind:"screenshot",url:"",alt:"",rights:"",sha256:""},components:{appId:"",releaseId:"",optional:true,dependsOn:[]}};
+                        const samples = {stories:{id:"",revision:"r1",kind:"story",title:"",summary:"",body:"",authorMakerId:"",appIds:[],publishAt:"",endAt:null,rights:""},media:{kind:"screenshot",url:"",alt:"",rights:"",sha256:""},components:{appId:"",releaseId:"",optional:true,dependsOn:[]}};
                         copy.push(copy.length ? JSON.parse(JSON.stringify(copy[copy.length-1])) : (samples[editor.field] || ""));
                         editor.edited(editor.path,copy);
                     }

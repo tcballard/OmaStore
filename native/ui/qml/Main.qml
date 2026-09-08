@@ -9,6 +9,8 @@ ApplicationWindow {
     required property var mediaPreview
     required property var worksheet
     property bool discardClose: false
+    property string makerSelection: ""
+    function showMaker(id) { makerSelection=id; navigate(4); core.communityAction("makers.get",{id:id}); }
     property int section: 0
     property bool showFilters: false
     readonly property bool showingDetail: !!core.detail.app
@@ -147,7 +149,7 @@ ApplicationWindow {
                 id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : (window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
+                sourceComponent: window.showingDetail ? detailPage : (window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             RowLayout {
@@ -179,6 +181,7 @@ ApplicationWindow {
                     Label { text: window.section === 3 ? "Saved for later." : (window.section === 0 ? "Find your next\nfavourite tool." : "Apps, on your terms."); color: storeTheme.ink; font.pixelSize: (window.width < 950 ? 32 : 42) * storeTheme.scale; font.bold: true; wrapMode: Text.Wrap; Layout.fillWidth: true }
                     Label { text: window.section === 3 ? "A local shortlist on this device. Installed-app management is still to come." : "See what it does. Know what it needs. Support the people who make it."; color: storeTheme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; Layout.maximumWidth: 630 }
                 }
+                EditorialPanel {visible:window.section===0;Layout.leftMargin:28;Layout.rightMargin:28;core:window.core;theme:storeTheme;onMakerChosen:(id)=>window.showMaker(id)}
                 RowLayout {
                     Layout.fillWidth: true; Layout.leftMargin: 28; Layout.rightMargin: 28
                     Label { text: window.section === 3 ? core.saved.length + " saved" : core.total + (core.total === 1 ? " application" : " applications"); font.bold: true; color: storeTheme.ink }
@@ -245,8 +248,9 @@ ApplicationWindow {
 
     Component {
         id: detailPage
-        DetailPage { details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
+        DetailPage { onMakerChosen:(id)=>window.showMaker(id); details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
     }
+    Component {id:makersPage;MakersPage {core:window.core;theme:storeTheme;selectedId:window.makerSelection;onChosen:(id)=>window.makerSelection=id;onBrowseApps:(id)=>{window.navigate(1);core.clearFilters();core.setFilter("makerId",id);}}}
     Component { id: submitPage; WorkspacePage { worksheet: window.worksheet; core: window.core; theme: storeTheme } }
     Dialog {
         id: unsaved

@@ -46,6 +46,10 @@ impl Client {
         } else {
             None
         };
+        #[cfg(feature = "development-catalogue")]
+        if let Some(store) = &sandbox {
+            let _ = store.seed_sample_context(&crate::catalogue::Client::new(true).catalogue);
+        }
         let _ = demo;
         Self {
             origin,
@@ -113,6 +117,10 @@ impl Client {
                 "stale_revision" => "stale_revision",
                 "candidate_invalid" => "candidate_invalid",
                 "candidate_scope_invalid" => "candidate_scope_invalid",
+                "published_context_required" => "published_context_required",
+                "published_context_changed" => "published_context_changed",
+                "public_preview_refresh_required" => "public_preview_refresh_required",
+                "verified_project_control_required" => "verified_project_control_required",
                 "candidate_cannot_self_verify" => "candidate_cannot_self_verify",
                 "media_count_exceeded" => "media_count_exceeded",
                 "media_too_large" | "normalized_media_too_large" => "media_too_large",
@@ -199,6 +207,9 @@ impl Client {
         Ok(value)
     }
     pub fn dispatch(&mut self, method: &str, params: Value) -> Result<Value> {
+        if method == "feed.export" {
+            return Ok(json!({"value":self.export_feed(&params)?,"workspace":self.cached}));
+        }
         if method == "status.get" {
             let ids: Vec<String> = serde_json::from_value(params["ids"].clone())?;
             if ids.len() > 100 || ids.iter().any(|id| !omastore_catalogue::token(id)) {
@@ -233,8 +244,13 @@ impl Client {
                 if self.sandbox.is_none() {
                     return Err(Error::new(403, "sample_mode_required"));
                 }
-                let candidate: Value =
-                    serde_json::from_str(include_str!("../../../docs/examples/submission.json"))?;
+                let mut candidate: Value = serde_json::from_str(
+                    &include_str!("../../../docs/examples/submission.json")
+                        .replace("demo-fieldnotes", "sample-fieldnotes")
+                        .replace("demo-maker", "sample-maker"),
+                )?;
+                candidate["apps"][0]["slug"] = json!("sample-fieldnotes");
+                candidate["apps"][0]["name"] = json!("Fieldnotes · sample submission");
                 self.command(json!({"command":"create_draft","kind":"app","candidate":candidate,"base_revision":null}))?
             }
             "drafts.new" => {
@@ -244,7 +260,14 @@ impl Client {
                 let mut candidate: Value = serde_json::from_str(&raw)?;
                 candidate["generatedAt"] =
                     json!(chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
-                self.command(json!({"command":"create_draft","kind":"app","candidate":candidate,"base_revision":null}))?
+                let kind = params["kind"].as_str().unwrap_or("app");
+                if kind == "editorial" {
+                    candidate["apps"] = json!([]);
+                    candidate["stories"] = json!([{"id":format!("story-{}",&nonce()?[..12]),"revision":"r1","kind":"story","title":"","summary":"","body":"","authorMakerId":candidate["makers"][0]["id"],"appIds":[],"publishAt":candidate["generatedAt"],"endAt":null,"rights":""}]);
+                } else if kind != "app" {
+                    return Err(Error::new(422, "invalid_draft_kind"));
+                }
+                self.command(json!({"command":"create_draft","kind":kind,"candidate":candidate,"base_revision":null}))?
             }
             "drafts.preview" => {
                 let candidate = params["candidate"].clone();
@@ -613,6 +636,73 @@ impl Client {
         }
         Ok(value)
     }
+    fn export_feed(&self, params: &Value) -> Result<Value> {
+        let maker = params["makerId"]
+            .as_str()
+            .filter(|s| omastore_catalogue::token(s));
+        if !params["makerId"].is_null() && maker.is_none() {
+            return Err(Error::new(422, "invalid_fields"));
+        }
+        let path = params["file"]
+            .as_str()
+            .and_then(|s| Url::parse(s).ok())
+            .and_then(|u| u.to_file_path().ok())
+            .filter(|p| p.is_absolute())
+            .ok_or(Error::new(422, "local_file_required"))?;
+        #[cfg(feature = "development-catalogue")]
+        let sample = self
+            .sandbox
+            .as_ref()
+            .map(|s| s.release_feed(maker))
+            .transpose()?;
+        #[cfg(not(feature = "development-catalogue"))]
+        let sample: Option<String> = None;
+        let xml = if let Some(xml) = sample {
+            xml
+        } else {
+            let origin = self
+                .origin
+                .as_ref()
+                .ok_or(Error::new(503, "workspace_unconfigured"))?;
+            let suffix = maker
+                .map(|m| format!("/makers/{m}/feed.xml"))
+                .unwrap_or("/feed.xml".into());
+            let mut response = self
+                .agent
+                .get(format!("{origin}{suffix}"))
+                .call()
+                .map_err(|_| Error::new(503, "feed_unavailable"))?;
+            if response.status().as_u16() != 200 {
+                return Err(Error::new(503, "feed_unavailable"));
+            }
+            response
+                .body_mut()
+                .with_config()
+                .limit(512 * 1024)
+                .read_to_string()
+                .map_err(|_| Error::new(503, "feed_unavailable"))?
+        };
+        if std::fs::symlink_metadata(&path).is_ok_and(|m| !m.is_file()) {
+            return Err(Error::new(422, "regular_file_required"));
+        }
+        let mut file = tempfile::NamedTempFile::new_in(
+            path.parent()
+                .ok_or(Error::new(422, "local_file_required"))?,
+        )?;
+        file.write_all(xml.as_bytes())?;
+        file.as_file().sync_all()?;
+        file.persist(path)
+            .map_err(|_| Error::new(500, "local_export_failed"))?;
+        let feed_url = self.origin.as_ref().map(|o| {
+            format!(
+                "{o}{}",
+                maker
+                    .map(|m| format!("/makers/{m}/feed.xml"))
+                    .unwrap_or("/feed.xml".into())
+            )
+        });
+        Ok(json!({"exported":true,"makerId":maker,"feedUrl":feed_url}))
+    }
     fn export_publication(&self, params: &Value) -> Result<Value> {
         let id = record_id(params)?;
         let path = params["file"]
@@ -729,7 +819,9 @@ impl Client {
             None => self.http_key("POST", "/api/v1/commands", &params, &key)?,
         };
         let _ = std::fs::remove_file(path);
-        if params["command"] == "save_draft" {
+        if params["command"] == "save_draft"
+            || (params["command"] == "prepare_draft" && value["errors"] == json!([]))
+        {
             if let Some(id) = params["id"].as_str() {
                 let _ = std::fs::remove_file(self.local_file("draft", id)?);
             }

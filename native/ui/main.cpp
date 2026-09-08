@@ -15,6 +15,8 @@
 #include <QSettings>
 #ifdef OMASTORE_QA
 #include <QTemporaryDir>
+#include <QFile>
+#include <QXmlStreamReader>
 #include <QTest>
 #include <memory>
 #include <functional>
@@ -137,6 +139,20 @@ int main(int argc, char *argv[]) {
                         check(core.detail().isEmpty() && core.query().value("q").toString() == "fieldnotes", "back preserves query");
                     } else if (demo) { check(false, "search result count"); }
                     core.clearFilters(); QTest::qWait(200);
+                    if(demo) {
+                        auto *makers=findItem(window->contentItem(),"navMakers");
+                        if(makers){makers->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}QTest::qWait(100);
+                        const auto makersResult=core.community().value("makers.list").toMap().value("items").toList();
+                        check(!makersResult.isEmpty(),"maker discovery");
+                        if(!makersResult.isEmpty()) {
+                            const auto makerId=makersResult.first().toMap().value("id").toString();
+                            auto *maker=findItem(window->contentItem(),"maker-"+makerId);
+                            if(maker){maker->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                            for(int i=0;i<40 && core.loading();++i)QTest::qWait(50);
+                            check(core.community().value("makers.get").toMap().value("id").toString()==makerId,"maker profile by keyboard");
+                            check(core.community().value("makers.get").toMap().value("claim").toString()=="unclaimed","fictional maker remains unclaimed");
+                        }
+                    }
                     auto *submit = findItem(window->contentItem(), "navSubmit");
                     if (submit) { submit->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
                     QTest::qWait(150);
@@ -192,6 +208,14 @@ int main(int argc, char *argv[]) {
                         press(findItem(window->contentItem(),"samplePublication"));
                         for(int i=0;i<80 && core.loading();++i) QTest::qWait(50);
                         check(core.workspaceReply().value("state").toString()=="published","local provider delivery observed");
+                        QTemporaryDir feedDirectory;
+                        const auto feedPath=feedDirectory.filePath("releases.xml");
+                        core.workspaceAction("feed.export",{{"makerId",QVariant()},{"file",QUrl::fromLocalFile(feedPath).toString()}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        QFile feed(feedPath);check(feed.open(QIODevice::ReadOnly),"native RSS export");
+                        QXmlStreamReader rss(feed.readAll());int entries=0;
+                        while(!rss.atEnd()){rss.readNext();if(rss.isStartElement() && rss.name()=="item")++entries;}
+                        check(!rss.hasError() && entries==1,"observed release RSS parses once");
                         core.workspaceAction("auth.sandbox",{{"name","operator"}});
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
                         press(findItem(window->contentItem(),"operationsWorkspaceTab"));

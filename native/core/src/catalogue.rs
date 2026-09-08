@@ -152,6 +152,10 @@ impl Client {
                 self.catalogue.recipes.retain(|r| r.id != recipe.id);
                 self.catalogue.recipes.push(recipe);
             }
+            for story in c.stories {
+                self.catalogue.stories.retain(|s| s.id != story.id);
+                self.catalogue.stories.push(story);
+            }
             self.catalogue.revision = c.revision;
         }
     }

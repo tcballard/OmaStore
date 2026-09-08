@@ -45,7 +45,7 @@ ColumnLayout {
             } else if ((r.action === "command" || r.action === "drafts.new" || r.action === "drafts.sample") && r.command === "create_draft") panel.open(r.id);
             else if (r.action === "command" && r.command === "save_draft") {panel.draft.version=r.version;panel.dirty=false;panel.notice="Saved to your private workspace.";}
             else if (r.action === "drafts.cache") panel.localSaved=true;
-            else if (r.action === "drafts.preview") {panel.errors=r.errors || [];panel.previewReady=true;preview.open();}
+            else if (r.action === "command" && r.command === "prepare_draft") {panel.candidate=r.candidate;panel.draft.version=r.version;panel.errors=r.errors || [];panel.previewReady=true;confirm.checked=false;preview.open();}
             else if (r.action === "media.upload") panel.open(r.draftId);
             else if (r.action === "revisions.get") panel.revision=r;
             else if (r.action === "publication.sample") {panel.notice=r.notice || "Local publication rehearsal completed.";core.workspaceAction("revisions.get",{id:r.id});}
@@ -65,6 +65,7 @@ ColumnLayout {
         Button { objectName:"newDraft"; text:"New listing"; enabled:!core.loading; onClicked:core.workspaceAction("drafts.new",{}) }
         Button { text:"From worksheet"; enabled:!core.loading && !!worksheet.result.candidate; onClicked:panel.command({command:"create_draft",kind:"app",candidate:worksheet.result.candidate,base_revision:null}) }
     }
+        Button {text:"New story / pick";enabled:!core.loading;onClicked:core.workspaceAction("drafts.new",{kind:"editorial"})}
     Button { visible:!!core.workspace.sandbox;text:"Use a filled fictional listing to try submission";enabled:!core.loading;onClicked:core.workspaceAction("drafts.sample",{}) }
     Label { visible:!(core.workspace.drafts || []).length; text:"Start with a few facts. Drafts stay private until you confirm the exact submission preview."; Layout.fillWidth:true; wrapMode:Text.Wrap }
     Repeater {
@@ -90,9 +91,14 @@ ColumnLayout {
                 Layout.fillWidth:true
                 Button {text:"Save workspace";enabled:panel.dirty && !core.loading;onClicked:panel.save()}
                 Button {text:"Compare server copy";enabled:!!panel.draft.localRecovery;onClicked:serverCopy.open()}
-                Button {text:"Preview submission";enabled:!panel.dirty && !core.loading;onClicked:core.workspaceAction("drafts.preview",{candidate:panel.candidate})}
+                Button {text:"Preview submission";enabled:!panel.dirty && !core.loading;onClicked:panel.command({command:"prepare_draft",id:panel.draft.id,version:panel.draft.version})}
             }
             Label {text:"Purpose, release identity, acquisition route and price are separate facts. Expand each section to edit. Public test results and verified control are assigned during review.";Layout.fillWidth:true;wrapMode:Text.Wrap}
+            ColumnLayout {
+                visible:panel.draft.kind==="editorial";Layout.fillWidth:true
+                Label {text:"Link published apps, then choose a UTC publish date and optional end date. Editorial selection is reviewed independently.";Layout.fillWidth:true;wrapMode:Text.Wrap}
+                Repeater {model:panel.draft.kind==="editorial" ? core.apps : [];CheckBox {required property var modelData;text:modelData.name;checked:(((panel.candidate.stories || [])[0] || {}).appIds || []).indexOf(modelData.id)>=0;onToggled:{let ids=panel.candidate.stories[0].appIds.filter(x=>x!==modelData.id);if(checked)ids.push(modelData.id);panel.change(["stories","0","appIds"],ids);panel.change(["apps"],[]);}}}
+            }
             ValueEditor { value:panel.candidate;field:"Listing fields";theme:panel.theme;onEdited:(path,value)=>panel.change(path,value) }
             Label {text:"Upload media";font.bold:true}
             Label {text:"PNG or WebP icon ≤1 MiB; up to five screenshots ≤5 MiB; one 15–45 second MP4/WebM demo ≤30 MiB. Supply alt text and rights for each item.";Layout.fillWidth:true;wrapMode:Text.Wrap}

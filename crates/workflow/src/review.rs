@@ -69,6 +69,27 @@ pub(crate) fn independent(
     if actor.id == owner {
         return Err(Error::new(403, "independent_reviewer_required"));
     }
+    for (kind, ids) in [
+        (
+            "app",
+            candidate
+                .apps
+                .iter()
+                .map(|a| a.id.as_str())
+                .collect::<Vec<_>>(),
+        ),
+        (
+            "maker",
+            candidate.makers.iter().map(|m| m.id.as_str()).collect(),
+        ),
+    ] {
+        for id in ids {
+            let own:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM entity_owners WHERE kind=?1 AND entity_id=?2 AND owner=?3)",params![kind,id,actor.id],|r|r.get(0))?;
+            if own {
+                return Err(Error::new(403, "independent_reviewer_required"));
+            }
+        }
+    }
     let mut targets = Vec::new();
     for app in &candidate.apps {
         if let Some(source) = &app.source {
@@ -341,8 +362,12 @@ pub(crate) fn eligible_payload(
             return Err(Error::new(409, "required_checks_missing"));
         }
     }
+    let context_apps = crate::context::check_frozen(t, id, candidate, now)?;
     let mut result = candidate.clone();
     for app in &mut result.apps {
+        if context_apps.contains(&app.id) {
+            continue;
+        }
         let mut s=t.prepare("SELECT body FROM runtime_evidence WHERE revision_id=?1 AND app_id=?2 AND release_id=?3 ORDER BY created_at DESC,id")?;
         let rows = s
             .query_map(params![id, app.id, app.current_release_id], |r| {
