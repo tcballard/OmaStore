@@ -14,7 +14,13 @@ B04b validation: all 19 Rust tests pass (plus the previously separate performanc
 
 Rollback: revert the B04a implementation and retain private database files for recovery. No external provider registration, author account, machine package or desktop setting has been changed.
 
-## Earlier native preview receipt
+## Author continuation receipts
+
+B05b adds the native full-field draft editor, local recovery scoped to account and service, optimistic server sync, an explicit conflict merge acknowledgement, media selection, exact preview, submission and revision status. HTTP mutation retries use a persisted key; a failed subsequent refresh cannot misreport a committed action. Expired login polling clears correctly. Local edits survive network failure without becoming public. The template contains empty author facts, not demo claims.
+
+B05a commit: `79129ba`. B05b verification: all 22 Rust tests passed, including authenticated HTTP upload/private-access checks; all 8 native CTest checks passed in 15.40 seconds, including creating a draft, keyboard typing and private autosave at three sizes and 200% scale. The recursive native editor uses dynamic QML loading after the runtime rejected static recursion. Media replacement retains historical bytes and counts the current draft selection. The checked UI is offscreen Linux; real Omarchy accessibility/media-dialog evidence remains outstanding.
+
+
 
 B04b is committed locally as `d2e341a4ee3d8363f5397a6d2a0173c6d92ae308` and published as `d17855a5ab5968882f8cce41bb486f229cecf8c9`, with identical tree `3750cc37a612fe44047fdc3f5b5844cc027af955`. The author continuation is [draft PR #2](https://github.com/tcballard/OmaStore/pull/2), stacked on PR #1.
 

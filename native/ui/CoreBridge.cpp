@@ -20,7 +20,7 @@ CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(dem
     m_timeout.setInterval(1000);
     connect(&m_timeout, &QTimer::timeout, this, [this] {
         for (const auto &pending : m_pending) {
-            if (m_clock.elapsed() - pending.since > 15000) { fail("The local service stopped responding. Reconnect to try again."); break; }
+            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
         }
     });
     connect(&m_process, &QProcess::started, this, [this] { request("core.info"); });
@@ -127,7 +127,7 @@ void CoreBridge::fail(const QString &message) {
 }
 void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
 void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
-    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke"};
+    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.preview","revisions.get","media.upload"};
     if (!m_ready || !actions.contains(action)) return;
     request("workspace."+action,params);
 }

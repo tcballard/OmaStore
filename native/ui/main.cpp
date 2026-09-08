@@ -146,6 +146,14 @@ int main(int argc, char *argv[]) {
                         if (sampleSignIn) {sampleSignIn->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         for (int i=0;i<40 && core.loading();++i) QTest::qWait(50);
                         check(core.workspace().value("actor").toMap().value("id").toString()=="development:author","sample author sign-in");
+                        auto *newDraft=findItem(window->contentItem(),"newDraft");
+                        if (newDraft) {newDraft->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for (int i=0;i<60 && (core.loading() || !findItem(window->contentItem(),"field-apps-0-name"));++i) QTest::qWait(50);
+                        auto *draftName=findItem(window->contentItem(),"field-apps-0-name");
+                        check(draftName!=nullptr,"native draft editor created");
+                        if (draftName) {draftName->forceActiveFocus();for (const auto character:QByteArray("My draft")) QTest::keyClick(window,character);QTest::keyClick(window,Qt::Key_Tab);}
+                        QTest::qWait(850);
+                        check(core.workspaceReply().value("localSaved").toBool(),"private draft autosave");
                     }
                     auto *localTab=findItem(window->contentItem(),"localWorksheetTab");
                     if (localTab) {localTab->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}

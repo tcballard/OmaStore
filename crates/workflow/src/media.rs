@@ -401,15 +401,17 @@ impl Store {
             crate::drafts::owned_version(t,actor,upload.draft_id,upload.version)?;
             let total:i64=t.query_row("SELECT COALESCE(SUM(bytes),0) FROM media WHERE owner=?1",[&actor.id],|r|r.get(0))?;
             if total+asset.bytes.len() as i64>200*1024*1024 {return Err(Error::new(422,"media_quota_exceeded"));}
-            let count:u32=t.query_row("SELECT COUNT(*) FROM media WHERE draft_id=?1 AND kind=?2",params![upload.draft_id,upload.kind],|r|r.get(0))?;
+            let raw:String=t.query_row("SELECT candidate FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;
+            let draft:Value=serde_json::from_str(&raw)?;
+            let count=draft["apps"][0]["media"].as_array().map(|m|m.iter().filter(|m|m["kind"]==upload.kind).count()).unwrap_or(0);
             if count>=if upload.kind=="screenshot"{5}else{1} {return Err(Error::new(422,"media_count_exceeded"));}
             objects.put_private(&object_key,&asset.bytes)?;
             let raw:String=t.query_row("SELECT candidate FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;let mut candidate:Value=serde_json::from_str(&raw)?;
             let list=candidate["apps"][0]["media"].as_array_mut().ok_or(Error::new(422,"draft_needs_app_fields"))?;
-            let id=nonce()?;
+            let id=t.query_row("SELECT id FROM media WHERE draft_id=?1 AND digest=?2 AND kind=?3",params![upload.draft_id,sha,upload.kind],|r|r.get::<_,String>(0)).optional()?.unwrap_or(nonce()?);
             let item=json!({"kind":upload.kind,"url":format!("https://raw.githubusercontent.com/tcballard/OmaStore/main/media/{object_key}"),"alt":upload.alt,"rights":upload.rights,"sha256":sha});list.push(item.clone());
             let candidate=serde_json::to_string(&candidate)?;if candidate.len()>crate::drafts::MAX_DRAFT_BYTES {return Err(Error::new(413,"candidate_too_large"));}
-            t.execute("INSERT INTO media VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,NULL)",params![id,upload.draft_id,actor.id,upload.kind,sha,asset.content_type,asset.bytes.len() as i64,asset.width,asset.height,asset.duration_ms,upload.alt,upload.rights,now])?;
+            t.execute("INSERT OR IGNORE INTO media VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,NULL)",params![id,upload.draft_id,actor.id,upload.kind,sha,asset.content_type,asset.bytes.len() as i64,asset.width,asset.height,asset.duration_ms,upload.alt,upload.rights,now])?;
             t.execute("UPDATE drafts SET candidate=?2,version=version+1,updated_at=?3,expiry_notice_at=NULL WHERE id=?1",params![upload.draft_id,candidate,now])?;
             audit(t,&actor.id,"media_attached",upload.draft_id,now,&json!({"media":id,"digest":sha}))?;
             let response=json!({"id":id,"draftId":upload.draft_id,"version":upload.version+1,"media":item});

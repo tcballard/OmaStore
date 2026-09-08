@@ -1,5 +1,6 @@
 //! The token never crosses the Qt pipe. Origins come only from operator configuration.
-use omastore_workflow::{auth::challenge, nonce, Error, Result};
+use base64::{engine::general_purpose::STANDARD, Engine};
+use omastore_workflow::{auth::challenge, digest, nonce, Error, Result};
 use serde_json::{json, Value};
 use std::{
     io::{Read, Write},
@@ -13,6 +14,8 @@ pub struct Client {
     token: Option<String>,
     login: Option<(String, String)>,
     storage: &'static str,
+    cached: Value,
+    demo: bool,
     agent: ureq::Agent,
     #[cfg(feature = "development-catalogue")]
     sandbox: Option<omastore_workflow::Store>,
@@ -36,7 +39,7 @@ impl Client {
             .map(|s| s.trim_end_matches('/').to_owned());
         #[cfg(feature = "development-catalogue")]
         let sandbox = if demo {
-            private_directory()
+            private_directory(true)
                 .and_then(|p| omastore_workflow::Store::development(&p.join("workflow.db")))
                 .ok()
         } else {
@@ -48,6 +51,8 @@ impl Client {
             token: None,
             login: None,
             storage: "signed_out",
+            cached: json!({"actor":null}),
+            demo,
             agent: ureq::Agent::new_with_config(
                 ureq::Agent::config_builder()
                     .timeout_global(Some(Duration::from_secs(10)))
@@ -60,6 +65,9 @@ impl Client {
         }
     }
     fn http(&self, method: &str, path: &str, params: &Value) -> Result<Value> {
+        self.http_key(method, path, params, "")
+    }
+    fn http_key(&self, method: &str, path: &str, params: &Value, key: &str) -> Result<Value> {
         let origin = self
             .origin
             .as_ref()
@@ -75,6 +83,7 @@ impl Client {
         } else {
             self.agent
                 .post(&url)
+                .header("Idempotency-Key", key)
                 .header("X-OmaStore-Client", "native-v1")
                 .header("Authorization", &format!("Bearer {token}"))
                 .send_json(params)
@@ -100,6 +109,17 @@ impl Client {
                 "role_revoked" | "role_required" => "role_required",
                 "rate_limited" => "rate_limited",
                 "stale_revision" => "stale_revision",
+                "candidate_invalid" => "candidate_invalid",
+                "candidate_scope_invalid" => "candidate_scope_invalid",
+                "candidate_cannot_self_verify" => "candidate_cannot_self_verify",
+                "media_count_exceeded" => "media_count_exceeded",
+                "media_too_large" | "normalized_media_too_large" => "media_too_large",
+                "media_quota_exceeded" => "media_quota_exceeded",
+                "unsupported_media_format" => "unsupported_media_format",
+                "draft_unavailable" => "draft_unavailable",
+                "revision_unavailable" => "revision_unavailable",
+                "transition_unavailable" => "transition_unavailable",
+                "public_preview_required" => "public_preview_required",
                 "invalid_fields" => "invalid_fields",
                 _ => "workspace_request_failed",
             };
@@ -114,12 +134,15 @@ impl Client {
             if let Some(token) = &self.token {
                 match store.actor(token, omastore_workflow::now()) {
                     Ok(actor) => {
-                        value["actor"] = json!(actor);
-                        value["claims"] = store.claims(&actor, omastore_workflow::now())?;
+                        let workspace = store.workspace(&actor, omastore_workflow::now())?;
+                        for (key, item) in workspace.as_object().unwrap() {
+                            value[key] = item.clone();
+                        }
                     }
                     Err(_) => self.token = None,
                 }
             }
+            self.cached = value.clone();
             return Ok(value);
         }
         if self.origin.is_none() {
@@ -137,7 +160,17 @@ impl Client {
             }
         }
         let mut value = if self.token.is_some() {
-            self.http("GET", "/api/v1/workspace", &json!({}))?
+            match self.http("GET", "/api/v1/workspace", &json!({})) {
+                Ok(value) => value,
+                Err(error) if error.status == 401 => {
+                    self.token = None;
+                    self.storage = "no_session";
+                    self.login = None;
+                    self.cached = json!({"actor":null});
+                    json!({"actor":null,"signInConfigured":true,"sessionExpired":true})
+                }
+                Err(error) => return Err(error),
+            }
         } else {
             let info = self.http("GET", "/api/v1/auth/info", &json!({}))?;
             json!({"actor":null,"signInConfigured":info["signInConfigured"]})
@@ -146,11 +179,55 @@ impl Client {
         value["sandbox"] = json!(false);
         value["storage"] = json!(self.storage);
         value["signingIn"] = json!(self.login.is_some());
+        self.cached = value.clone();
         Ok(value)
     }
     pub fn dispatch(&mut self, method: &str, params: Value) -> Result<Value> {
         let result = match method {
             "state" if params == json!({}) => json!({}),
+            "command" => self.command(params)?,
+            "drafts.new" => {
+                let raw = include_str!("../../../crates/workflow/templates/app.json")
+                    .replace("APP_ID", &format!("app-{}", &nonce()?[..12]))
+                    .replace("MAKER_ID", &format!("maker-{}", &nonce()?[..12]));
+                let mut candidate: Value = serde_json::from_str(&raw)?;
+                candidate["generatedAt"] = json!(chrono::Utc::now().to_rfc3339());
+                self.command(json!({"command":"create_draft","kind":"app","candidate":candidate,"base_revision":null}))?
+            }
+            "drafts.preview" => {
+                let candidate = params["candidate"].clone();
+                let errors = match serde_json::from_value::<omastore_catalogue::Catalogue>(
+                    candidate.clone(),
+                ) {
+                    Ok(c) => json!(c.validate(true)),
+                    Err(_) => json!([{"path":"candidate","code":"invalid_schema"}]),
+                };
+                return Ok(
+                    json!({"value":{"candidate":candidate,"errors":errors},"workspace":self.cached}),
+                );
+            }
+            "drafts.get" | "revisions.get" => {
+                let id = record_id(&params)?;
+                let mut value = self.record(method, id)?;
+                if method == "drafts.get" {
+                    if let Ok(bytes) = std::fs::read(self.local_file("draft", id)?) {
+                        if bytes.len() <= 220 * 1024 {
+                            value["localRecovery"] = serde_json::from_slice(&bytes)?;
+                        }
+                    }
+                }
+                value
+            }
+            "drafts.cache" => {
+                let id = record_id(&params)?;
+                let bytes = serde_json::to_vec(&params)?;
+                if bytes.len() > 220 * 1024 {
+                    return Err(Error::new(413, "candidate_too_large"));
+                }
+                save_private(&self.local_file("draft", id)?, &bytes)?;
+                return Ok(json!({"value":{"id":id,"localSaved":true},"workspace":self.cached}));
+            }
+            "media.upload" => self.upload(params)?,
             "auth.start" if params == json!({}) => {
                 let verifier = nonce()?;
                 let value = self.http(
@@ -183,11 +260,17 @@ impl Client {
                     .login
                     .as_ref()
                     .ok_or(Error::new(401, "login_expired"))?;
-                let value = self.http(
+                let value = match self.http(
                     "POST",
                     "/api/v1/auth/poll",
                     &json!({"attemptId":attempt,"verifier":verifier}),
-                )?;
+                ) {
+                    Ok(value) => value,
+                    Err(error) => {
+                        self.login = None;
+                        return Err(error);
+                    }
+                };
                 if value["status"] == "signed_in" {
                     self.accept_token(&value)?;
                     self.login = None;
@@ -208,6 +291,7 @@ impl Client {
                     }
                 }
                 self.token = None;
+                self.cached = json!({"actor":null});
                 self.login = None;
                 self.storage = "no_session";
                 json!({"signedOut":true})
@@ -265,7 +349,165 @@ impl Client {
             }
             _ => return Err(Error::new(422, "unknown_workspace_method")),
         };
-        Ok(json!({"value":result,"workspace":self.state()?}))
+        // A refresh failure must not turn a committed mutation into an ambiguous failure.
+        let workspace = match self.state() {
+            Ok(v) => v,
+            Err(error) => {
+                let mut v = self.cached.clone();
+                v["refreshWarning"] = json!(error.code);
+                v
+            }
+        };
+        Ok(json!({"value":result,"workspace":workspace}))
+    }
+    fn local_file(&self, kind: &str, id: &str) -> Result<std::path::PathBuf> {
+        let owner = self.cached["actor"]["id"]
+            .as_str()
+            .ok_or(Error::new(401, "sign_in_required"))?;
+        let dir = private_directory(self.demo)?.join("recovery");
+        let key = digest(format!(
+            "{}:{owner}:{kind}:{id}",
+            self.origin.as_deref().unwrap_or("sample")
+        ));
+        Ok(dir.join(format!("{key}.json")))
+    }
+    fn record(&self, method: &str, id: &str) -> Result<Value> {
+        #[cfg(feature = "development-catalogue")]
+        if let Some(store) = &self.sandbox {
+            let actor = store.actor(
+                self.token.as_deref().unwrap_or(""),
+                omastore_workflow::now(),
+            )?;
+            return if method == "drafts.get" {
+                store.draft(&actor, id)
+            } else {
+                store.revision(&actor, id)
+            };
+        }
+        let collection = if method == "drafts.get" {
+            "drafts"
+        } else {
+            "revisions"
+        };
+        self.http("GET", &format!("/api/v1/{collection}/{id}"), &json!({}))
+    }
+    fn request_key(&self, params: &Value) -> Result<(String, std::path::PathBuf)> {
+        let path = self.local_file("outbox", "pending")?;
+        let hash = digest(serde_json::to_vec(params)?);
+        if let Ok(bytes) = std::fs::read(&path) {
+            if bytes.len() < 230 * 1024 {
+                if let Ok(old) = serde_json::from_slice::<Value>(&bytes) {
+                    if old["digest"] == hash {
+                        if let Some(key) = old["key"].as_str() {
+                            return Ok((key.to_owned(), path));
+                        }
+                    }
+                }
+            }
+        }
+        let key = nonce()?;
+        save_private(
+            &path,
+            &serde_json::to_vec(&json!({"key":key,"digest":hash,"request":params}))?,
+        )?;
+        Ok((key, path))
+    }
+    fn command(&self, params: Value) -> Result<Value> {
+        let command: omastore_workflow::drafts::Command = serde_json::from_value(params.clone())?;
+        let (key, path) = self.request_key(&params)?;
+        #[cfg(feature = "development-catalogue")]
+        let local = if let Some(store) = &self.sandbox {
+            let actor = store.actor(
+                self.token.as_deref().unwrap_or(""),
+                omastore_workflow::now(),
+            )?;
+            Some(store.command(&actor, &key, command, omastore_workflow::now())?)
+        } else {
+            None
+        };
+        #[cfg(not(feature = "development-catalogue"))]
+        let local: Option<Value> = {
+            let _ = command;
+            None
+        };
+        let mut value = match local {
+            Some(v) => v,
+            None => self.http_key("POST", "/api/v1/commands", &params, &key)?,
+        };
+        let _ = std::fs::remove_file(path);
+        if params["command"] == "save_draft" {
+            if let Some(id) = params["id"].as_str() {
+                let _ = std::fs::remove_file(self.local_file("draft", id)?);
+            }
+        }
+        value["command"] = params["command"].clone();
+        Ok(value)
+    }
+    fn upload(&self, params: Value) -> Result<Value> {
+        let draft = params["draftId"]
+            .as_str()
+            .ok_or(Error::new(422, "invalid_fields"))?;
+        if draft.len() != 64 || !draft.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(Error::new(422, "invalid_fields"));
+        }
+        let path = params["file"]
+            .as_str()
+            .and_then(|p| Url::parse(p).ok())
+            .filter(|u| u.scheme() == "file")
+            .and_then(|u| u.to_file_path().ok())
+            .ok_or(Error::new(422, "local_file_required"))?;
+        let meta = std::fs::symlink_metadata(&path)?;
+        if !meta.is_file() || meta.len() > omastore_workflow::media::VIDEO_LIMIT as u64 {
+            return Err(Error::new(413, "media_too_large"));
+        }
+        let mut bytes = Vec::new();
+        std::fs::File::open(path)?
+            .take((omastore_workflow::media::VIDEO_LIMIT + 1) as u64)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > omastore_workflow::media::VIDEO_LIMIT {
+            return Err(Error::new(413, "media_too_large"));
+        }
+        let mut identity = params.clone();
+        identity["file"] = json!(digest(&bytes));
+        let (key, pending) = self.request_key(&identity)?;
+        #[cfg(feature = "development-catalogue")]
+        if let Some(store) = &self.sandbox {
+            let actor = store.actor(
+                self.token.as_deref().unwrap_or(""),
+                omastore_workflow::now(),
+            )?;
+            store.draft(&actor, draft)?;
+            let objects = omastore_workflow::media::LocalObjects::new(
+                &private_directory(true)?.join("objects"),
+            )?;
+            let asset = omastore_workflow::media::normalize(
+                params["kind"].as_str().unwrap_or(""),
+                &bytes,
+                &objects,
+            )?;
+            let value = store.attach_media(
+                &actor,
+                omastore_workflow::media::Upload {
+                    draft_id: draft,
+                    version: params["version"].as_i64().unwrap_or(0),
+                    kind: params["kind"].as_str().unwrap_or(""),
+                    alt: params["alt"].as_str().unwrap_or(""),
+                    rights: params["rights"].as_str().unwrap_or(""),
+                    key: &key,
+                },
+                &asset,
+                &objects,
+                omastore_workflow::now(),
+            )?;
+            let _ = std::fs::remove_file(pending);
+            return Ok(value);
+        }
+        let mut body = params;
+        body.as_object_mut().unwrap().remove("file");
+        body["bytes"] = json!(STANDARD.encode(bytes));
+        let value = self.http_key("POST", "/api/v1/media", &body, &key)?;
+        let _ = std::fs::remove_file(pending);
+        Ok(value)
     }
     fn accept_token(&mut self, value: &Value) -> Result<()> {
         let token = value["token"]
@@ -336,8 +578,7 @@ fn secret(operation: &str, origin: &str, token: Option<&str>) -> Result<String> 
     }
     Ok(value.trim_end_matches('\n').to_owned())
 }
-#[cfg(feature = "development-catalogue")]
-fn private_directory() -> Result<std::path::PathBuf> {
+fn private_directory(demo: bool) -> Result<std::path::PathBuf> {
     use std::os::unix::fs::PermissionsExt;
     let base = std::env::var_os("XDG_DATA_HOME")
         .map(std::path::PathBuf::from)
@@ -346,10 +587,34 @@ fn private_directory() -> Result<std::path::PathBuf> {
             std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/share"))
         })
         .ok_or(Error::new(500, "local_storage_unavailable"))?;
-    let path = base.join("omastore-sample");
+    let path = base.join(if demo { "omastore-sample" } else { "omastore" });
     if !path.exists() {
         std::fs::create_dir_all(&path)?;
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700))?;
     }
     Ok(path)
+}
+
+fn record_id(params: &Value) -> Result<&str> {
+    params["id"]
+        .as_str()
+        .filter(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+        .ok_or(Error::new(422, "invalid_fields"))
+}
+fn save_private(path: &std::path::Path, bytes: &[u8]) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let parent = path
+        .parent()
+        .ok_or(Error::new(500, "local_storage_unavailable"))?;
+    std::fs::create_dir_all(parent)?;
+    if std::fs::symlink_metadata(parent)?.file_type().is_symlink() {
+        return Err(Error::new(500, "unsafe_local_storage"));
+    }
+    std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700))?;
+    let mut file = tempfile::NamedTempFile::new_in(parent)?;
+    file.write_all(bytes)?;
+    file.as_file().sync_all()?;
+    file.persist(path)
+        .map_err(|_| Error::new(500, "local_storage_unavailable"))?;
+    Ok(())
 }

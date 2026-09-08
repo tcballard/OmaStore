@@ -74,7 +74,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "candidate.prepare"]}),
+            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
