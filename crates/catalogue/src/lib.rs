@@ -395,37 +395,37 @@ impl Catalogue {
         let mut ids = HashSet::new();
         let mut slugs = HashSet::new();
         let maker_ids: HashSet<&str> = self.makers.iter().map(|m| m.id.as_str()).collect();
-        for maker in &self.makers {
+        for (maker_index, maker) in self.makers.iter().enumerate() {
             check(
                 token(&maker.id) && ids.insert(maker.id.clone()),
-                format!("makers.{}.id", maker.id),
+                format!("makers.{maker_index}.id"),
                 "invalid_or_duplicate_id",
             );
             check(
                 token(&maker.slug) && slugs.insert(maker.slug.clone()),
-                format!("makers.{}.slug", maker.id),
+                format!("makers.{maker_index}.slug"),
                 "invalid_or_duplicate_slug",
             );
             check(
                 !maker.name.is_empty() && maker.name.len() <= 120 && maker.bio.len() <= 2000,
-                format!("makers.{}", maker.id),
+                format!("makers.{maker_index}"),
                 "invalid_text_length",
             );
             check(
                 public_url(&maker.homepage),
-                format!("makers.{}.homepage", maker.id),
+                format!("makers.{maker_index}.homepage"),
                 "invalid_https_url",
             );
             check(
                 maker.claim != Claim::Verified
                     || maker.claim_evidence.as_deref().is_some_and(public_url),
-                format!("makers.{}.claim", maker.id),
+                format!("makers.{maker_index}.claim"),
                 "missing_claim_evidence",
             );
         }
         slugs.clear();
-        for app in &self.apps {
-            let p = format!("apps.{}", app.id);
+        for (app_index, app) in self.apps.iter().enumerate() {
+            let p = format!("apps.{app_index}");
             check(
                 token(&app.id) && ids.insert(app.id.clone()),
                 format!("{p}.id"),
@@ -488,8 +488,8 @@ impl Catalogue {
                 format!("{p}.releases"),
                 "invalid_release_count",
             );
-            for release in &app.releases {
-                let rp = format!("{p}.releases.{}", release.id);
+            for (release_index, release) in app.releases.iter().enumerate() {
+                let rp = format!("{p}.releases.{release_index}");
                 check(
                     token(&release.id) && releases.insert(release.id.as_str()),
                     rp.clone(),
@@ -628,8 +628,8 @@ impl Catalogue {
             }
         }
         slugs.clear();
-        for recipe in &self.recipes {
-            let p = format!("recipes.{}", recipe.id);
+        for (recipe_index, recipe) in self.recipes.iter().enumerate() {
+            let p = format!("recipes.{recipe_index}");
             check(
                 token(&recipe.id) && ids.insert(recipe.id.clone()) && token(&recipe.revision),
                 p.clone(),

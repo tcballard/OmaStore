@@ -6,8 +6,8 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | --- | --- | --- | --- |
 | B00 | Repository checkout, runnable shell and handoff | None | verified |
 | B01 | Catalogue v1 schema, validation and fixtures | B00 | implemented; local contract checks passed |
-| B02 | Native catalogue client, cache and read API | B01 | implemented; HTTP process/CI gate pending |
-| B03 | Native discovery and truthful app details | B02 | not_started |
+| B02 | Native catalogue client, cache and read API | B01 | local contract and actual HTTP/core checks passed; CI pending |
+| B03 | Native discovery and truthful app details | B02 | implemented; native offscreen interaction passed; real Omarchy pending |
 | B04 | Publisher identity and persistent workspaces | B01 | not_started |
 | B05 | Submission drafts, media and preview | B04 | not_started |
 | B06 | Bounded checks and evidence intake | B05 | not_started |

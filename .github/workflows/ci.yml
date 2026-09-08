@@ -1,4 +1,4 @@
-name: Native scaffold
+name: Native storefront
 
 on:
   push:
@@ -24,9 +24,9 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Check Rust diagnostics
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - name: Test Rust protocol boundaries
-        run: cargo test --workspace --locked
+        run: cargo test --workspace --all-features --locked
       - name: Validate the public catalogue
         run: cargo run --locked --bin omastore-validate -- data/registry.json
       - name: Configure native app
@@ -37,10 +37,24 @@ jobs:
         run: ctest --preset dev
       - name: Stage desktop packaging
         run: cmake --install build --prefix "$PWD/build/stage"
+      - name: Build the separate synthetic preview
+        run: |
+          cmake --preset demo
+          cmake --build --preset demo --parallel 2
+      - name: Exercise native keyboard flows and sizing
+        run: ctest --preset demo
+      - name: Capture the actual preview window
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: ./build-demo/bin/omastore --demo --screenshot build-demo/discovery.png
       - name: Preserve test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: native-test-results
-          path: build/Testing/Temporary/
+          path: |
+            build/Testing/Temporary/
+            build-demo/Testing/Temporary/
+            build-demo/discovery.png
           if-no-files-found: ignore

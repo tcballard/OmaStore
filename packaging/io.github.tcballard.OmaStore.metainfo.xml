@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.tcballard.OmaStore</id>
+  <name>OmaStore</name>
+  <summary>A native community application storefront for Omarchy</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <launchable type="desktop-id">io.github.tcballard.OmaStore.desktop</launchable>
+  <description>
+    <p>Browse application descriptions, sources, prices and compatibility evidence in a native Qt window. Save a local shortlist without a store account.</p>
+    <p>This is a development preview. Installation, author accounts and managed payments are not available yet. No official Omarchy endorsement is implied.</p>
+  </description>
+  <url type="homepage">https://github.com/tcballard/OmaStore</url>
+  <url type="bugtracker">https://github.com/tcballard/OmaStore/issues</url>
+  <provides><binary>omastore</binary></provides>
+  <categories><category>System</category><category>PackageManager</category></categories>
+  <content_rating type="oars-1.1"/>
+</component>

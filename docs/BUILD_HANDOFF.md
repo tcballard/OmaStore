@@ -2,6 +2,12 @@
 
 Date: 8 September 2026. Current change series: native discovery.
 
+## B03 native discovery
+
+Implemented native search/filter/detail views, independent price/type/licence/evidence labels, seller/source/support actions, local saved items and preference restoration. Added desktop portal theme/text scaling, demand-loaded digest-checked inert images with external/failure fallbacks, Arch packaging recipe and actual Qt keyboard checks at 800×600, 1280×800, 1920×1080 and 200% DPI. Eight demo CTest entries passed, including the actual HTTP/core process comparison. The current environment supports that HTTP exercise; the earlier assumption of unavailable local sockets was not applicable to this run. Real Wayland/Omarchy/portal and assistive-technology behaviour remain unverified.
+
+Performance sample: Intel Xeon Platinum 8370C, Linux x86_64, Rust 1.98.1 release, 1,000 synthetic entries and 100 samples. Shared query p95 10.312 ms; pure HTTP handler p95 10.527 ms. These exclude disk/socket/proxy time and are not GUI typing-latency measurements.
+
 ## B02 catalogue delivery
 
 Implemented shared search, typed public HTTP routes, bounded filters and snapshot/time-bound pagination; native HTTPS refresh and atomic validated XDG cache; independent read-only loopback service. Query/cache contract checks pass locally. Actual HTTP service/core parity is wired into CTest; local listening sockets are unavailable, so CI must supply this evidence. No auth/status/install endpoints exist. Next: B03 native discovery.

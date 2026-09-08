@@ -1,12 +1,50 @@
 {
   "version": 3,
-  "configurePresets": [{
-    "name": "dev",
-    "displayName": "Native development build",
-    "generator": "Ninja",
-    "binaryDir": "${sourceDir}/build",
-    "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug", "BUILD_TESTING": "ON"}
-  }],
-  "buildPresets": [{"name": "dev", "configurePreset": "dev"}],
-  "testPresets": [{"name": "dev", "configurePreset": "dev", "output": {"outputOnFailure": true}}]
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Native development build",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "demo",
+      "displayName": "Native preview with synthetic catalogue",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build-demo",
+      "cacheVariables": {
+        "OMASTORE_DEVELOPMENT_DATA": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "demo",
+      "configurePreset": "demo"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "demo",
+      "configurePreset": "demo",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
 }

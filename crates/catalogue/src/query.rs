@@ -122,10 +122,30 @@ pub fn app_detail(
         .iter()
         .find(|a| a.id == id || a.slug == id)
         .ok_or("not_found")?;
+    let paid = app.offers.first().is_some_and(|o| {
+        matches!(
+            o.model,
+            OfferModel::Paid
+                | OfferModel::Subscription
+                | OfferModel::Service
+                | OfferModel::Upgrade
+                | OfferModel::PaidFeatures
+        )
+    });
+    let label = if paid {
+        "View seller offer"
+    } else {
+        match app.current_release().route {
+            InstallRoute::AurExternal { .. } => "View AUR instructions",
+            InstallRoute::ArchPackage { .. } => "View package instructions",
+            InstallRoute::PluginExternal { .. } => "View plugin instructions",
+            _ => "Get from developer",
+        }
+    };
     Ok(json!({"snapshot": catalogue.snapshot_id(), "app": app,
         "release": app.current_release(), "summary": summary(app, now),
         "makers": catalogue.makers.iter().filter(|m| app.maker_ids.contains(&m.id)).collect::<Vec<_>>(),
-        "acquisition": {"kind": "external", "label": "Visit developer", "url": app.current_release().route.url(),
+        "acquisition": {"kind": "external", "label": label, "url": if paid { app.offers[0].url.as_str() } else { app.current_release().route.url() },
             "reason": "Managed installation is not available in this preview."}}))
 }
 
