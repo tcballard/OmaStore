@@ -51,7 +51,7 @@ impl Host {
         hash(self)
     }
     pub fn summary(&self) -> serde_json::Value {
-        serde_json::json!({"state":self.state,"reason":self.reason,"architecture":self.architecture,"omarchyVersion":self.omarchy_version,"repositories":self.repositories,"installedCount":self.installed.len(),"updateRequired":self.update_required,"locked":self.locked,"simulated":self.simulated,"fingerprint":self.fingerprint()})
+        serde_json::json!({"state":self.state,"reason":self.reason,"architecture":self.architecture,"omarchyVersion":self.omarchy_version,"repositories":self.repositories,"installedCount":self.installed.len(),"updateRequired":self.update_required,"locked":self.locked,"simulated":self.simulated,"fingerprint":self.fingerprint(),"configurationFingerprint":self.configuration,"databaseFingerprint":self.sync_databases})
     }
 }
 

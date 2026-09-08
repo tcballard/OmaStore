@@ -83,6 +83,10 @@ impl Store {
         }
         let connection = db(Connection::open(path))?;
         db(connection.busy_timeout(Duration::from_secs(3)))?;
+        let schema: i64 = db(connection.query_row("PRAGMA user_version", [], |r| r.get(0)))?;
+        if schema > 2 {
+            return Err("local_schema_upgrade_required");
+        }
         let has_meta: bool = db(connection.query_row(
             "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='local_meta')",
             [],
@@ -105,7 +109,7 @@ impl Store {
             CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY,plan_json TEXT NOT NULL,state TEXT NOT NULL,version INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS operation_events(sequence INTEGER PRIMARY KEY AUTOINCREMENT,operation_id TEXT NOT NULL REFERENCES operations(id),state TEXT NOT NULL,code TEXT NOT NULL,at INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS sample_packages(name TEXT PRIMARY KEY,version TEXT NOT NULL);
-            PRAGMA user_version=1;"))?;
+"))?;
         let mode = if demo { "sample" } else { "system" };
         let stored: Option<String> = db(connection
             .query_row("SELECT value FROM local_meta WHERE key='mode'", [], |r| {
@@ -119,6 +123,7 @@ impl Store {
             "INSERT OR IGNORE INTO local_meta(key,value) VALUES('mode',?1)",
             [mode],
         ))?;
+        crate::lifecycle::migrate(&connection)?;
         Ok(Self { connection, demo })
     }
     pub fn observe(&mut self, c: &Catalogue, h: &Host, now: i64) -> Result<()> {

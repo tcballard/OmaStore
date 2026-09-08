@@ -206,6 +206,19 @@ int main(int argc, char *argv[]) {
                         core.openHandoff("omastore://setup/demo-writing-desk?revision=1");
                         for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
                         check(window->property("setupSelection").toString()=="demo-writing-desk","identity handoff opens exact setup");
+                        core.communityAction("system.plan",{{"kind","app"},{"id","demo-fieldnotes"}});
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        auto *approve=findItem(window->contentItem(),"confirmPlan");
+                        check(approve&&!approve->isEnabled(),"installation requires an explicit consent gesture");
+                        auto *consent=findItem(window->contentItem(),"planConsent");
+                        if(consent){consent->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        if(approve){approve->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for(int i=0;i<100 && core.community().value("operations.status").toMap().value("state").toString()!="succeeded";++i)QTest::qWait(50);
+                        check(core.community().value("operations.status").toMap().value("state").toString()=="succeeded","sample worker reaches verified local outcome");
+                        auto *done=findItem(window->contentItem(),"closePlan");if(done){done->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        core.communityAction("library.refresh");for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        check(!core.community().value("library.list").toMap().value("items").toList().isEmpty(),"sample installation appears in observed library");
+
                         QTest::keyClick(window,Qt::Key_Escape);QTest::qWait(50);
                     }
                     auto *submit = findItem(window->contentItem(), "navSubmit");

@@ -1,6 +1,8 @@
 mod catalogue;
+mod execution;
 mod handoff;
 mod library;
+mod lifecycle;
 mod planner;
 mod platform;
 mod setups;
@@ -73,6 +75,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
     if request.method.starts_with("library.")
         || request.method.starts_with("operations.")
         || request.method == "handoff.open"
+        || request.method == "system.handoff"
     {
         return match local_request(runtime, &request.method, request.params) {
             Ok(value) => {
@@ -107,7 +110,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
@@ -185,7 +188,17 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
 fn prepare_plan(runtime: &mut Runtime, params: Value) -> platform::Result<Value> {
     let selection: planner::Selection =
         serde_json::from_value(params).map_err(|_| "invalid_selection")?;
-    let now = chrono::Utc::now().timestamp();
+    let plan = compute_plan(runtime, selection, chrono::Utc::now().timestamp())?;
+    library::Store::open(runtime.demo)?.save_plan(&plan)?;
+    let value = serde_json::to_value(&plan).map_err(|_| "plan_invalid")?;
+    runtime.plan = Some(plan);
+    Ok(value)
+}
+fn compute_plan(
+    runtime: &mut Runtime,
+    selection: planner::Selection,
+    now: i64,
+) -> platform::Result<planner::Plan> {
     let ids = selection.ids(&runtime.catalogue.catalogue, now)?;
     #[cfg(feature = "development-catalogue")]
     if runtime.demo {
@@ -195,18 +208,14 @@ fn prepare_plan(runtime: &mut Runtime, params: Value) -> platform::Result<Value>
             library::Store::open(true)?.sample_packages()?,
             now,
         )?;
-        let plan = planner::build(
+        return planner::build(
             &runtime.catalogue.catalogue,
             selection,
             &host,
             &status,
             Ok(packages),
             now,
-        )?;
-        let value = serde_json::to_value(&plan).map_err(|_| "plan_invalid")?;
-        library::Store::open(runtime.demo)?.save_plan(&plan)?;
-        runtime.plan = Some(plan);
-        return Ok(value);
+        );
     }
     let host = platform::probe();
     let workspace = runtime
@@ -222,18 +231,14 @@ fn prepare_plan(runtime: &mut Runtime, params: Value) -> platform::Result<Value>
     } else {
         Ok(Vec::new())
     };
-    let plan = planner::build(
+    planner::build(
         &runtime.catalogue.catalogue,
         selection,
         &host,
         &status,
         resolved,
         now,
-    )?;
-    let value = serde_json::to_value(&plan).map_err(|_| "plan_invalid")?;
-    library::Store::open(runtime.demo)?.save_plan(&plan)?;
-    runtime.plan = Some(plan);
-    Ok(value)
+    )
 }
 
 fn local_request(runtime: &mut Runtime, method: &str, params: Value) -> platform::Result<Value> {
@@ -270,8 +275,62 @@ fn local_request(runtime: &mut Runtime, method: &str, params: Value) -> platform
         let p: Handoff = serde_json::from_value(params).map_err(|_| "invalid_request")?;
         return handoff::open(&runtime.catalogue.catalogue, &p.uri);
     }
+    if method == "system.handoff" {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Handoff {
+            kind: String,
+            confirmed: bool,
+        }
+        let p: Handoff = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+        if !p.confirmed {
+            return Err("explicit_consent_required");
+        }
+        return execution::system_handoff(&p.kind, runtime.demo);
+    }
     let mut store = library::Store::open(runtime.demo)?;
     match method {
+        "operations.status" => {
+            let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            let mut value = lifecycle::status(&store, &p.id)?;
+            value["workerActive"] = json!(lifecycle::worker_active(
+                &library::directory(runtime.demo)?,
+                &p.id
+            )?);
+            Ok(value)
+        }
+        "operations.cancel" => {
+            let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            lifecycle::cancel(&mut store, &p.id, chrono::Utc::now().timestamp())
+        }
+        "operations.confirm" => {
+            let consent: lifecycle::Consent =
+                serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            let plan = store.plan(&consent.id)?;
+            if !consent.accepted || consent.digest != plan.digest {
+                return Err("explicit_consent_required");
+            }
+            let status = lifecycle::status(&store, &plan.digest)?;
+            if status["state"] == "planned" {
+                let fresh = compute_plan(
+                    runtime,
+                    plan.selection.clone(),
+                    chrono::Utc::now().timestamp(),
+                )?;
+                lifecycle::consent(&mut store, &consent, &fresh, chrono::Utc::now().timestamp())?;
+            } else if status["state"] != "awaiting_user" && status["state"] != "running" {
+                return Ok(status);
+            }
+            if let Err(code) = execution::launch(&store, &plan) {
+                lifecycle::fail(
+                    &mut store,
+                    &plan.digest,
+                    code,
+                    chrono::Utc::now().timestamp(),
+                )?;
+            }
+            lifecycle::status(&store, &plan.digest)
+        }
         "library.list" | "library.refresh" => {
             let p: Page = serde_json::from_value(params).map_err(|_| "invalid_request")?;
             let mut value = store.view(p.offset)?;
@@ -370,6 +429,13 @@ fn main() -> io::Result<()> {
         #[cfg(feature = "development-catalogue")]
         [mode, demo] if mode == "--stdio" && demo == "--demo" => {
             serve(io::stdin().lock(), io::stdout().lock(), &mut client)
+        }
+        [mode, id] if mode == "--operation-worker" => {
+            execution::worker(id, false).map_err(io::Error::other)
+        }
+        #[cfg(feature = "development-catalogue")]
+        [mode, id, flag] if mode == "--operation-worker" && flag == "--demo" => {
+            execution::worker(id, true).map_err(io::Error::other)
         }
         [arg] if arg == "--version" => {
             println!("omastore-core {}", env!("CARGO_PKG_VERSION"));

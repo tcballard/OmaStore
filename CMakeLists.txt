@@ -103,6 +103,8 @@ if(BUILD_TESTING)
     set_tests_properties(native-instance PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
     add_test(NAME native-startup COMMAND omastore --smoke-test)
     if(OMASTORE_DEVELOPMENT_DATA)
+        add_test(NAME native-lifecycle COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/lifecycle_process.py" "${CORE_BINARY}")
+        set_tests_properties(native-lifecycle PROPERTIES TIMEOUT 20)
         foreach(SIZE IN ITEMS 800x600 1280x800 1920x1080)
             add_test(NAME native-interaction-${SIZE} COMMAND omastore --demo --ui-test --window-size ${SIZE})
             set_tests_properties(native-interaction-${SIZE} PROPERTIES TIMEOUT 20

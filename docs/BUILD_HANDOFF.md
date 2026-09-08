@@ -1,5 +1,9 @@
 # Build handoff
 
+B14 implements exact explicit consent, fresh preflight after system authentication, independent workers, kernel locks/atomic claims, bounded output draining, package/source/version outcome checks, cancellation boundaries and native operation progress. All 52 Rust tests and both Clippy modes pass. Nine native checks pass (27.07 seconds), including a real core-loss/subprocess-survival/replay test and keyboard sample installation at three sizes and 200% scaling. The session-bus test still skips locally. Live package writes remain unavailable: the verified Omarchy release list is empty pending actual VM lifecycle evidence. B15 adds interruption reconciliation, removal, selected retry and diagnostics.
+
+B13 is published as `5396535d0babb79977e1121a591b079eb25a58a3`, matching local `43ddbfdef836b9394e18462a220e0eb3910e4441` and tree `de597806329ac9b5955cfb570be9e663c2e13cd7`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34282128450), including the actual two-process D-Bus test in both ordinary and sample builds. B12 [CI also passed](https://github.com/tcballard/OmaStore/actions/runs/34280853990).
+
 B13 adds a private local SQLite library, persistent exact proposals/events, external installed-version observations, cached reads, package-owned desktop launcher selection, strict identity-only URI handling and a per-user single-window lock/session-bus handoff. All 49 Rust tests and ordinary/development Clippy pass. Eight native checks pass (23.14 seconds); the additional two-process D-Bus test skipped because this environment cannot create the isolated bus. CI must run that test. Real Omarchy focus/launcher/offline-launch evidence remains outstanding. B14–B15 consent, independent execution and recovery follow; no host package mutation occurred.
 
 B12 is published as `e90a4393322745a2e94d93699b6a6a7898ff7930`, matching local `82789a8c35d2728170bb78b25ec9db725f8cc28c` and tree `6bec1d582354017b9681d54eb332d13510727eb5`.

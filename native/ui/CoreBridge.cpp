@@ -25,7 +25,7 @@ CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(dem
     m_timeout.setInterval(1000);
     connect(&m_timeout, &QTimer::timeout, this, [this] {
         for (const auto &pending : m_pending) {
-            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("system.") || pending.method.startsWith("library.") ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
+            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("system.") || pending.method.startsWith("library.") || pending.method.startsWith("operations.") ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
         }
     });
     connect(&m_process, &QProcess::started, this, [this] { request("core.info"); });
@@ -39,7 +39,7 @@ CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(dem
 CoreBridge::~CoreBridge() {
     m_timeout.stop(); m_process.disconnect(this); m_process.closeWriteChannel();
     if (!m_process.waitForFinished(250)) {
-        // Only catalogue reads/atomic cache writes exist. Package lifecycles require B15.
+        // Package mutations belong to independent journalled workers, never this pipe child.
         m_process.terminate();
         if (!m_process.waitForFinished(250)) { m_process.kill(); m_process.waitForFinished(250); }
     }
@@ -141,6 +141,7 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         emit workspaceChanged();
     } else if (m_communityRequests.value(pending.method)==id) {
         m_community.insert(pending.method=="setups.import"?"setups.select":pending.method=="library.refresh"?"library.list":pending.method,result);
+        if(pending.method=="operations.confirm" || pending.method=="operations.cancel") m_community.insert("operations.status",result);
         if(pending.method=="operations.get") m_community.insert("system.plan",result.value("plan").toMap());
         emit communityChanged();
         if(pending.method=="handoff.open") {
@@ -228,7 +229,7 @@ bool CoreBridge::openLink(const QString &kind, int index) {
 bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() && m_distributionUntil>QDateTime::currentSecsSinceEpoch();}
 
 void CoreBridge::communityAction(const QString &method,const QVariantMap &params) {
-    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan","library.list","library.refresh","library.launchers","library.launch","operations.get","operations.events","handoff.open"};
+    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan","library.list","library.refresh","library.launchers","library.launch","operations.get","operations.events","operations.status","operations.confirm","operations.cancel","system.handoff","handoff.open"};
     if(m_ready && methods.contains(method)) { if(method=="system.plan" || method=="operations.get") { m_community.remove("system.plan"); emit communityChanged(); } request(method,params); }
 }
 bool CoreBridge::openMakerLink(const QString &kind) {
