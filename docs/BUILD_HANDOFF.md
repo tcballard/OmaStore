@@ -1,5 +1,9 @@
 # Build handoff
 
+B16c removes the advisory-bearing RustCrypto RSA dependency by selecting jsonwebtoken's supported AWS-LC backend. The actual GitHub App RS256 signing/verification/tamper test passes with a generated temporary key. cargo-audit 0.22.2 reports zero vulnerabilities/warnings across 249 dependencies against advisory database `bf25f6575a93a35f30796c65c0ed91bee7fa19fd`; the source credential-format scan has zero matches. The receipt binds the lockfile digest. B16b CI run 34288947027 failed at sandbox startup before the video test; the positive test now emits a bounded fixed-program startup diagnostic so the environment failure can be resolved without weakening the sandbox.
+
+B16b is published as `ce41725a28a36db35ec7037c0122230c7a1287be`, matching local `dae59d81a4d561b9ce18134f133ed8234d42fd4b` and tree `d44d05aed303b42c5b53a5d83904bed1b19a2ca4`. B17 settings work is in progress separately.
+
 B16b connects native readiness/evidence and review-start controls, hourly maintenance, subscription addresses and isolated video normalization. All 60 ordinary Rust tests, both Clippy modes and nine native checks pass (29.17 seconds); the session-bus check skips locally. The positive Bubblewrap/FFmpeg test is explicitly ignored in the ordinary suite and required separately in CI; this container lacks Bubblewrap. A credential-format scan of tracked/unignored source found zero matches. The dependency advisory tool is compiling separately; record its result in the next receipt. No public release gate was marked passed. B17–B22 implementation continues.
 
 B16a is published as `ca197e26d6bdaad9142f4c4895233441f3195b72`, matching local `bf56f8cbe869becb2681efc0e063efe284ba7e96` and tree `a0ae000811c73062b91e3db692d5301fb5fbca9a`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34287878156).

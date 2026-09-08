@@ -115,6 +115,24 @@ pub struct Github {
     pub config: Config,
     token: Arc<Mutex<Option<(String, i64)>>>,
 }
+fn app_jwt(app_id: u64, key: &jsonwebtoken::EncodingKey, now: i64) -> Result<String> {
+    #[derive(Serialize)]
+    struct Claims {
+        iat: i64,
+        exp: i64,
+        iss: String,
+    }
+    jsonwebtoken::encode(
+        &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256),
+        &Claims {
+            iat: now - 60,
+            exp: now + 540,
+            iss: app_id.to_string(),
+        },
+        key,
+    )
+    .map_err(|_| Error::new(503, "github_signing_failed"))
+}
 impl Github {
     pub fn new(config: Config) -> Self {
         Self {
@@ -129,23 +147,8 @@ impl Github {
                 return Ok(value.clone());
             }
         }
-        #[derive(Serialize)]
-        struct Claims {
-            iat: i64,
-            exp: i64,
-            iss: String,
-        }
         let now = crate::now();
-        let jwt = jsonwebtoken::encode(
-            &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256),
-            &Claims {
-                iat: now - 60,
-                exp: now + 540,
-                iss: self.config.app_id.to_string(),
-            },
-            &self.config.private_key,
-        )
-        .map_err(|_| Error::new(503, "github_signing_failed"))?;
+        let jwt = app_jwt(self.config.app_id, &self.config.private_key, now)?;
         let name = self
             .config
             .repository
@@ -282,4 +285,60 @@ async fn send(method: &str, path: &str, body: Value, token: &str) -> Result<Valu
             },
         )
     })
+}
+
+#[cfg(test)]
+mod signing_tests {
+    use super::*;
+    #[test]
+    fn github_app_tokens_use_rs256_and_bounded_claims() {
+        use std::process::{Command, Stdio};
+        let d = tempfile::tempdir().unwrap();
+        let file = d.path().join("ephemeral.pem");
+        let generated = Command::new("/usr/bin/openssl")
+            .args([
+                "genpkey",
+                "-algorithm",
+                "RSA",
+                "-pkeyopt",
+                "rsa_keygen_bits:2048",
+                "-out",
+            ])
+            .arg(&file)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .unwrap();
+        assert!(generated.success());
+        let public = Command::new("/usr/bin/openssl")
+            .args(["pkey", "-pubout", "-in"])
+            .arg(&file)
+            .stderr(Stdio::null())
+            .output()
+            .unwrap();
+        assert!(public.status.success());
+        let key = jsonwebtoken::EncodingKey::from_rsa_pem(&std::fs::read(&file).unwrap()).unwrap();
+        let now = crate::now();
+        let jwt = app_jwt(42, &key, now).unwrap();
+        let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+        validation.set_issuer(&["42"]);
+        let claims = jsonwebtoken::decode::<Value>(
+            &jwt,
+            &jsonwebtoken::DecodingKey::from_rsa_pem(&public.stdout).unwrap(),
+            &validation,
+        )
+        .unwrap()
+        .claims;
+        assert_eq!(claims["iat"], now - 60);
+        assert_eq!(claims["exp"], now + 540);
+        assert_eq!(claims["iss"], "42");
+        let mut tampered = jwt.into_bytes();
+        tampered[20] = if tampered[20] == b'A' { b'B' } else { b'A' };
+        assert!(jsonwebtoken::decode::<Value>(
+            &String::from_utf8(tampered).unwrap(),
+            &jsonwebtoken::DecodingKey::from_rsa_pem(&public.stdout).unwrap(),
+            &validation
+        )
+        .is_err());
+    }
 }

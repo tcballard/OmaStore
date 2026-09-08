@@ -687,6 +687,16 @@ mod sandbox_tests {
         let d = tempfile::tempdir().unwrap();
         let o = LocalObjects::new(&d.path().join("objects")).unwrap();
         let work = tempfile::tempdir_in(o.root.join("work")).unwrap();
+        let probe = sandbox_command(work.path())
+            .unwrap()
+            .args(["--", "/usr/bin/true"])
+            .output()
+            .unwrap();
+        assert!(
+            probe.status.success(),
+            "Sandbox startup failed: {}",
+            String::from_utf8_lossy(&probe.stderr[..probe.stderr.len().min(4096)])
+        );
         let env = decoder("/usr/bin/env", &[], 4096, work.path()).unwrap();
         let env = String::from_utf8(env).unwrap();
         assert!(!env.contains("HOME="));
