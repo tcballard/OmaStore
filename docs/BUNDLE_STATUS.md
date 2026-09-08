@@ -21,14 +21,14 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B13 | Native library and identity handoff | B12 | implemented_unverified; 49 Rust and 8 native checks pass; local bus test skipped, CI/real Omarchy pending |
 | B14 | Supported package execution | B12, B13 | implemented_unverified; 52 Rust and 9 native checks pass; real Omarchy execution gate remains closed |
 | B15 | Journal reconciliation and lifecycle | B11, B14 | implemented_unverified; recovery, partial retries, removal and diagnostic checks pass; real Omarchy lifecycle gate remains external |
-| B16 | Pilot operations and release readiness | B09, B10, B11, B15 | in_progress; B16a operator/retention/backup authority passes 60 Rust tests |
-| B17 | Supported settings schema and diffs | B11, B15, B16 | not_started |
+| B16 | Pilot operations and release readiness | B09, B10, B11, B15 | software implemented; 60 Rust and nine native checks pass; isolated-video CI, advisory audit and actual pilot evidence remain tracked |
+| B17 | Supported settings schema and diffs | B11, B15, B16 | next implementation |
 | B18 | Setting apply, conflict and restore | B17 | not_started |
 | B19 | Recipe remix and private-data-safe export | B18 | not_started |
 | B20 | Commerce operating model and disabled integration | B16 | not_started |
 | B21 | Checkout, delivery and entitlements | B20 | not_started |
 | B22 | Refunds, disputes, payouts and commerce readiness | B21 | not_started |
 
-B00–B03 are implemented and checked on offscreen Linux, including actual process/HTTP interactions. [CI passed for implementation revision 887d449](https://github.com/tcballard/OmaStore/actions/runs/34218944477); the handoff records its full revision and tree. R1 still needs real Omarchy desktop validation. B03b is a bounded local preparation extension; it does not complete B04 or B05. Public listings remain empty. Publisher identity, submission/review and publication software are implemented; live provider, Omarchy and pilot evidence remain release gates. Installations and payments follow in later bundles.
+B00–B03 are implemented and checked on offscreen Linux, including actual process/HTTP interactions. [CI passed for implementation revision 887d449](https://github.com/tcballard/OmaStore/actions/runs/34218944477); the handoff records its full revision and tree. R1 still needs real Omarchy desktop validation. B03b is a bounded local preparation extension; it does not complete B04 or B05. Public listings remain empty. Publisher identity, submission/review and publication software are implemented; live provider, Omarchy and pilot evidence remain release gates. The sample installation lifecycle is implemented; live installation and commerce have separate release gates.
 
-Full-scope continuation is underway. B04–B09 implement identity, drafts/media, checks, review, publication and monitoring; B10 connects makers/editorial. B11–B22 remain the active continuation. Real Omarchy, provider and pilot evidence remain release gates. Review BUILD_HANDOFF.md for exact receipts.
+Full-scope continuation is underway. B04–B09 implement identity, drafts/media, checks, review, publication and monitoring; B10 connects makers/editorial. B17–B22 remain the active continuation. Real Omarchy, provider and pilot evidence remain release gates. Review BUILD_HANDOFF.md for exact receipts.

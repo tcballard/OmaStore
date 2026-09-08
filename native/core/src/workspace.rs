@@ -144,6 +144,8 @@ impl Client {
                 "delivery_in_progress" => "delivery_in_progress",
                 "publication_busy" => "publication_busy",
                 "invalid_fields" => "invalid_fields",
+                "invalid_release_evidence" => "invalid_release_evidence",
+                "new_publisher_intake_paused" => "new_publisher_intake_paused",
                 _ => "workspace_request_failed",
             };
             return Err(Error::new(status, code));
@@ -296,6 +298,25 @@ impl Client {
                 )?;
                 store.sample_runtime(&actor, record_id(&params)?, omastore_workflow::now())?
             }
+            "operations.dashboard" => {
+                #[cfg(feature = "development-catalogue")]
+                let local = if let Some(store) = &self.sandbox {
+                    let actor = store.actor(
+                        self.token.as_deref().unwrap_or(""),
+                        omastore_workflow::now(),
+                    )?;
+                    Some(store.operations_dashboard(&actor, omastore_workflow::now())?)
+                } else {
+                    None
+                };
+                #[cfg(not(feature = "development-catalogue"))]
+                let local: Option<Value> = None;
+                match local {
+                    Some(value) => value,
+                    None => self.http("GET", "/api/v1/operations", &json!({}))?,
+                }
+            }
+            "feed.info" => self.feed_info(&params)?,
             "review.queue" | "review.get" => {
                 let id = if method == "review.get" {
                     record_id(&params)?
@@ -639,6 +660,31 @@ impl Client {
         }
         Ok(value)
     }
+    fn feed_info(&self, params: &Value) -> Result<Value> {
+        let maker = params["makerId"]
+            .as_str()
+            .filter(|s| omastore_catalogue::token(s));
+        if !params["makerId"].is_null() && maker.is_none() {
+            return Err(Error::new(422, "invalid_fields"));
+        }
+        #[cfg(feature = "development-catalogue")]
+        if self.sandbox.is_some() {
+            return Ok(
+                json!({"feedUrl":null,"notice":"Sample feeds are local exports; they have no live subscription address."}),
+            );
+        }
+        let url = self.origin.as_ref().map(|o| {
+            format!(
+                "{o}{}",
+                maker
+                    .map(|m| format!("/makers/{m}/feed.xml"))
+                    .unwrap_or("/feed.xml".into())
+            )
+        });
+        Ok(
+            json!({"feedUrl":url,"notice":if url.is_some(){"Copy this address into your feed reader for future releases."}else{"A deployed catalogue service is required for a subscription address."}}),
+        )
+    }
     fn export_feed(&self, params: &Value) -> Result<Value> {
         let maker = params["makerId"]
             .as_str()
@@ -696,14 +742,7 @@ impl Client {
         file.as_file().sync_all()?;
         file.persist(path)
             .map_err(|_| Error::new(500, "local_export_failed"))?;
-        let feed_url = self.origin.as_ref().map(|o| {
-            format!(
-                "{o}{}",
-                maker
-                    .map(|m| format!("/makers/{m}/feed.xml"))
-                    .unwrap_or("/feed.xml".into())
-            )
-        });
+        let feed_url = self.feed_info(params)?["feedUrl"].clone();
         Ok(json!({"exported":true,"makerId":maker,"feedUrl":feed_url}))
     }
     fn export_publication(&self, params: &Value) -> Result<Value> {

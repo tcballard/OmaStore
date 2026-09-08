@@ -8,6 +8,7 @@ ScrollView {
     required property var core
     required property var theme
     property string selectedId: ""
+    property string feedUrl:""
     property string notice: ""
     signal chosen(string id)
     signal browseApps(string makerId)
@@ -18,7 +19,7 @@ ScrollView {
     clip: true
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
     Component.onCompleted: {if(selectedId.length) page.core.communityAction("makers.get",{id:selectedId});}
-    Connections {target:core;function onWorkspaceChanged(){const r=page.core.workspaceReply;if(r.action==="feed.export") page.notice=r.error ? "Feed export unavailable: "+r.error.replace(/_/g," ") : "RSS exported. Import it into your feed reader.";}}
+    Connections {target:core;function onWorkspaceChanged(){const r=page.core.workspaceReply;if(r.action==="feed.info"){page.feedUrl=r.feedUrl || "";page.notice=r.notice || "Feed unavailable";} if(r.action==="feed.export") page.notice=r.error ? "Feed export unavailable: "+r.error.replace(/_/g," ") : "RSS exported. Import it into your feed reader.";}}
     ColumnLayout {
         width:page.availableWidth
         spacing:18
@@ -28,9 +29,12 @@ ScrollView {
             Label {text:"THE PEOPLE BEHIND THE TOOLS";font.family:theme.mono;color:theme.muted;Layout.fillWidth:true;wrapMode:Text.Wrap}
             Label {objectName:"makerTitle";text:page.showing ? page.profile.name : "Software has people behind it.";font.pixelSize:32*theme.scale;font.bold:true;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
             Label {visible:!!page.notice;text:page.notice;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+            TextField {visible:!!page.feedUrl;text:page.feedUrl;readOnly:true;selectByMouse:true;Layout.fillWidth:true;Accessible.name:"Release feed subscription address"}
             Flow {
                 Layout.fillWidth:true;spacing:8
                 Button {text:"All makers";visible:page.selectedId.length>0;onClicked:page.chosen("")}
+                Button {text:"Subscription address";enabled:!core.loading;onClicked:core.workspaceAction("feed.info",{makerId:page.selectedId.length?page.selectedId:null})}
+                Button {text:"Copy subscription address";enabled:!!page.feedUrl && !!core.workspaceReply.feedUrl;onClicked:core.copyFeedLink()}
                 Button {text:page.showing?"Export maker release feed":"Export all releases";onClicked:feedFile.open()}
                 Button {text:"Project website";visible:page.showing;onClicked:page.core.openMakerLink("homepage")}
                 Button {text:"Support the maker";visible:page.showing && !!page.profile.support;onClicked:page.core.openMakerLink("support")}

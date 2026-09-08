@@ -1,6 +1,6 @@
 # Public read and native process contracts
 
-Build `omastore-service` through Cargo or CMake. Run `omastore-service data/registry.json 127.0.0.1:8080`; put an operator-managed HTTPS proxy in front of it before offering remote access. It does not provide author authentication or installation eligibility.
+Build `omastore-service` through Cargo or CMake. Run `omastore-service data/registry.json 127.0.0.1:8080`; put an operator-managed HTTPS proxy in front of it before offering remote access. With the optional private database and configured provider, the same service provides authenticated author/reviewer workflows and fresh distribution status. Public catalogue reads alone never grant installation authority.
 
 GET `/api/v1/catalogue` returns the validated public snapshot. GET `/api/v1/apps` accepts `q`, `category`, `appType`, `licence`, `price`, `architecture`, `offline`, `evidence`, `profile`, `limit` (1–50, default 20) and `cursor`. Enum values come from the catalogue contract. Unknown/duplicate parameters fail with 400. Exact ID/name and name prefix lead search, followed by text match and known compatibility with an explicitly selected environment profile, then stable lowercase name/ID. Editorial entries do not affect search.
 
@@ -23,3 +23,7 @@ B12 adds native `system.probe` (empty parameters) and `system.plan` (`{kind:"app
 B13 adds native `library.list` and `library.refresh` with `{offset?}`, `library.launchers` with `{id}`, `library.launch` with `{id,desktop}`, `operations.get` with `{id}`, `operations.events` with `{id,after?}`, and `handoff.open` with `{uri}`. Package observations and journal data remain local. Launch accepts only a currently observed package-owned system desktop file. Handoffs contain exact public identities and never authorise a write. See [LOCAL_LIBRARY.md](LOCAL_LIBRARY.md).
 
 B14 adds `operations.status` and `operations.cancel` with `{id}`, `operations.confirm` with `{id,digest,accepted:true}`, and `system.handoff` with `{kind:"update"|"install",confirmed:true}`. Confirmation recomputes material and binds the saved proposal; a separate worker claims the durable operation. Status exposes typed outcomes and event sequences. The live adapter has an empty verified-release allowlist until actual Omarchy acceptance evidence exists. Sample confirmation exercises the same ledger and independent process boundary without accessing host packages. See [EXECUTION.md](EXECUTION.md).
+
+B15 adds removal selections (`system.plan` with `{kind:"remove",id}`), `operations.reconcile`, `operations.replan`, `operations.diagnostics`, exact-digest `operations.diagnostics.export`, `library.setups`, `library.detach_setup` and `library.remember_setup`. See EXECUTION.md for explicit consent, references and recovery limits.
+
+B16 adds authenticated GET `/api/v1/operations`, native `workspace.operations.dashboard`, the `start_review` and `release_evidence` commands, and `workspace.feed.info` for a subscription address. Sample feeds deliberately return no live subscription URL. Operator and reviewer actions recheck current roles. See OPERATIONS.md for maintenance, backup/restore and release evidence.

@@ -92,6 +92,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/api/v1/submissions/{id}", get(publication::submitted))
         .route("/api/v1/github/webhook", post(publication::webhook))
+        .route("/api/v1/operations", get(workspace::operations))
         .route("/api/v1/review", get(workspace::review_queue))
         .route("/api/v1/review/{id}", get(workspace::review_detail))
         .route("/api/v1/commands", post(workspace::command))
@@ -403,6 +404,25 @@ async fn public_read(
 }
 
 /// One bounded worker per service process; SQLite leases coordinate replicas/restarts.
+pub fn start_maintenance_worker(state: AppState) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(3600));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            let Some(objects) = state.objects.clone() else {
+                break;
+            };
+            if db(&state, move |store| store.maintenance(&objects, now()))
+                .await
+                .is_err()
+            {
+                eprintln!("maintenance_failed: inspect the operator queue and private storage");
+            }
+        }
+    })
+}
+
 pub fn start_checks_worker(state: AppState) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(5));

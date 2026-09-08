@@ -305,6 +305,10 @@ int main(int argc, char *argv[]) {
                         press(findItem(window->contentItem(),"restoreDistribution"));
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
                         check(core.workspaceReply().value("holds").toList().isEmpty(),"reviewed distribution restoration");
+                        press(findItem(window->contentItem(),"readinessWorkspaceTab"));press(findItem(window->contentItem(),"loadReadiness"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("environment").toString()=="development"&&!core.workspaceReply().value("pilotEvidenceComplete").toBool(),"native readiness separates sample and public evidence");
+                        check(core.workspaceReply().value("gates").toList().size()==12,"native operator report exposes every pilot gate");
 
                         core.refresh();
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);

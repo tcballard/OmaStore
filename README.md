@@ -2,15 +2,15 @@
 
 A native community application storefront for Omarchy. Discover useful software, understand what it needs and support the people who make it.
 
-OmaStore runs in its own Qt Quick window with a Rust core. The current preview includes search, app and maker pages, editorial stories, release-feed export, evidence labels, cached browsing and a local saved list. The native author workspace supports private drafts, media, exact previews, independent review and publication recovery. Desktop colour scheme and text scaling follow the settings portal.
+OmaStore runs in its own Qt Quick window with a Rust core. The current preview includes search, app and maker pages, editorial stories, release feeds, selective setups, evidence labels, cached browsing and a local library. It can review exact package plans, rehearse independent installation/removal workers, reconcile interruptions and preview diagnostic exports. The native author workspace supports private drafts, media, exact previews, independent review and publication recovery. Desktop colour scheme and text scaling follow the settings portal.
 
-**Development preview.** The public catalogue is empty until genuine listings are reviewed. A separate demo build contains six explicitly fictional listings for exercising the interface. The demo also supports fictional author/reviewer/operator sessions and a local publication rehearsal. Real provider integration and Omarchy desktop evidence remain release gates; setup adoption, installed-app management and checkout are the next bundles.
+**Development preview.** The public catalogue is empty until genuine listings are reviewed. A separate demo build contains six explicitly fictional listings for exercising the interface. The demo also supports fictional author/reviewer/operator sessions and a local publication rehearsal. Real provider integration and Omarchy desktop evidence remain release gates; live package writes remain disabled until actual Omarchy lifecycle evidence is recorded. Settings and commerce are the next bundles.
 
 ![Actual native preview showing explicitly fictional development listings](docs/qa/native-discovery.png)
 
 ## Build and try it on Omarchy
 
-Requirements: Linux, Qt 6.4+, CMake 3.22+, Ninja, C++17 and the pinned Rust toolchain. On Omarchy/Arch:
+Requirements: Linux, Qt 6.4+, CMake 3.22+, Ninja, C++17 and the pinned Rust toolchain. Bring Omarchy up to date using its normal updater first. On Omarchy/Arch:
 
 ```sh
 sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools qt6-wayland xdg-desktop-portal rustup python
@@ -61,6 +61,6 @@ The optional read service can be run with `./build/bin/omastore-service data/reg
 - [Local author preparation](docs/adr/0003-local-author-preparation.md): scope and the boundary with future authenticated submissions.
 - [Contributing](CONTRIBUTING.md) and [submissions](SUBMISSION.md).
 
-B04–B09 are implemented; B10 connects makers, editorial discovery and delivered-release feeds. Work continues with selective setups and the local installation lifecycle. Keep the existing native window and Rust core. Managed installs must wait for B09/B12–B15's status, planning, confirmation and durable lifecycle gates.
+B04–B15 implement the private author/reviewer flow, publication, monitoring, makers, editorial, setups and the native installation lifecycle. B16 adds operations and readiness. Continue with B17–B22 settings, remixing and optional commerce. The sample playground runs now; live release gates remain explicit in the handoff.
 
 Independent community project. No official Omarchy endorsement is implied. Project code is MIT licensed; Qt, upstream applications and media retain their own licences.

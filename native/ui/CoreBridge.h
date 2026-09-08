@@ -31,6 +31,7 @@ public:
     Q_INVOKABLE void start();
     void openHandoff(const QString &uri);
     Q_INVOKABLE void refresh();
+    Q_INVOKABLE void copyFeedLink();
     Q_INVOKABLE void setFilter(const QString &key, const QString &value);
     Q_INVOKABLE void clearFilters();
     Q_INVOKABLE void nextPage();

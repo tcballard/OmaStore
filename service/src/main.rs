@@ -109,6 +109,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     } else {
         None
     };
+    let maintenance_worker = if state.store.is_some()
+        && !state.sandbox
+        && std::env::var("OMASTORE_MAINTENANCE_PAUSED").ok().as_deref() != Some("1")
+    {
+        Some(omastore_service::start_maintenance_worker(state.clone()))
+    } else {
+        None
+    };
     let listener = tokio::net::TcpListener::bind(addr).await?;
     println!("LISTENING {}", listener.local_addr()?);
     axum::serve(listener, router(state))
@@ -120,6 +128,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         worker.abort();
     }
     if let Some(worker) = publication_worker {
+        worker.abort();
+    }
+    if let Some(worker) = maintenance_worker {
         worker.abort();
     }
     if let Some(worker) = monitoring_worker {

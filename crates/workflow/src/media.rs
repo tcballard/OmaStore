@@ -215,8 +215,49 @@ pub fn normalize(kind: &str, bytes: &[u8], objects: &LocalObjects) -> Result<Ass
         duration_ms: None,
     })
 }
-fn decoder(program: &str, args: &[&str], limit: usize) -> Result<Vec<u8>> {
-    let mut child = Command::new("/usr/bin/prlimit")
+fn sandbox_command(work: &Path) -> Result<Command> {
+    let work = work.canonicalize()?;
+    if fs::symlink_metadata(&work)?.file_type().is_symlink() {
+        return Err(Error::new(500, "unsafe_media_storage"));
+    }
+    let mut command = Command::new("/usr/bin/bwrap");
+    command
+        .env_clear()
+        .env("PATH", "/usr/bin:/bin")
+        .env("LANG", "C")
+        .env("OPENBLAS_NUM_THREADS", "1")
+        .args([
+            "--unshare-all",
+            "--die-with-parent",
+            "--new-session",
+            "--cap-drop",
+            "ALL",
+            "--ro-bind",
+            "/usr",
+            "/usr",
+            "--symlink",
+            "usr/bin",
+            "/bin",
+            "--symlink",
+            "usr/lib",
+            "/lib",
+            "--symlink",
+            "usr/lib64",
+            "/lib64",
+            "--proc",
+            "/proc",
+            "--dev",
+            "/dev",
+            "--tmpfs",
+            "/tmp",
+            "--bind",
+        ])
+        .arg(work)
+        .args(["/work", "--chdir", "/work", "--", "/usr/bin/prlimit"]);
+    Ok(command)
+}
+fn decoder(program: &str, args: &[&str], limit: usize, work: &Path) -> Result<Vec<u8>> {
+    let mut child = sandbox_command(work)?
         .args([
             "--as=1073741824",
             "--cpu=15",
@@ -281,12 +322,11 @@ fn normalize_video(bytes: &[u8], objects: &LocalObjects) -> Result<Asset> {
     let input = work.path().join(format!("input.{extension}"));
     let output = work.path().join(format!("output.{extension}"));
     fs::write(&input, bytes)?;
-    let input = input
-        .to_str()
-        .ok_or(Error::new(500, "media_storage_failed"))?;
-    let output = output
-        .to_str()
-        .ok_or(Error::new(500, "media_storage_failed"))?;
+    let host_output = output.clone();
+    let input = format!("/work/input.{extension}");
+    let output = format!("/work/output.{extension}");
+    decoder("/usr/bin/true", &[], 1024, work.path())
+        .map_err(|_| Error::new(503, "media_sandbox_unavailable"))?;
     let probe = decoder(
         "/usr/bin/ffprobe",
         &[
@@ -300,9 +340,10 @@ fn normalize_video(bytes: &[u8], objects: &LocalObjects) -> Result<Asset> {
             "format=duration:stream=codec_type,codec_name,width,height",
             "-of",
             "json",
-            input,
+            &input,
         ],
         64 * 1024,
+        work.path(),
     )?;
     let probe: Value = serde_json::from_slice(&probe)?;
     let duration = probe["format"]["duration"]
@@ -337,7 +378,7 @@ fn normalize_video(bytes: &[u8], objects: &LocalObjects) -> Result<Asset> {
             "-f",
             format,
             "-i",
-            input,
+            &input,
             "-map",
             "0:v:0",
             "-map",
@@ -348,11 +389,12 @@ fn normalize_video(bytes: &[u8], objects: &LocalObjects) -> Result<Asset> {
             "-1",
             "-c",
             "copy",
-            output,
+            &output,
         ],
         1024,
+        work.path(),
     )?;
-    let bytes = read(Path::new(output), VIDEO_LIMIT)?;
+    let bytes = read(&host_output, VIDEO_LIMIT)?;
     Ok(Asset {
         bytes,
         extension,
@@ -633,5 +675,61 @@ mod setup_tests {
         .unwrap();
         assert!(!s.release_feed(None).unwrap().contains("<item>"));
         assert_eq!(s.delivered_catalogue().unwrap().unwrap().recipes.len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod sandbox_tests {
+    use super::*;
+    #[test]
+    #[ignore = "requires Bubblewrap user namespaces and FFmpeg; mandatory deployment CI gate"]
+    fn video_normalization_is_isolated_and_strips_metadata() {
+        let d = tempfile::tempdir().unwrap();
+        let o = LocalObjects::new(&d.path().join("objects")).unwrap();
+        let work = tempfile::tempdir_in(o.root.join("work")).unwrap();
+        let env = decoder("/usr/bin/env", &[], 4096, work.path()).unwrap();
+        let env = String::from_utf8(env).unwrap();
+        assert!(!env.contains("HOME="));
+        assert!(!env.contains("TOKEN="));
+        assert!(!env.contains("SECRET="));
+        let outside = d.path().join("private-secret");
+        fs::write(&outside, "private sentinel").unwrap();
+        assert!(decoder(
+            "/usr/bin/test",
+            &["!", "-e", outside.to_str().unwrap()],
+            1024,
+            work.path()
+        )
+        .is_ok());
+        let input = d.path().join("input.mp4");
+        let status = Command::new("/usr/bin/ffmpeg")
+            .env_clear()
+            .env("PATH", "/usr/bin:/bin")
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=32x32:d=15:r=1",
+                "-an",
+                "-c:v",
+                "libx264",
+                "-threads",
+                "1",
+                "-metadata",
+                "title=PRIVATE_MEDIA_METADATA",
+            ])
+            .arg(&input)
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let normalized = normalize_video(&fs::read(input).unwrap(), &o).unwrap();
+        assert!(normalized.duration_ms.unwrap() >= 15000);
+        assert!(!normalized
+            .bytes
+            .windows(b"PRIVATE_MEDIA_METADATA".len())
+            .any(|w| w == b"PRIVATE_MEDIA_METADATA"));
     }
 }

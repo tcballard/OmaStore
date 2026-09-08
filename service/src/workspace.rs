@@ -310,3 +310,10 @@ mod tests {
         assert_eq!(status, 409);
     }
 }
+
+pub async fn operations(State(s): State<AppState>, headers: HeaderMap) -> ApiResult<Json<Value>> {
+    let actor = actor(&s, &headers).await?;
+    db(&s, move |store| store.operations_dashboard(&actor, now()))
+        .await
+        .map(Json)
+}

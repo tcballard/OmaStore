@@ -1,5 +1,9 @@
 # Build handoff
 
+B16b connects native readiness/evidence and review-start controls, hourly maintenance, subscription addresses and isolated video normalization. All 60 ordinary Rust tests, both Clippy modes and nine native checks pass (29.17 seconds); the session-bus check skips locally. The positive Bubblewrap/FFmpeg test is explicitly ignored in the ordinary suite and required separately in CI; this container lacks Bubblewrap. A credential-format scan of tracked/unignored source found zero matches. The dependency advisory tool is compiling separately; record its result in the next receipt. No public release gate was marked passed. B17–B22 implementation continues.
+
+B16a is published as `ca197e26d6bdaad9142f4c4895233441f3195b72`, matching local `bf56f8cbe869becb2681efc0e063efe284ba7e96` and tree `a0ae000811c73062b91e3db692d5301fb5fbca9a`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34287878156).
+
 B16a adds operator queue/readiness projections, current-role evidence intake, actual first-response tracking, consecutive-week expansion pause, draft notice/grace retention, active-selection media quota, and private database/object backup and restoration to new paths. All 60 Rust tests and all-feature Clippy pass. Populated backup restoration, public object recovery, environment isolation, tamper rejection, retention and revoked roles are exercised. Native dashboard, hourly worker and media sandbox hardening follow in B16b.
 
 B15 is published as `fb07b56045f51875be3fc3c4fd9ebf571d58909d`, matching local `eb1fa84ca478392a3cf76786bfef7ed4bd493685` and tree `b3eb52436b8986e6f9564cad1125bf252753da09`.

@@ -178,7 +178,7 @@ void CoreBridge::fail(const QString &message) {
 }
 void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
 void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
-    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export","status.get","monitor.queue","monitor.sample","feed.export"};
+    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export","status.get","monitor.queue","monitor.sample","feed.export","feed.info","operations.dashboard"};
     if (!m_ready || !actions.contains(action)) return;
     request("workspace."+action,params);
 }
@@ -235,7 +235,7 @@ bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() &
 
 void CoreBridge::communityAction(const QString &method,const QVariantMap &params) {
     static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan","library.list","library.refresh","library.launchers","library.launch","operations.get","operations.events","operations.status","operations.confirm","operations.cancel","operations.reconcile","operations.replan","operations.diagnostics","operations.diagnostics.export","library.setups","library.detach_setup","library.remember_setup","system.handoff","handoff.open"};
-    if(m_ready && methods.contains(method)) { if(method=="system.plan" || method=="operations.get" || method=="operations.replan") { m_community.remove("system.plan"); emit communityChanged(); } request(method,params); }
+    if(m_ready && methods.contains(method)) { if(method=="library.detach_setup" || method=="operations.diagnostics") m_community.remove(method); if(method=="system.plan" || method=="operations.get" || method=="operations.replan") { m_community.remove("system.plan"); emit communityChanged(); } request(method,params); }
 }
 bool CoreBridge::openMakerLink(const QString &kind) {
     if(kind!="homepage" && kind!="support") return false;
@@ -257,3 +257,5 @@ void CoreBridge::copySetupLink() {
 }
 
 void CoreBridge::openHandoff(const QString &uri) { if(uri.isEmpty() || uri.size()>400)return;if(m_ready)communityAction("handoff.open",{{"uri",uri}});else m_pendingHandoff=uri; }
+
+void CoreBridge::copyFeedLink(){const QUrl url(m_workspaceReply.value("feedUrl").toString(),QUrl::StrictMode);if(url.isValid()&&url.scheme()=="https"&&!url.host().isEmpty()&&url.userInfo().isEmpty())QGuiApplication::clipboard()->setText(url.toString());}
