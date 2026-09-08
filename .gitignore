@@ -1,0 +1,9 @@
+/build/
+/target/
+/.cache/
+*.user
+*.log
+.env
+.env.*
+!.env.example
+__pycache__/

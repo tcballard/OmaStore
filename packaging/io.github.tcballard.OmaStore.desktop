@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=OmaStore
+Comment=Discover applications and setups for Omarchy
+Exec=omastore
+TryExec=omastore
+Icon=system-software-install
+Terminal=false
+Categories=System;PackageManager;
+StartupNotify=true
