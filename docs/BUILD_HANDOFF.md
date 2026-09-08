@@ -1,6 +1,10 @@
 # Build handoff
 
-Date: 8 September 2026. Scope: B00 native scaffold.
+Date: 8 September 2026. Current change series: native discovery.
+
+## B01 catalogue contract
+
+Implemented shared Rust public types, bounded validation CLI, immutable release variants, offer/currency fields, evidence identity/freshness, recipe references/cycle checks, empty public data and separate synthetic examples. Four catalogue contract tests cover positive and negative cases, deterministic snapshots and changed/stale evidence; the existing three core tests are retained. Rust formatting and Clippy pass. Native compilation/CI will be rerun for the completed discovery series. B01 structural validation is not publication approval. Next: B02 shared queries, native cache and read service.
 
 Starting state: empty repository. README initialization: `9db3481c7ea3c5c9363cf06040e74427e17d5c45`. Verified implementation revision: [`05c7e941e54e0c53369da349d474735c258c222b`](https://github.com/tcballard/OmaStore/commit/05c7e941e54e0c53369da349d474735c258c222b). The published source tree matches the locally checked tree `9bcbaa5633ca61b7e9f3deb47e2b3d6296b12876`.
 

@@ -5,7 +5,7 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | Bundle | Deliverable | Dependencies | Status |
 | --- | --- | --- | --- |
 | B00 | Repository checkout, runnable shell and handoff | None | verified |
-| B01 | Catalogue v1 schema, validation and fixtures | B00 | not_started |
+| B01 | Catalogue v1 schema, validation and fixtures | B00 | implemented; local contract checks passed |
 | B02 | Native catalogue client, cache and read API | B01 | not_started |
 | B03 | Native discovery and truthful app details | B02 | not_started |
 | B04 | Publisher identity and persistent workspaces | B01 | not_started |

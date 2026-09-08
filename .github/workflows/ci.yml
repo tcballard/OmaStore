@@ -27,6 +27,8 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test Rust protocol boundaries
         run: cargo test --workspace --locked
+      - name: Validate the public catalogue
+        run: cargo run --locked --bin omastore-validate -- data/registry.json
       - name: Configure native app
         run: cmake --preset dev
       - name: Build native app

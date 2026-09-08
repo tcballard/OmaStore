@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "channel": "development",
+  "revision": "demo-v1",
+  "buildRevision": "catalogue-v1",
+  "generatedAt": "2026-09-08T00:00:00Z",
+  "apps": [
+    {
+      "id": "demo-fieldnotes",
+      "slug": "fieldnotes",
+      "name": "Fieldnotes",
+      "summary": "A quiet place to write, think and keep your own files.",
+      "description": "This is a fictional listing for reviewing OmaStore.\n\nA quiet place to write, think and keep your own files.\n\nThe listing shows how purpose, source, cost and compatibility stay separate. No app, screenshot or test evidence is being represented as real.",
+      "tags": [
+        "writing",
+        "demo"
+      ],
+      "category": "writing",
+      "appType": "desktop",
+      "maturity": "preview",
+      "licence": {
+        "class": "open_source",
+        "identifier": "MIT",
+        "url": "https://example.com/licence"
+      },
+      "makerIds": [
+        "demo-maker"
+      ],
+      "homepage": "https://example.com/apps/fieldnotes",
+      "source": "https://example.com/source/fieldnotes",
+      "support": "https://example.com/support",
+      "media": [],
+      "capabilities": [
+        "local-files"
+      ],
+      "currentReleaseId": "r1",
+      "releases": [
+        {
+          "id": "r1",
+          "version": "0.1 preview",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "extra",
+            "package": "demo-fieldnotes",
+            "version": "0.1.0-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "extra",
+            "package": "demo-fieldnotes",
+            "url": "https://example.com/packages/fieldnotes"
+          },
+          "notes": "Synthetic release for testing the storefront. No installable application is provided.",
+          "offline": "yes",
+          "account": "no",
+          "activation": "no",
+          "serviceCosts": "No service costs declared in this synthetic example.",
+          "privileges": [],
+          "services": [],
+          "removal": "Use the originating package manager or developer instructions. Personal files should be preserved."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "demo-maker",
+          "model": "free",
+          "url": "https://example.com/packages/fieldnotes",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": null,
+          "entitlement": "Example only. Check the seller for final price, rights and terms.",
+          "terms": "https://example.com/terms",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    }
+  ],
+  "makers": [
+    {
+      "id": "demo-maker",
+      "slug": "demo-maker",
+      "name": "Example Workshop",
+      "bio": "A fictional maker used to exercise OmaStore. No publisher participation is implied.",
+      "homepage": "https://example.com",
+      "claim": "unclaimed",
+      "claimEvidence": null
+    }
+  ],
+  "recipes": [],
+  "editorial": []
+}
