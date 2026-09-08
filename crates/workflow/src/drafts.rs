@@ -12,6 +12,16 @@ pub const MAX_DRAFT_BYTES: usize = 80 * 1024;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    RecoverPublication {
+        id: String,
+        version: i64,
+        action: String,
+        number: Option<i64>,
+    },
+    RequestPublication {
+        id: String,
+        version: i64,
+    },
     ReviewDecision {
         id: String,
         version: i64,
@@ -146,6 +156,15 @@ impl Store {
 }
 fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Result<Value> {
     match command {
+        Command::RecoverPublication {
+            id,
+            version,
+            action,
+            number,
+        } => crate::publication::recover(t, actor, &id, version, &action, number, now),
+        Command::RequestPublication { id, version } => {
+            crate::publication::request(t, actor, &id, version, now)
+        }
         Command::ReviewDecision {
             id,
             version,
@@ -254,6 +273,7 @@ fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Re
                 now,
                 &json!({"digest":hash,"number":number}),
             )?;
+            crate::publication::submitted(t, &revision, now)?;
             Ok(json!({"id":revision,"digest":hash,"state":"submitted","version":1,"number":number}))
         }
         Command::WithdrawRevision {

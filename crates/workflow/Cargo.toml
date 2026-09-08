@@ -22,3 +22,6 @@ omastore-catalogue.workspace = true
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
 tempfile = "3.23"
 chrono-tz = "0.10.4"
+async-trait = "0.1"
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
+hmac = "0.12"

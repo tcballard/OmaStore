@@ -2,8 +2,11 @@
 pub mod auth;
 pub mod checks;
 pub mod drafts;
+pub mod github;
 pub mod media;
 pub mod net;
+pub mod publication;
+pub mod publisher;
 pub mod review;
 pub mod store;
 

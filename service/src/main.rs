@@ -74,6 +74,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
         }
     }
+    if !state.sandbox && state.store.is_some() && !state.origin.is_empty() {
+        match omastore_workflow::github::Config::from_env() {
+            Ok(Some(config)) => {
+                state.github = Some(omastore_workflow::github::Github::new(config));
+                state.publication_state = "configured".into();
+            }
+            Ok(None) => {}
+            Err(error) => state.publication_state = error.code.into(),
+        }
+    }
+    if std::env::var("OMASTORE_PUBLICATION_PAUSED").ok().as_deref() == Some("1") {
+        state.publication_state = "paused".into();
+    }
+    let publication_worker = if state.github.is_some() && state.publication_state == "configured" {
+        Some(omastore_service::publication::start_worker(state.clone()))
+    } else {
+        None
+    };
     state.read_catalogue()?;
     let worker = if state.store.is_some()
         && !state.sandbox
@@ -91,6 +109,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         })
         .await?;
     if let Some(worker) = worker {
+        worker.abort();
+    }
+    if let Some(worker) = publication_worker {
         worker.abort();
     }
     Ok(())

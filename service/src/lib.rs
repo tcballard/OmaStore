@@ -1,3 +1,4 @@
+pub mod publication;
 mod workspace;
 use axum::{
     body::{Body, Bytes},
@@ -21,6 +22,8 @@ pub struct AppState {
     pub store: Option<Store>,
     pub objects: Option<omastore_workflow::media::LocalObjects>,
     pub oauth: Option<Arc<GithubOAuth>>,
+    pub github: Option<omastore_workflow::github::Github>,
+    pub publication_state: String,
     pub origin: String,
     pub sandbox: bool,
     pub concurrency: Arc<Semaphore>,
@@ -33,6 +36,8 @@ impl AppState {
             store: None,
             objects: None,
             oauth: None,
+            github: None,
+            publication_state: "unconfigured".into(),
             origin: String::new(),
             sandbox: false,
             concurrency: Arc::new(Semaphore::new(32)),
@@ -74,6 +79,13 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/auth/logout", post(logout))
         .route("/api/v1/auth/sandbox", post(sandbox_login))
         .route("/api/v1/workspace", get(workspace))
+        .route("/api/v1/publication/{id}", get(publication::status))
+        .route(
+            "/api/v1/publication/{id}/manifest",
+            get(publication::manifest),
+        )
+        .route("/api/v1/submissions/{id}", get(publication::submitted))
+        .route("/api/v1/github/webhook", post(publication::webhook))
         .route("/api/v1/review", get(workspace::review_queue))
         .route("/api/v1/review/{id}", get(workspace::review_detail))
         .route("/api/v1/commands", post(workspace::command))
@@ -172,7 +184,7 @@ pub async fn actor(s: &AppState, headers: &HeaderMap) -> ApiResult<Actor> {
 }
 async fn auth_info(State(s): State<AppState>) -> Json<Value> {
     Json(
-        json!({"workspaceEnabled":s.store.is_some(),"signInConfigured":s.oauth.is_some(),"sandbox":s.sandbox,"origin":s.origin}),
+        json!({"workspaceEnabled":s.store.is_some(),"signInConfigured":s.oauth.is_some(),"sandbox":s.sandbox,"origin":s.origin,"publicationBridge":s.publication_state}),
     )
 }
 #[derive(Deserialize)]
