@@ -13,3 +13,5 @@ Identities distinguish source commits, publisher binary SHA-256s and repository 
 Snapshot digests use typed JSON with apps/makers/recipes sorted by ID. Array order within a record is meaningful. Whole snapshots are bounded at 8 MiB; individual app records at 96 KiB; descriptions at 12 KiB. The bulk snapshot limit is distinct from the specification's 1 MiB limit for fetched third-party metadata. No third-party metadata is fetched by the validator.
 
 Money uses unsigned integer minor units and an explicit checked currency exponent. Initial supported currencies: USD/GBP/EUR/CAD/AUD/CHF (2), JPY (0), KWD (3). Other currencies fail validation pending an exponent-table extension. Prices are informational; final external prices belong to the seller.
+
+Every test record must also supply `executedSha256`, identifying the actual bytes run even for source-commit or repository-package releases. For a binary-artifact identity it must equal that artifact SHA-256. The UI exposes recorded environment/date/actor/limitations and the evidence link; the derived current-candidate status remains separate from historical records.

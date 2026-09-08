@@ -149,6 +149,8 @@ bool CoreBridge::openLink(const QString &kind, int index) {
         const auto offers = app.value("offers").toList(); if (index >= 0 && index < offers.size()) destination = offers[index].toMap().value(kind == "offer" ? "url" : kind).toString();
     } else if (kind == "media") {
         const auto media = app.value("media").toList(); if (index >= 0 && index < media.size()) destination = media[index].toMap().value("url").toString();
+    } else if (kind == "evidence") {
+        const auto tests = app.value("tests").toList(); if (index >= 0 && index < tests.size()) destination = tests[index].toMap().value("evidence").toString();
     }
     const QUrl url(destination, QUrl::StrictMode);
     if (!url.isValid() || url.scheme() != "https" || url.host().isEmpty() || !url.userInfo().isEmpty()) return false;

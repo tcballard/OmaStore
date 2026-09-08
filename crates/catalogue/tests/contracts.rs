@@ -90,6 +90,7 @@ fn current_evidence_requires_same_candidate_bytes_and_recent_environment_record(
         release_id: app.current_release_id.clone(),
         candidate_digest: app.candidate_digest(),
         executed_identity: app.current_release().identity.clone(),
+        executed_sha256: "a".repeat(64),
         result: TestResult::Passes,
         freshness: Freshness::Current,
         tested_at: "2026-09-07T00:00:00Z".into(),
@@ -148,4 +149,30 @@ fn canonical_snapshot_is_stable_and_recipe_cycles_fail() {
         .validate(true)
         .iter()
         .any(|e| e.code == "cyclic_components"));
+}
+
+#[test]
+fn test_records_identify_executed_bytes_and_reject_binary_mismatch() {
+    let c = fixture();
+    let app = &c.apps[1];
+    let mut value = json!(c);
+    value["apps"][1]["tests"] = json!([{
+        "releaseId": app.current_release_id, "candidateDigest": app.candidate_digest(),
+        "executedIdentity": app.current_release().identity, "executedSha256": "f".repeat(64),
+        "result": "passes", "freshness": "current", "testedAt": "2026-09-08T00:00:00Z",
+        "environment": "Synthetic environment", "toolVersion": "fixture-1", "actor": "fixture",
+        "evidence": "https://example.com/evidence", "limitations": "Synthetic test only"
+    }]);
+    assert!(Catalogue::parse(&serde_json::to_vec(&value).unwrap(), true)
+        .unwrap_err()
+        .iter()
+        .any(|e| e.code == "executed_byte_digest_mismatch"));
+    value["apps"][1]["tests"][0]["executedSha256"] =
+        value["apps"][1]["releases"][0]["identity"]["sha256"].clone();
+    assert!(Catalogue::parse(&serde_json::to_vec(&value).unwrap(), true).is_ok());
+    value["apps"][1]["tests"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("executedSha256");
+    assert!(Catalogue::parse(&serde_json::to_vec(&value).unwrap(), true).is_err());
 }

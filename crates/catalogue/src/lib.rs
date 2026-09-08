@@ -261,6 +261,7 @@ pub struct TestRecord {
     pub release_id: String,
     pub candidate_digest: String,
     pub executed_identity: ReleaseIdentity,
+    pub executed_sha256: String,
     pub result: TestResult,
     pub freshness: Freshness,
     pub tested_at: String,
@@ -615,6 +616,18 @@ impl Catalogue {
                 );
             }
             for test in &app.tests {
+                check(
+                    digest(&test.executed_sha256, 64),
+                    format!("{p}.tests"),
+                    "missing_executed_byte_digest",
+                );
+                if let ReleaseIdentity::BinaryArtifact { sha256, .. } = &test.executed_identity {
+                    check(
+                        sha256 == &test.executed_sha256,
+                        format!("{p}.tests"),
+                        "executed_byte_digest_mismatch",
+                    );
+                }
                 check(
                     releases.contains(test.release_id.as_str())
                         && valid_identity(&test.executed_identity, &maker_ids)

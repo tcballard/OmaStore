@@ -54,6 +54,18 @@ ScrollView {
                     Label { required property int index; required property string modelData; text: modelData; color: index % 2 ? theme.ink : theme.muted; font.bold: index % 2 === 0; Layout.fillWidth: true; Layout.preferredWidth: index % 2 ? 400 : 150; wrapMode: Text.Wrap; textFormat: Text.PlainText }
                 }
             }
+            Repeater {
+                model: page.app.tests || []
+                ColumnLayout {
+                    required property var modelData
+                    required property int index
+                    Layout.fillWidth: true
+                    Label { text: "Recorded test · " + page.readable(modelData.result); font.bold: true; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                    Label { text: modelData.environment + " · " + modelData.testedAt + "\nRelease: " + modelData.releaseId + "\nTested by: " + modelData.actor + " · " + modelData.toolVersion; color: theme.muted; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                    Label { text: modelData.limitations || "No limitations recorded."; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                    Button { text: "Read test evidence ↗"; onClicked: core.openLink("evidence", index) }
+                }
+            }
             Label { text: "About this app"; font.pixelSize: 22 * theme.scale; font.bold: true; Layout.topMargin: 12 }
             Label { text: page.app.description || ""; wrapMode: Text.Wrap; textFormat: Text.PlainText; Layout.fillWidth: true }
             Label { text: "See it in use"; font.pixelSize: 22 * theme.scale; font.bold: true; Layout.topMargin: 12 }

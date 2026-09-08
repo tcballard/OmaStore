@@ -14,7 +14,7 @@ The worksheet saves partial work privately on this device, rejects concurrent ov
 
 Local environment: Linux x86_64, Ubuntu 24.04.3, Qt 6.8.3, GCC 13.3, Rust 1.98.1. Isolated toolchain paths are verification-environment details, not project dependencies.
 
-- Rust catalogue, evidence, query, cache and local-preparation tests pass; 13 tests total, plus one deliberately ignored performance sample run separately. Formatting and Clippy with warnings denied pass.
+- Rust catalogue, evidence, query, cache and local-preparation tests pass; 14 tests total, plus one deliberately ignored performance sample run separately. Formatting and Clippy with warnings denied pass. Test records require the SHA-256 of the executed bytes, including source/package releases, and app details expose the recorded environment, date, actor, limitations and evidence link.
 - Actual Qt keyboard flow passes at 800×600, 1280×800 and 1920×1080 logical sizes, plus 800×600 at 200% DPI. It exercises search focus/typing, card activation, accessible card name, app detail, saving, restored preferences, back navigation, worksheet typing/saving and field-error feedback.
 - Native media tests check byte digest, inert image format, decoded dimensions and disallowed origins. Worksheet tests cover restart recovery, optimistic conflict, invalid saved-file preservation, checked-result invalidation and local-only export.
 - Actual Rust HTTP service and core process tests compare query outputs and check conditional GET, invalid filters/methods, snapshot changes and invalid catalogue replacement. These ran successfully here; an earlier socket-restriction assumption was not applicable to this run.
