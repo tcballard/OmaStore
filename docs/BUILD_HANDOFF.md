@@ -1,6 +1,8 @@
 # Build handoff
 
-Date: 8 September 2026. Branch: `build/native-discovery`. Scope: B01, B02, B03 and bounded extension B03b. GitHub revision and CI receipts will be recorded after publication.
+Date: 8 September 2026. Branch: `build/native-discovery`. Scope: B01, B02, B03 and bounded extension B03b, followed by the executed-byte evidence correction. Review: [draft PR #1](https://github.com/tcballard/OmaStore/pull/1).
+
+Verified implementation: [`887d44947beee29ca45c89b7ff5f6888542d3ae6`](https://github.com/tcballard/OmaStore/commit/887d44947beee29ca45c89b7ff5f6888542d3ae6), with Git tree `3ddb5cd7b037d8838d3dd72fab187700109e633f`. The published tree exactly matches the locally checked tree. The following documentation receipt commit does not change implementation files.
 
 ## Grounding and implemented outcome
 
@@ -14,11 +16,13 @@ The worksheet saves partial work privately on this device, rejects concurrent ov
 
 Local environment: Linux x86_64, Ubuntu 24.04.3, Qt 6.8.3, GCC 13.3, Rust 1.98.1. Isolated toolchain paths are verification-environment details, not project dependencies.
 
+- [GitHub CI run 34218944477](https://github.com/tcballard/OmaStore/actions/runs/34218944477) passed all native gates for the implementation revision above: Rust checks, public catalogue validation, ordinary and separate demo builds, both CTest suites, desktop staging and an actual preview screenshot. The suites contain 5 ordinary-build checks and 8 preview checks. CI uses Ubuntu 24.04; it is not a real Omarchy desktop exercise.
 - Rust catalogue, evidence, query, cache and local-preparation tests pass; 14 tests total, plus one deliberately ignored performance sample run separately. Formatting and Clippy with warnings denied pass. Test records require the SHA-256 of the executed bytes, including source/package releases, and app details expose the recorded environment, date, actor, limitations and evidence link.
 - Actual Qt keyboard flow passes at 800×600, 1280×800 and 1920×1080 logical sizes, plus 800×600 at 200% DPI. It exercises search focus/typing, card activation, accessible card name, app detail, saving, restored preferences, back navigation, worksheet typing/saving and field-error feedback.
 - Native media tests check byte digest, inert image format, decoded dimensions and disallowed origins. Worksheet tests cover restart recovery, optimistic conflict, invalid saved-file preservation, checked-result invalidation and local-only export.
 - Actual Rust HTTP service and core process tests compare query outputs and check conditional GET, invalid filters/methods, snapshot changes and invalid catalogue replacement. These ran successfully here; an earlier socket-restriction assumption was not applicable to this run.
 - Ordinary-build tests check that the demo option is rejected and fictional catalogue text is absent from the core executable. CMake staging installs only owned desktop artifacts. The Arch PKGBUILD has syntax validation only until exercised on Arch.
+- A separate local Release build with `BUILD_TESTING=OFF` and development data disabled built successfully. Its help omits QA/demo switches and its dynamic dependencies omit Qt Test.
 
 Performance sample: Intel Xeon Platinum 8370C at 2.80 GHz, release Rust build, 1,000 synthetic entries, 100 samples. Shared query p95 10.312 ms; pure HTTP handler p95 10.527 ms. These exclude disk/socket/proxy time and do not establish GUI typing latency with 1,000 entries. The numeric target remains a target until that broader exercise is measured.
 

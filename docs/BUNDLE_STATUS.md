@@ -5,10 +5,10 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | Bundle | Deliverable | Dependencies | Status |
 | --- | --- | --- | --- |
 | B00 | Repository checkout, runnable shell and handoff | None | verified |
-| B01 | Catalogue v1 schema, validation and fixtures | B00 | implemented; local contract checks passed |
-| B02 | Native catalogue client, cache and read API | B01 | local contract and actual HTTP/core checks passed; CI pending |
-| B03 | Native discovery and truthful app details | B02 | implemented; native offscreen interaction passed; real Omarchy pending |
-| B03b | Local author preparation, validation and export | B01, B03 | implemented; local checks passed; native portal exercise pending |
+| B01 | Catalogue v1 schema, validation and fixtures | B00 | implemented; local and CI contract checks passed |
+| B02 | Native catalogue client, cache and read API | B01 | local and CI checks passed, including actual HTTP/core parity |
+| B03 | Native discovery and truthful app details | B02 | local and CI native offscreen checks passed; real Omarchy pending |
+| B03b | Local author preparation, validation and export | B01, B03 | local and CI checks passed; native portal exercise pending |
 | B04 | Publisher identity and persistent workspaces | B01 | not_started |
 | B05 | Submission drafts, media and preview | B04 | not_started |
 | B06 | Bounded checks and evidence intake | B05 | not_started |
@@ -29,6 +29,6 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B21 | Checkout, delivery and entitlements | B20 | not_started |
 | B22 | Refunds, disputes, payouts and commerce readiness | B21 | not_started |
 
-B00–B03 are implemented and checked on offscreen Linux, including actual process/HTTP interactions. R1 still needs real Omarchy desktop validation. B03b is a bounded local preparation extension; it does not complete B04 or B05. Public listings remain empty and publisher claims, installations and payments are unimplemented.
+B00–B03 are implemented and checked on offscreen Linux, including actual process/HTTP interactions. [CI passed for implementation revision 887d449](https://github.com/tcballard/OmaStore/actions/runs/34218944477); the handoff records its full revision and tree. R1 still needs real Omarchy desktop validation. B03b is a bounded local preparation extension; it does not complete B04 or B05. Public listings remain empty and publisher claims, installations and payments are unimplemented.
 
 Next: real-Omarchy R1 exercise and B04 publisher identity/private workspaces. Review BUILD_HANDOFF.md for exact evidence and configuration gates.
