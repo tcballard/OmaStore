@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
 Dialog {
     id:dialog
@@ -11,15 +12,19 @@ Dialog {
     readonly property var operation:!!plan.digest && (core.community["operations.status"] || {}).id===plan.digest?(core.community["operations.status"] || {}):({})
     readonly property string phase:operation.state || "planned"
     property real nowSeconds:Date.now()/1000
-    readonly property bool canConfirm:!!operation.enabled && (phase==="planned" || (phase==="awaiting_user"&&!operation.claimed)) && plan.expiresAt>nowSeconds && !(plan.blockers || []).length && (plan.operations || []).some(o=>o.action==="install")
+    readonly property bool canConfirm:!!operation.enabled && (phase==="planned" || (phase==="awaiting_user"&&!operation.claimed)) && plan.expiresAt>nowSeconds && !(plan.blockers || []).length && (plan.operations || []).some(o=>o.action==="install" || o.action==="remove")
     property string systemKind:"update"
+    property bool awaitingDiagnostics:false
+    readonly property var diagnostics:core.community["operations.diagnostics"] || ({})
+    readonly property bool removing:(plan.selection || {}).kind==="remove"
     parent:Overlay.overlay;anchors.centerIn:parent
     width:Math.min(800,parent?parent.width-32:800);height:Math.min(720,parent?parent.height-32:720)
-    modal:true;title:plan.simulated?"Sample installation plan":"Review installation plan"
+    modal:true;title:removing?(plan.simulated?"Sample removal plan":"Review package removal"):(plan.simulated?"Sample installation plan":"Review installation plan")
     standardButtons:Dialog.Close
     Connections {
         target:dialog.core
         function onCommunityChanged(){
+            if(dialog.awaitingDiagnostics && (dialog.diagnostics.document || {}).operationId===dialog.plan.digest){dialog.awaitingDiagnostics=false;diagnosticPreview.open();}
             if(!dialog.plan.digest)dialog.shownDigest="";
             if(dialog.plan.digest && dialog.plan.digest!==dialog.shownDigest){
                 dialog.shownDigest=dialog.plan.digest;consent.checked=false;dialog.nowSeconds=Date.now()/1000;
@@ -45,6 +50,8 @@ Dialog {
                         Label {text:modelData.action.toUpperCase()+" · "+modelData.reason;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
                         Label {visible:!!modelData.package;text:(modelData.repository || "")+" / "+(modelData.package || "")+(modelData.installedVersion?" · installed "+modelData.installedVersion:"");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
                         Label {text:"Declared privileges: "+(modelData.privileges.length?modelData.privileges.join(", "):"none recorded")+"\nServices: "+(modelData.services.length?modelData.services.join(", "):"none recorded");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+                        Label {visible:!!modelData.disclosure;text:((modelData.disclosure || {}).evidence || "")+"\nAccounts: "+((modelData.disclosure || {}).account || "not part of this operation")+" · activation: "+((modelData.disclosure || {}).activation || "not part of this operation")+"\n"+((modelData.disclosure || {}).serviceCosts || "")+"\n"+((modelData.disclosure || {}).removal || (modelData.disclosure || {}).restoration || "");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+
                     }
                 }
             }
@@ -58,12 +65,21 @@ Dialog {
             Label {visible:(dialog.operation.items || []).some(o=>o.state==="manual");text:"External components remain manual steps. This does not mean the whole setup is installed.";Layout.fillWidth:true;wrapMode:Text.Wrap}
             Label {visible:!!(dialog.core.community["operations.confirm"] || {}).error;text:((dialog.core.community["operations.confirm"] || {}).error || "").replace(/_/g," ")+". Review a fresh proposal before continuing.";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
             CheckBox {id:consent;objectName:"planConsent";text:dialog.plan.simulated?"I approve this sample change":"I approve these package changes";enabled:dialog.canConfirm;Layout.fillWidth:true}
-            Button {objectName:"confirmPlan";text:dialog.plan.simulated?"Run sample installation":"Continue in the system terminal";enabled:dialog.canConfirm&&consent.checked&&!dialog.core.loading;onClicked:dialog.core.communityAction("operations.confirm",{id:dialog.plan.digest,digest:dialog.plan.digest,accepted:true})}
+            Button {objectName:"confirmPlan";text:dialog.plan.simulated?(dialog.removing?"Run sample removal":"Run sample installation"):"Continue in the system terminal";enabled:dialog.canConfirm&&consent.checked&&!dialog.core.loading;onClicked:dialog.core.communityAction("operations.confirm",{id:dialog.plan.digest,digest:dialog.plan.digest,accepted:true})}
             Button {text:dialog.phase==="running"?"Stop after the current transaction":"Cancel this operation";visible:dialog.phase==="planned"||dialog.phase==="awaiting_user"||dialog.phase==="running";enabled:!dialog.core.loading&&!dialog.operation.cancelRequested;onClicked:dialog.core.communityAction("operations.cancel",{id:dialog.plan.digest})}
             Flow {Layout.fillWidth:true;spacing:8;Button {text:"Open Omarchy's updater";onClicked:{dialog.systemKind="update";systemPrompt.open();}} Button {text:"Open system package chooser";onClicked:{dialog.systemKind="install";systemPrompt.open();}}}
+            Flow {Layout.fillWidth:true;spacing:8;Button {objectName:"reconcileOperation";text:"Reconcile package state";visible:dialog.phase==="unknown";enabled:!dialog.core.loading;onClicked:dialog.core.communityAction("operations.reconcile",{id:dialog.plan.digest})} Button {objectName:"replanOperation";text:"Review a fresh plan";enabled:!!dialog.plan.digest&&!dialog.core.loading&&dialog.phase!=="running"&&!dialog.operation.workerActive;onClicked:dialog.core.communityAction("operations.replan",{id:dialog.plan.digest})} Button {objectName:"previewDiagnostics";text:"Preview diagnostics";enabled:!!dialog.plan.digest&&!dialog.core.loading;onClicked:{dialog.awaitingDiagnostics=true;dialog.core.communityAction("operations.diagnostics",{id:dialog.plan.digest});}}}
+            Button {text:"Keep observed components as a setup";visible:(dialog.plan.selection || {}).kind==="setup";enabled:!dialog.core.loading&&dialog.plan.expiresAt>dialog.nowSeconds;onClicked:dialog.core.communityAction("library.remember_setup",{id:dialog.plan.digest})}
             Button {objectName:"closePlan";text:"Done";onClicked:dialog.close()}
             Label {text:"Plan: "+(dialog.plan.digest || "");font.family:dialog.theme.mono;font.pixelSize:10*dialog.theme.scale;Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}
         }
     }
     Dialog {id:systemPrompt;implicitHeight:240*dialog.theme.scale;height:Math.min(implicitHeight,parent?parent.height-32:implicitHeight);parent:Overlay.overlay;anchors.centerIn:parent;modal:true;title:dialog.systemKind==="update"?"Open Omarchy's updater":"Open the system package chooser";standardButtons:Dialog.Ok|Dialog.Cancel;width:Math.min(560,parent?parent.width-32:560);contentItem: Label {text:dialog.plan.simulated?"This will rehearse the handoff without opening a system tool.":"The normal system tool will open in a separate terminal and own any package changes. Refresh the library when it finishes.";wrapMode:Text.Wrap} onAccepted:dialog.core.communityAction("system.handoff",{kind:dialog.systemKind,confirmed:true})}
+    Dialog {
+        id:diagnosticPreview;parent:Overlay.overlay;anchors.centerIn:parent;modal:true;title:"Diagnostic export preview";standardButtons:Dialog.Close
+        width:Math.min(720,parent?parent.width-32:720);height:Math.min(600,parent?parent.height-32:600)
+        ColumnLayout {anchors.fill:parent;Label {text:"Review this exact report before saving or sharing it.";Layout.fillWidth:true;wrapMode:Text.Wrap} ScrollView {Layout.fillWidth:true;Layout.fillHeight:true;TextArea {objectName:"diagnosticDocument";text:JSON.stringify(dialog.diagnostics.document || {},null,2);readOnly:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}} Button {objectName:"saveDiagnostics";text:"Choose export file";onClicked:diagnosticFile.open()} Button {objectName:"closeDiagnostics";text:"Done";onClicked:diagnosticPreview.close()}}
+    }
+    FileDialog {id:diagnosticFile;title:"Save diagnostic report";fileMode:FileDialog.SaveFile;nameFilters:["Diagnostic report (*.json)"];defaultSuffix:"json";onAccepted:dialog.core.communityAction("operations.diagnostics.export",{id:dialog.plan.digest,digest:dialog.diagnostics.digest,file:selectedFile.toString()})}
+
 }

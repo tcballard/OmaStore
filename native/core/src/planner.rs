@@ -12,6 +12,9 @@ pub enum Selection {
     App {
         id: String,
     },
+    Remove {
+        id: String,
+    },
     Setup {
         id: String,
         revision: String,
@@ -68,6 +71,8 @@ pub struct Operation {
     pub privileges: Vec<String>,
     pub services: Vec<String>,
     pub external_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disclosure: Option<Value>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -189,6 +194,9 @@ pub fn build(
             privileges: release.privileges.clone(),
             services: release.services.clone(),
             external_url: Some(release.route.url().into()),
+            disclosure: Some(
+                json!({"evidence":app.evidence(chrono::DateTime::from_timestamp(now,0).ok_or("invalid_time")?).1,"account":release.account,"activation":release.activation,"serviceCosts":release.service_costs,"removal":release.removal}),
+            ),
         };
         let current = eligible(c, status, id, now);
         status_material.push(json!({"id":id,"eligible":current,"identity":op.identity_digest}));

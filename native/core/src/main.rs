@@ -5,6 +5,7 @@ mod library;
 mod lifecycle;
 mod planner;
 mod platform;
+mod recovery;
 mod setups;
 mod workspace;
 struct Runtime {
@@ -110,7 +111,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["operations.reconcile", "operations.replan", "operations.diagnostics", "operations.diagnostics.export", "library.setups", "library.detach_setup", "library.remember_setup","operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
@@ -199,6 +200,11 @@ fn compute_plan(
     selection: planner::Selection,
     now: i64,
 ) -> platform::Result<planner::Plan> {
+    if let planner::Selection::Remove { id } = &selection {
+        let store = library::Store::open(runtime.demo)?;
+        let host = local_host(runtime, &store)?;
+        return recovery::removal(&store, &runtime.catalogue.catalogue, id, &host, now);
+    }
     let ids = selection.ids(&runtime.catalogue.catalogue, now)?;
     #[cfg(feature = "development-catalogue")]
     if runtime.demo {
@@ -292,12 +298,53 @@ fn local_request(runtime: &mut Runtime, method: &str, params: Value) -> platform
     match method {
         "operations.status" => {
             let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
-            let mut value = lifecycle::status(&store, &p.id)?;
-            value["workerActive"] = json!(lifecycle::worker_active(
-                &library::directory(runtime.demo)?,
-                &p.id
-            )?);
-            Ok(value)
+            recovery::inspect(&mut store, &p.id, chrono::Utc::now().timestamp())
+        }
+        "operations.reconcile" => {
+            let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            let host = local_host(runtime, &store)?;
+            recovery::reconcile(&mut store, &p.id, &host, chrono::Utc::now().timestamp())
+        }
+        "operations.replan" => {
+            let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            if recovery::inspect(&mut store, &p.id, chrono::Utc::now().timestamp())?["workerActive"]
+                == true
+            {
+                return Err("operation_worker_active");
+            }
+            let plan = store.plan(&p.id)?;
+            prepare_plan(
+                runtime,
+                serde_json::to_value(plan.selection).map_err(|_| "invalid_selection")?,
+            )
+        }
+        "operations.diagnostics" => {
+            let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            recovery::diagnostics(&store, &p.id)
+        }
+        "operations.diagnostics.export" => recovery::export_diagnostics(&store, params),
+        "library.setups" => {
+            let p: Page = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            recovery::setups(&store, p.offset)
+        }
+        "library.detach_setup" => {
+            let p: recovery::Detach =
+                serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            recovery::detach(&mut store, p)
+        }
+        "library.remember_setup" => {
+            let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+            let plan = store.plan(&p.id)?;
+            if plan.catalogue_snapshot != runtime.catalogue.catalogue.snapshot_id() {
+                return Err("snapshot_changed");
+            }
+            let host = local_host(runtime, &store)?;
+            store.observe(
+                &runtime.catalogue.catalogue,
+                &host,
+                chrono::Utc::now().timestamp(),
+            )?;
+            recovery::remember(&mut store, &plan, &host, chrono::Utc::now().timestamp())
         }
         "operations.cancel" => {
             let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;

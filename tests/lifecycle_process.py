@@ -52,7 +52,21 @@ with tempfile.TemporaryDirectory() as directory:
         replay = request(recovered, "operations.confirm", consent)
         assert replay["ok"] and replay["result"]["state"] == "succeeded", replay
         assert request(recovered, "library.list", {})["result"]["lastSequence"] == library["lastSequence"]
-        print("PASS: explicit consent, worker survival, durable version observation and replay without a second install")
+        removal=request(recovered,"system.plan",{"kind":"remove","id":"demo-fieldnotes"})["result"]
+        assert removal["operations"][0]["action"]=="remove" and not removal["blockers"]
+        remove_consent={"id":removal["digest"],"digest":removal["digest"],"accepted":True}
+        assert request(recovered,"operations.confirm",remove_consent)["ok"]
+        deadline=time.monotonic()+7
+        while time.monotonic()<deadline:
+            state=request(recovered,"operations.status",{"id":removal["digest"]})["result"]
+            if state["state"] in ("succeeded","failed","unknown"): break
+            time.sleep(0.1)
+        assert state["state"]=="succeeded",state
+        assert not request(recovered,"library.list",{})["result"]["items"][0]["present"]
+        assert request(recovered,"operations.confirm",remove_consent)["result"]["state"]=="succeeded"
+        fresh=request(recovered,"operations.replan",{"id":removal["digest"]})["result"]
+        assert fresh["operations"][0]["action"]=="noop"
+        print("PASS: consent, worker survival, durable observation, explicit removal and replay without duplicate mutation")
     finally:
         for process in processes:
             if process.poll() is None:

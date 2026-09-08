@@ -107,7 +107,11 @@ pub fn consent(store: &mut Store, request: &Consent, fresh: &Plan, now: i64) -> 
     if !plan.simulated && !live_enabled(&plan) {
         return Err("omarchy_adapter_evidence_required");
     }
-    if !plan.operations.iter().any(|o| o.action == "install") {
+    if !plan
+        .operations
+        .iter()
+        .any(|o| matches!(o.action.as_str(), "install" | "remove"))
+    {
         return Err("no_managed_package_changes");
     }
     let tx = db(store
@@ -179,6 +183,20 @@ pub fn begin(store: &mut Store, id: &str, fresh: &Plan, now: i64) -> Result<()> 
     )?;
     db(tx.commit())
 }
+pub fn unknown(store: &mut Store, id: &str, code: &str, now: i64) -> Result<()> {
+    let tx = db(store
+        .connection
+        .transaction_with_behavior(TransactionBehavior::Immediate))?;
+    let state: String = db(
+        tx.query_row("SELECT state FROM operations WHERE id=?1", [id], |r| {
+            r.get(0)
+        }),
+    )?;
+    if state == "awaiting_user" || state == "running" {
+        change(&tx, id, &state, "unknown", code, now)?;
+    }
+    db(tx.commit())
+}
 pub fn heartbeat(store: &Store, id: &str, now: i64) -> Result<()> {
     db(store.connection.execute(
         "UPDATE operation_control SET heartbeat_at=?2 WHERE operation_id=?1",
@@ -244,12 +262,20 @@ pub fn finish(
             "manual"
         } else if !known {
             "unknown"
+        } else if op.action == "remove" {
+            if observed.is_none() {
+                "removed"
+            } else {
+                "still_installed"
+            }
         } else if observed == Some(&op.version) {
             "observed_present"
         } else {
             "not_installed"
         };
-        if op.action == "install" && state != "observed_present" {
+        if (op.action == "install" && state != "observed_present")
+            || (op.action == "remove" && state != "removed")
+        {
             complete = false;
         }
         items.push(json!({"appId":op.app_id,"name":op.name,"state":state,"version":observed,"preexisting":op.installed_version.is_some()}));
@@ -299,6 +325,12 @@ pub fn finish(
     ))?;
     if known {
         for op in &plan.operations {
+            if op.action == "remove" {
+                if let Some(package) = &op.package {
+                    db(tx.execute("UPDATE installed_apps SET present=?2,last_seen_at=?3,source_state=?4 WHERE package=?1",params![package,host.installed.contains_key(package),now,if host.installed.contains_key(package){"removal_incomplete"}else{"removed"}]))?;
+                }
+                continue;
+            }
             let Some(package) = &op.package else { continue };
             let Some(version) = host.installed.get(package) else {
                 continue;
@@ -306,8 +338,13 @@ pub fn finish(
             if !matches!(op.action.as_str(), "install" | "noop") {
                 continue;
             }
-            let managed = complete && op.action == "install";
-            db(tx.execute("INSERT INTO installed_apps(id,name,package,repository,observed_version,present,last_seen_at,preexisting,source_state,catalogue_release,catalogue_version) VALUES(?1,?2,?3,?4,?5,1,?6,?7,?8,?9,?10) ON CONFLICT(id) DO UPDATE SET observed_version=excluded.observed_version,present=1,last_seen_at=excluded.last_seen_at,source_state=excluded.source_state",params![op.app_id,op.name,package,op.repository.as_deref().unwrap_or(""),version,now,!managed,if managed{"verified_transaction"}else{"observed_after_operation"},op.release_id,op.version]))?;
+            let managed = complete
+                && op.action == "install"
+                && matches!(
+                    code,
+                    "package_state_verified" | "sample_package_state_verified"
+                );
+            db(tx.execute("INSERT INTO installed_apps(id,name,package,repository,observed_version,present,last_seen_at,preexisting,source_state,catalogue_release,catalogue_version) VALUES(?1,?2,?3,?4,?5,1,?6,?7,?8,?9,?10) ON CONFLICT(id) DO UPDATE SET observed_version=excluded.observed_version,present=1,last_seen_at=excluded.last_seen_at,source_state=excluded.source_state",params![op.app_id,op.name,package,op.repository.as_deref().unwrap_or(""),version,now,op.installed_version.is_some(),if managed{"verified_transaction"}else{"observed_after_operation"},op.release_id,op.version]))?;
             if let Selection::Setup { id, revision, .. } = &plan.selection {
                 db(tx.execute("INSERT INTO setup_refs(setup_id,revision,app_id,added_at) VALUES(?1,?2,?3,?4) ON CONFLICT(setup_id,app_id) DO UPDATE SET revision=excluded.revision",params![id,revision,op.app_id,now]))?;
             }

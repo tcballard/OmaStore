@@ -94,7 +94,7 @@ private:
     QVariantMap m_catalogue, m_detail, m_query, m_distribution;
     qint64 m_distributionUntil=0;
     QTimer m_distributionExpiry;
-    QString m_pendingHandoff;
+    QString m_pendingHandoff, m_detailRequestId;
     QVariantMap m_community;
     QMap<QString,QString> m_communityRequests;
     QVariantMap m_workspace, m_workspaceReply;

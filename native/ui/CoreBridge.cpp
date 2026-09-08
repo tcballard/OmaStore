@@ -57,6 +57,7 @@ void CoreBridge::request(const QString &method, const QVariantMap &params) {
     const QString id = QString::number(++m_sequence);
     if (method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick" || method.startsWith("system.") || method.startsWith("library.") || method.startsWith("operations.") || method=="handoff.open") m_communityRequests[method]=id;
     if (method == "candidate.prepare") m_candidateRequest = id;
+    if (method == "apps.get") m_detailRequestId=id;
     m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor")});
     const QJsonObject envelope{{"protocol_version", 1}, {"id", id}, {"method", method}, {"params", QJsonObject::fromVariantMap(params)}};
     m_process.write(QJsonDocument(envelope).toJson(QJsonDocument::Compact) + '\n'); emit stateChanged();
@@ -80,8 +81,10 @@ void CoreBridge::acceptReply(const QByteArray &line) {
     if (parse.error != QJsonParseError::NoError || !doc.isObject() || reply.value("protocol_version").toInt(-1) != 1
         || !reply.value("ok").isBool() || !m_pending.contains(id)) { fail("The local service sent an unsupported message."); return; }
     const auto pending = m_pending.take(id);
+    if(pending.method=="apps.get" && id!=m_detailRequestId){emit stateChanged();return;}
     if (!reply.value("ok").toBool()) {
         const auto code = reply.value("error").toObject().value("code").toString();
+        if(pending.method=="apps.get"){m_detail.clear();emit detailChanged();}
         if (pending.method.startsWith("workspace.")) {
             m_workspaceReply = {{"action",pending.method.mid(10)},{"error",code}};
             if (pending.method == "workspace.auth.poll") m_workspace.insert("signingIn",false);
@@ -94,6 +97,7 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         if(m_communityRequests.value(pending.method)==id) {
             m_community.insert(pending.method,QVariantMap{{"error",code}});emit communityChanged();
             m_error=code=="snapshot_changed"?"The catalogue changed. Reload the selection before continuing.":"This selection is unavailable or no longer matches the catalogue.";
+            if(pending.method.startsWith("operations.") || pending.method.startsWith("library.")) m_error="Local operation unavailable: "+QString(code).replace('_',' ')+".";
             emit stateChanged();return;
         }
         if (code == "snapshot_changed" || code == "cursor_expired") { m_cursor.clear(); search(); }
@@ -141,7 +145,8 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         emit workspaceChanged();
     } else if (m_communityRequests.value(pending.method)==id) {
         m_community.insert(pending.method=="setups.import"?"setups.select":pending.method=="library.refresh"?"library.list":pending.method,result);
-        if(pending.method=="operations.confirm" || pending.method=="operations.cancel") m_community.insert("operations.status",result);
+        if(pending.method=="operations.confirm" || pending.method=="operations.cancel" || pending.method=="operations.reconcile") m_community.insert("operations.status",result);
+        if(pending.method=="operations.replan") m_community.insert("system.plan",result);
         if(pending.method=="operations.get") m_community.insert("system.plan",result.value("plan").toMap());
         emit communityChanged();
         if(pending.method=="handoff.open") {
@@ -229,8 +234,8 @@ bool CoreBridge::openLink(const QString &kind, int index) {
 bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() && m_distributionUntil>QDateTime::currentSecsSinceEpoch();}
 
 void CoreBridge::communityAction(const QString &method,const QVariantMap &params) {
-    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan","library.list","library.refresh","library.launchers","library.launch","operations.get","operations.events","operations.status","operations.confirm","operations.cancel","system.handoff","handoff.open"};
-    if(m_ready && methods.contains(method)) { if(method=="system.plan" || method=="operations.get") { m_community.remove("system.plan"); emit communityChanged(); } request(method,params); }
+    static const QStringList methods{"makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan","library.list","library.refresh","library.launchers","library.launch","operations.get","operations.events","operations.status","operations.confirm","operations.cancel","operations.reconcile","operations.replan","operations.diagnostics","operations.diagnostics.export","library.setups","library.detach_setup","library.remember_setup","system.handoff","handoff.open"};
+    if(m_ready && methods.contains(method)) { if(method=="system.plan" || method=="operations.get" || method=="operations.replan") { m_community.remove("system.plan"); emit communityChanged(); } request(method,params); }
 }
 bool CoreBridge::openMakerLink(const QString &kind) {
     if(kind!="homepage" && kind!="support") return false;

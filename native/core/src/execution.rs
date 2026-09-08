@@ -85,6 +85,27 @@ pub fn launch(store: &Store, plan: &Plan) -> Result<()> {
     Ok(())
 }
 pub fn arguments(plan: &Plan) -> Result<Vec<String>> {
+    if matches!(plan.selection, crate::planner::Selection::Remove { .. }) {
+        if plan.operations.len() != 1 || plan.operations[0].action != "remove" {
+            return Err("invalid_removal_plan");
+        }
+        let package = plan.operations[0]
+            .package
+            .as_deref()
+            .ok_or("invalid_package_target")?;
+        if !platform::package_token(package) {
+            return Err("invalid_package_target");
+        }
+        return Ok(vec![
+            "-n".into(),
+            "--".into(),
+            "/usr/bin/pacman".into(),
+            "-R".into(),
+            "--noconfirm".into(),
+            "--".into(),
+            package.into(),
+        ]);
+    }
     let mut targets = BTreeSet::new();
     for op in &plan.operations {
         if op.action != "install" {
@@ -271,6 +292,15 @@ pub fn worker(id: &str, demo: bool) -> Result<()> {
                 .connection
                 .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
                 .map_err(|_| "local_database_unavailable")?;
+            for op in &plan.operations {
+                if op.action == "remove" {
+                    tx.execute(
+                        "DELETE FROM sample_packages WHERE name=?1",
+                        [op.package.as_deref().ok_or("invalid_package_target")?],
+                    )
+                    .map_err(|_| "local_database_unavailable")?;
+                }
+            }
             for package in &plan.packages {
                 tx.execute("INSERT INTO sample_packages(name,version) VALUES(?1,?2) ON CONFLICT(name) DO UPDATE SET version=excluded.version",rusqlite::params![package.name,package.version]).map_err(|_|"local_database_unavailable")?;
             }

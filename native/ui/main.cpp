@@ -215,6 +215,11 @@ int main(int argc, char *argv[]) {
                         if(approve){approve->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         for(int i=0;i<100 && core.community().value("operations.status").toMap().value("state").toString()!="succeeded";++i)QTest::qWait(50);
                         check(core.community().value("operations.status").toMap().value("state").toString()=="succeeded","sample worker reaches verified local outcome");
+                        auto *previewDiagnostics=findItem(window->contentItem(),"previewDiagnostics");
+                        if(previewDiagnostics){previewDiagnostics->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
+                        check(findItem(window->contentItem(),"diagnosticDocument")!=nullptr,"native diagnostic preview before export");
+                        auto *closeDiagnostics=findItem(window->contentItem(),"closeDiagnostics");if(closeDiagnostics){closeDiagnostics->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}QTest::qWait(50);
                         auto *done=findItem(window->contentItem(),"closePlan");if(done){done->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         core.communityAction("library.refresh");for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
                         check(!core.community().value("library.list").toMap().value("items").toList().isEmpty(),"sample installation appears in observed library");

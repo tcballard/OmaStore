@@ -1,5 +1,9 @@
 # Build handoff
 
+B15 completes read-only interruption reconciliation, fresh partial-setup replanning, shared-reference-aware removal, safe setup detachment and exact-preview diagnostic export. All 56 Rust tests and both Clippy modes pass. Nine native checks pass in 27.54 seconds; the bus test skips locally. The real subprocess test now covers install, coordinator loss, recovery, explicit removal and replay. Real Omarchy lifecycle evidence remains an external gate; no host package or settings changed. Next: B16 operations and readiness, then B17–B22.
+
+B14 is published as `37f053021c800ca3f12c0c230e73c3658f167809`, matching local `6f4e57228dc316fd13a38e43ba7714eadaff85b7` and tree `01da93a3aaf2d154cd57252eae657bc6d28ae381`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34284929806).
+
 B14 implements exact explicit consent, fresh preflight after system authentication, independent workers, kernel locks/atomic claims, bounded output draining, package/source/version outcome checks, cancellation boundaries and native operation progress. All 52 Rust tests and both Clippy modes pass. Nine native checks pass (27.07 seconds), including a real core-loss/subprocess-survival/replay test and keyboard sample installation at three sizes and 200% scaling. The session-bus test still skips locally. Live package writes remain unavailable: the verified Omarchy release list is empty pending actual VM lifecycle evidence. B15 adds interruption reconciliation, removal, selected retry and diagnostics.
 
 B13 is published as `5396535d0babb79977e1121a591b079eb25a58a3`, matching local `43ddbfdef836b9394e18462a220e0eb3910e4441` and tree `de597806329ac9b5955cfb570be9e663c2e13cd7`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34282128450), including the actual two-process D-Bus test in both ordinary and sample builds. B12 [CI also passed](https://github.com/tcballard/OmaStore/actions/runs/34280853990).
