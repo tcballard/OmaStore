@@ -1,5 +1,9 @@
 # Build handoff
 
+B17 implements the versioned settings registry, read-only fingerprints and before/desired/scope/restoration proposals, private plan storage, and native selection/diff views from Library and Setups. Requirements B17-A1–A4 pass in fixtures; A5 remains a live-adapter gate. All 64 Rust tests and both Clippy configurations pass. Nine native checks pass in 28.56 seconds, including actual keyboard settings preview at four sizes/scales; the local bus test skips. No host desktop setting was read or changed in sample mode. Initial live-version allowlists remain empty. Next: B18 apply/recovery/restore, B19 remixes, B20–B22 commerce.
+
+B16e remote `517ddd63fb2c425e30b50aa5ee5d29d891cd0c10` matches local `9a2738e`, tree `da62b2549ef112face94d5d348b4543e3bd954d4`. The separate isolated-media CI result remains pending.
+
 B16e makes the system dynamic-loader cache available read-only to the isolated decoder and adds a bounded fixed-FFprobe startup diagnostic. The supported-host B16d run passed namespace/environment/private-file isolation, then failed during video normalization. B16d remote `601db8506fa14a07fa04cdddd7194edb2ffb3558` matches local `9692ad4`, tree `9fc3ad1715f8bd1c52fa88cef15de7603bc0d2b7`. Actual video integration remains pending until its positive job passes.
 
 B16d moves the mandatory isolated-video integration to a supported Ubuntu 22.04 worker host while retaining native Ubuntu 24.04 coverage. B16c CI 34290845779 diagnosed namespace loopback setup as the failure before any decoder ran. No host AppArmor/sysctl policy is weakened and no test is skipped. The replacement job must pass before media isolation is accepted. B16c remote `40306e78fc3c9a96378dfb617310ab7ca82212ae` matches local `9383c28c18f46fbe21349ea91134427ef560d814`, tree `c255f3d1f945978724447472c208b235003565c5`.

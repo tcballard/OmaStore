@@ -26,7 +26,12 @@ fn db<T>(r: rusqlite::Result<T>) -> Result<T> {
     r.map_err(|_| "local_database_unavailable")
 }
 pub fn migrate(connection: &rusqlite::Connection) -> Result<()> {
-    db(connection.execute_batch("CREATE TABLE IF NOT EXISTS operation_control(operation_id TEXT PRIMARY KEY REFERENCES operations(id),claimed INTEGER NOT NULL DEFAULT 0,cancel_requested INTEGER NOT NULL DEFAULT 0,heartbeat_at INTEGER NOT NULL,result_json TEXT); PRAGMA user_version=2;"))
+    db(connection.execute_batch("CREATE TABLE IF NOT EXISTS operation_control(operation_id TEXT PRIMARY KEY REFERENCES operations(id),claimed INTEGER NOT NULL DEFAULT 0,cancel_requested INTEGER NOT NULL DEFAULT 0,heartbeat_at INTEGER NOT NULL,result_json TEXT);"))?;
+    let version: i64 = db(connection.query_row("PRAGMA user_version", [], |r| r.get(0)))?;
+    if version < 2 {
+        db(connection.execute_batch("PRAGMA user_version=2;"))?;
+    }
+    Ok(())
 }
 fn change(
     tx: &Transaction<'_>,

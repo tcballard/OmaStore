@@ -9,6 +9,7 @@ pub mod editorial;
 pub mod http;
 pub mod preparation;
 pub mod query;
+pub mod settings;
 pub mod setups;
 
 pub const MAX_CATALOGUE_BYTES: usize = 8 * 1024 * 1024;

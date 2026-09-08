@@ -223,6 +223,13 @@ int main(int argc, char *argv[]) {
                         auto *done=findItem(window->contentItem(),"closePlan");if(done){done->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         core.communityAction("library.refresh");for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
                         check(!core.community().value("library.list").toMap().value("items").toList().isEmpty(),"sample installation appears in observed library");
+                        auto *librarySettings=findItem(window->contentItem(),"navLibrary");if(librarySettings){librarySettings->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        auto *openSettings=findItem(window->contentItem(),"openSettings");if(openSettings){openSettings->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        auto *clockSetting=findItem(window->contentItem(),"settingEnabled-omarchy-clock-placement");check(clockSetting!=nullptr,"native supported settings choices");if(clockSetting){clockSetting->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        auto *previewSettings=findItem(window->contentItem(),"previewSettings");if(previewSettings){previewSettings->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        const auto settingsPlan=core.community().value("settings.preview").toMap();check(settingsPlan.value("canApply").toBool()&&settingsPlan.value("simulated").toBool(),"native settings diff remains an explicit fictional proposal");
+                        auto *closeSettings=findItem(window->contentItem(),"closeSettings");if(closeSettings){closeSettings->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+
 
                         QTest::keyClick(window,Qt::Key_Escape);QTest::qWait(50);
                     }

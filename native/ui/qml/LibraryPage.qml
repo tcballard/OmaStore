@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 ScrollView {
     id:page
+    signal settingsRequested()
     required property var core
     required property var theme
     property int tab:0
@@ -46,6 +47,7 @@ ScrollView {
             Label {visible:!!page.notice;text:page.notice;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
             Flow {
                 Layout.fillWidth:true;spacing:8
+                Button {objectName:"openSettings";text:"Desktop settings";onClicked:page.settingsRequested()}
                 Button {objectName:"libraryInstalled";text:"Installed";highlighted:page.tab===0;onClicked:page.tab=0}
                 Button {objectName:"librarySaved";text:"Saved · "+page.core.saved.length;highlighted:page.tab===1;onClicked:page.tab=1}
                 Button {text:"Setups";highlighted:page.tab===3;onClicked:{page.tab=3;page.core.communityAction("library.setups");}}
