@@ -1,5 +1,7 @@
 # Build handoff
 
+B16f resolves the diagnosed Debian loader failure: the isolated FFprobe could not resolve `libblas.so.3`, whose system-package symlink passes through `/etc/alternatives`. The fixed alternatives directory is now mounted read-only when present, alongside the loader cache; arbitrary `/etc` remains unavailable. B16e CI 34291762913 supplied this exact diagnostic. Pending the positive integration result. B17 remote `b60c7c5527a68e2728b644c18e345118172bc055` matches local `4eb07ad`, tree `45aaff00639b20de0a3493f9ad82a6473c818d87`. B18 remains a separate uncommitted changeset.
+
 B17 implements the versioned settings registry, read-only fingerprints and before/desired/scope/restoration proposals, private plan storage, and native selection/diff views from Library and Setups. Requirements B17-A1–A4 pass in fixtures; A5 remains a live-adapter gate. All 64 Rust tests and both Clippy configurations pass. Nine native checks pass in 28.56 seconds, including actual keyboard settings preview at four sizes/scales; the local bus test skips. No host desktop setting was read or changed in sample mode. Initial live-version allowlists remain empty. Next: B18 apply/recovery/restore, B19 remixes, B20–B22 commerce.
 
 B16e remote `517ddd63fb2c425e30b50aa5ee5d29d891cd0c10` matches local `9a2738e`, tree `da62b2549ef112face94d5d348b4543e3bd954d4`. The separate isolated-media CI result remains pending.
