@@ -540,7 +540,7 @@ Rust core. Preserve the native scaffold and inspect subsequent work. Do not
 replace it with a website, Electron app or webview. Shared services support
 the native application; no website is needed to open or use the scaffold.
 
-Continue from the next dependency-ready bundle, B01 after the B00 scaffold.
+Consult BUNDLE_STATUS.md for current implementation progress. After the B01–B03 native discovery work, the next server bundle is B04; complete the separate real-Omarchy R1 exercise. B03b local author preparation does not replace B04–B07.
 Keep each bundle reviewable. Establish catalogue types and real validation,
 then the native catalogue client/cache and discovery views. Author services,
 installation and payments follow their bundle dependencies and release gates.

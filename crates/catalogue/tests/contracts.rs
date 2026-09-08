@@ -61,6 +61,10 @@ fn unsafe_or_ambiguous_records_fail_with_field_codes() {
         ("/apps/1/offers/0/price/minorUnits", json!(24.5)),
         ("/apps/1/offers/0/price/minorUnits", json!(-1)),
         ("/apps/1/offers/0/price/exponent", json!(0)),
+        (
+            "/apps/0/offers/0/price",
+            json!({"currency": "USD", "minorUnits": 100, "exponent": 2}),
+        ),
         ("/recipes/0/components/0/releaseId", json!("missing")),
         ("/makers/0/claim", json!("verified")),
     ];
@@ -96,6 +100,21 @@ fn current_evidence_requires_same_candidate_bytes_and_recent_environment_record(
         limitations: "Fixture only".into(),
     });
     assert_eq!(app.evidence(now).0, "passes");
+    app.tests[0].result = TestResult::Fails;
+    app.tests.push(TestRecord {
+        environment: "Another fixture environment".into(),
+        result: TestResult::Passes,
+        tested_at: "2026-09-08T00:00:00Z".into(),
+        ..app.tests[0].clone()
+    });
+    assert_eq!(app.evidence(now).0, "passes");
+    assert_eq!(
+        app.evidence_for_profile(now, Some("Synthetic test environment"))
+            .0,
+        "fails"
+    );
+    app.tests.pop();
+    app.tests[0].result = TestResult::Passes;
     app.tests[0].tested_at = "2025-09-07T00:00:00Z".into();
     assert_eq!(app.evidence(now).0, "retest_due");
     app.tests[0].tested_at = "2026-09-07T00:00:00Z".into();

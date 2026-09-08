@@ -11,3 +11,5 @@ The native core accepts one JSON object per line with `protocol_version: 1`, a b
 Catalogue info identifies `bundled`, `cached`, `live`, `stale` or `development` source, last successful fetch, content revision and a bounded warning code. Browser links are explicit user actions. Opening a listing or refreshing data does not start installations, obtain seller rights or upload local inventory.
 
 Run `cargo test --workspace --locked` for contract/cache cases. CTest's `catalogue-http` starts the real service and core, compares their query results and exercises replacement/errors. A local environment that forbids listening sockets reports this check as skipped; CI must execute it. TLS delivery and proxy operations remain a separate deployment exercise.
+
+B03b adds native-only `candidate.prepare`, accepting the strict string-field worksheet defined in `preparation::Fields`. It returns `valid` plus bounded field errors, or a typed development candidate/digest and readiness warnings. It never writes, uploads, claims or publishes. The native worksheet layer handles explicit private local saves and file-dialog exports.

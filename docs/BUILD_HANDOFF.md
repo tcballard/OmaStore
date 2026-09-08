@@ -1,56 +1,41 @@
 # Build handoff
 
-Date: 8 September 2026. Current change series: native discovery.
+Date: 8 September 2026. Branch: `build/native-discovery`. Scope: B01, B02, B03 and bounded extension B03b. GitHub revision and CI receipts will be recorded after publication.
 
-## B03 native discovery
+## Grounding and implemented outcome
 
-Implemented native search/filter/detail views, independent price/type/licence/evidence labels, seller/source/support actions, local saved items and preference restoration. Added desktop portal theme/text scaling, demand-loaded digest-checked inert images with external/failure fallbacks, Arch packaging recipe and actual Qt keyboard checks at 800×600, 1280×800, 1920×1080 and 200% DPI. Eight demo CTest entries passed, including the actual HTTP/core process comparison. The current environment supports that HTTP exercise; the earlier assumption of unavailable local sockets was not applicable to this run. Real Wayland/Omarchy/portal and assistive-technology behaviour remain unverified.
+Started from the actual `tcballard/OmaStore` native scaffold at `53b8957335e0842289abc2966d762fe09f7bcded`. No unrelated repository was used as an application baseline. The authoritative native product spec is version 0.2. [ADR 0002](adr/0002-native-discovery.md) records pinned Omawrite/Omacalc sources inspected for desktop settings, Qt windows, shortcuts and Arch packaging conventions.
 
-Performance sample: Intel Xeon Platinum 8370C, Linux x86_64, Rust 1.98.1 release, 1,000 synthetic entries and 100 samples. Shared query p95 10.312 ms; pure HTTP handler p95 10.527 ms. These exclude disk/socket/proxy time and are not GUI typing-latency measurements.
+The application now supports native discovery/search/filter/detail, independent price/type/licence/evidence labels, explicit external acquisition/source/support links, local saved items and a local author worksheet. The Rust crate is the single catalogue schema/query authority, reused by the core and actual public read service. The HTTPS client validates before replacing its bounded atomic XDG cache. Public catalogue data remains empty. Only the separately compiled demo embeds synthetic listings; no real publisher participation or test result was invented.
 
-## B02 catalogue delivery
+The worksheet saves partial work privately on this device, rejects concurrent overwrite, checks a typed candidate, previews the exact export and uses a native file dialog. It always exports an unclaimed development candidate. B03b does not complete B04 identity or B05 server drafts. No public intake, authentication, package writes, installed-app scanning, managed checkout or desktop configuration mutation is implemented.
 
-Implemented shared search, typed public HTTP routes, bounded filters and snapshot/time-bound pagination; native HTTPS refresh and atomic validated XDG cache; independent read-only loopback service. Query/cache contract checks pass locally. Actual HTTP service/core parity is wired into CTest; local listening sockets are unavailable, so CI must supply this evidence. No auth/status/install endpoints exist. Next: B03 native discovery.
+## Validation evidence
 
-## B01 catalogue contract
+Local environment: Linux x86_64, Ubuntu 24.04.3, Qt 6.8.3, GCC 13.3, Rust 1.98.1. Isolated toolchain paths are verification-environment details, not project dependencies.
 
-Implemented shared Rust public types, bounded validation CLI, immutable release variants, offer/currency fields, evidence identity/freshness, recipe references/cycle checks, empty public data and separate synthetic examples. Four catalogue contract tests cover positive and negative cases, deterministic snapshots and changed/stale evidence; the existing three core tests are retained. Rust formatting and Clippy pass. Native compilation/CI will be rerun for the completed discovery series. B01 structural validation is not publication approval. Next: B02 shared queries, native cache and read service.
+- Rust catalogue, evidence, query, cache and local-preparation tests pass; 13 tests total, plus one deliberately ignored performance sample run separately. Formatting and Clippy with warnings denied pass.
+- Actual Qt keyboard flow passes at 800×600, 1280×800 and 1920×1080 logical sizes, plus 800×600 at 200% DPI. It exercises search focus/typing, card activation, accessible card name, app detail, saving, restored preferences, back navigation, worksheet typing/saving and field-error feedback.
+- Native media tests check byte digest, inert image format, decoded dimensions and disallowed origins. Worksheet tests cover restart recovery, optimistic conflict, invalid saved-file preservation, checked-result invalidation and local-only export.
+- Actual Rust HTTP service and core process tests compare query outputs and check conditional GET, invalid filters/methods, snapshot changes and invalid catalogue replacement. These ran successfully here; an earlier socket-restriction assumption was not applicable to this run.
+- Ordinary-build tests check that the demo option is rejected and fictional catalogue text is absent from the core executable. CMake staging installs only owned desktop artifacts. The Arch PKGBUILD has syntax validation only until exercised on Arch.
 
-Starting state: empty repository. README initialization: `9db3481c7ea3c5c9363cf06040e74427e17d5c45`. Verified implementation revision: [`05c7e941e54e0c53369da349d474735c258c222b`](https://github.com/tcballard/OmaStore/commit/05c7e941e54e0c53369da349d474735c258c222b). The published source tree matches the locally checked tree `9bcbaa5633ca61b7e9f3deb47e2b3d6296b12876`.
+Performance sample: Intel Xeon Platinum 8370C at 2.80 GHz, release Rust build, 1,000 synthetic entries, 100 samples. Shared query p95 10.312 ms; pure HTTP handler p95 10.527 ms. These exclude disk/socket/proxy time and do not establish GUI typing latency with 1,000 entries. The numeric target remains a target until that broader exercise is measured.
 
-## Product decision
+## Boundaries and remaining gates
 
-Tom corrected the earlier web-first plan: OmaStore itself must be native to Omarchy. The authoritative specification is now version 0.2 in `PRODUCT_SPEC.md`. B00 creates the Qt/QML application and Rust core. B01–B03 then establish catalogue contracts and native discovery. No website or cloud account is a prerequisite.
+R1 still needs a real Omarchy desktop exercise: launcher/app identity, Wayland tiling, live portal theme/text updates, native file dialog, actual keyboard/screen-reader behaviour and visual review. Offscreen success is not that evidence. The current visual composition and theme icon are provisional.
 
-## Repository and changes
+B04 is the next server bundle. Implement the real private workflow database, provider-supported browser sign-in, scoped project claims and desktop secret-service storage. An operator-owned provider registration/callback and deployment configuration have not been supplied or created. Do not put connector credentials into the product. The following author, reviewer, publication/status and installation bundles remain unimplemented and must retain their gates.
 
-The user supplied `tcballard/OmaStore`. GitHub reported an empty public repository with default branch name `main` before this work. No prior commits or application files were replaced. The scaffold is one bounded initial implementation change set.
+The initial native catalogue origin points to this repository's `main/data/registry.json`; until the PR is merged, refresh may return an unavailable state while bundled data remains usable. The read service has not been remotely deployed. It binds to loopback and requires proxy request/time/concurrency limits before public exposure. The cache is browsing data, never permission to install.
 
-Implemented: Cargo workspace and pinned toolchain, CMake/Ninja build, Qt/QML window with six navigation destinations and honest empty states, narrow QProcess bridge, read-only Rust `core.info` protocol, standard desktop entry, CI configuration, MIT licence, contribution/submission policy stubs and the native-first product/bundle documents.
+Native inline images accept only digest-addressed, inert assets under this repository's controlled `main/media/` prefix. Other publisher media remains an explicit external link pending an approved hosting adapter. No real application assets are supplied in the preview. Videos are never preloaded.
 
-The app resolves a sibling core executable. Protocol lines are capped at 256 KiB and request IDs at 128 bytes. Invalid JSON, unsupported versions and unknown methods fail explicitly. Oversized requests terminate the read-only stream with a bounded error. There is no arbitrary command method, installer, privileged helper or URI registration in this scaffold.
+Known deliberate author scope: one worksheet, one external route/offer, manual local save, no media upload or claims. The complete publication candidate will need capabilities, services/privileges, release notes, real media and evidence added/reviewed in B05–B07. No field validation or exported digest grants approval.
 
-## Validation
+## Continue and recover
 
-| Evidence | Result |
-| --- | --- |
-| Rust unit tests | 3 passed: stream recovery, oversized input and unsupported protocol/write methods |
-| Clippy | Passed with warnings denied |
-| Rust formatting | Passed |
-| Actual process contract | 3 process checks passed through CTest |
-| Qt compilation and offscreen startup | Qt 6.8.3 build passed; actual Qt window/core handshake passed offscreen |
-| Desktop installation staging | Passed; both executables and the desktop entry staged under build/stage |
-| GitHub CI | [Native build, protocol tests, Qt startup and packaging passed](https://github.com/tcballard/OmaStore/actions/runs/34204868598) on the verified implementation revision |
-| Real Omarchy desktop | Not run; launcher, theme integration, tiling and accessibility remain unverified |
+Read the spec, bundle status and ADRs. Preserve the native window, typed process boundary, public/private separation and current data. Use separate dependency-ready commits. Complete real-desktop R1 validation and B04 before representing the preview as a marketplace pilot.
 
-The local environment initially lacked Rust and Qt tools. An isolated user-space toolchain was installed for verification. Local toolchain paths are not project dependencies and must not be copied into the build configuration. The standard Ubuntu package install path is used in CI.
-
-## Next work
-
-B00 scaffold validation is complete on Linux. Start B01. Establish catalogue schema version 1 in shared Rust types, explicit release/evidence identities, unknown states, validation and development-only fixtures. Keep the public catalogue empty until genuine listings are supplied and approved. Extend the native UI; do not generate a web storefront.
-
-Author services, app scans, installation, setup writes and commerce remain unimplemented. B12–B15 must introduce typed plans, confirmation, actual package outcomes and durable recovery before any platform-write capability is enabled. B00's simple child shutdown is safe only for its current read-only process.
-
-## Recovery
-
-Revert the scaffold change set to remove the source changes. Installation can be rehearsed entirely under `build/stage`; remove only that owned staging directory when cleaning up. A real install/removal workflow is not implemented. No user applications or desktop configuration were changed during scaffold verification.
+Revert the relevant bundle commits to undo code. Preserve users' saved items and local worksheet files when changing versions; do not remove broad XDG directories. Stage packaging under `build/stage` for reversible rehearsal. No user applications or Omarchy settings were changed by this build session.

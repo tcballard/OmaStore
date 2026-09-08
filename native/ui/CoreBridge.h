@@ -31,8 +31,10 @@ public:
     Q_INVOKABLE void showApp(const QString &id);
     Q_INVOKABLE void closeDetail();
     Q_INVOKABLE void toggleSaved();
+    Q_INVOKABLE void removeSaved(const QString &id);
     Q_INVOKABLE bool isSaved(const QString &id) const;
     Q_INVOKABLE bool openLink(const QString &kind, int index = 0);
+    void prepareCandidate(const QVariantMap &fields) { request("candidate.prepare", fields); }
     bool ready() const { return m_ready; }
     bool loading() const { return !m_pending.isEmpty(); }
     bool loaded() const { return m_loaded; }
@@ -51,6 +53,7 @@ signals:
     void detailChanged();
     void queryChanged();
     void savedChanged();
+    void candidatePrepared(const QVariantMap &result);
 private:
     struct Pending { QString method; qint64 since; int generation; bool append; };
     void request(const QString &method, const QVariantMap &params = {});
@@ -67,7 +70,7 @@ private:
     bool m_ready = false, m_loaded = false, m_demo;
     quint64 m_sequence = 0;
     int m_generation = 0, m_total = 0;
-    QString m_version, m_error, m_cursor, m_detailRequested;
+    QString m_version, m_error, m_cursor, m_detailRequested, m_candidateRequest;
     QVariantMap m_catalogue, m_detail, m_query;
     QVariantList m_apps, m_saved;
 };

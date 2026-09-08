@@ -97,7 +97,7 @@ pub fn price_label(app: &App) -> String {
                 width = p.exponent.into()
             )
         };
-        format!(
+        let amount = format!(
             "{} {}{}",
             p.currency,
             amount,
@@ -106,7 +106,16 @@ pub fn price_label(app: &App) -> String {
                 .as_ref()
                 .map(|b| format!(" / {b}"))
                 .unwrap_or_default()
-        )
+        );
+        match offer.model {
+            OfferModel::Free => "Free".into(),
+            OfferModel::Donation => format!("Free · optional {amount}"),
+            OfferModel::PayWhatYouWant => format!("Pay what you want · reference {amount}"),
+            OfferModel::Upgrade | OfferModel::PaidFeatures | OfferModel::WorkingPreview => {
+                format!("{label} · {amount}")
+            }
+            _ => amount,
+        }
     } else {
         label.into()
     }
@@ -225,15 +234,10 @@ pub fn list(
         } else {
             3
         };
-        let compatible = query.profile.as_ref().is_some_and(|p| {
-            app.evidence(at).0 == "passes"
-                && app.tests.iter().any(|t| {
-                    &t.environment == p
-                        && t.release_id == r.id
-                        && t.executed_identity == r.identity
-                        && t.candidate_digest == app.candidate_digest()
-                })
-        });
+        let compatible = query
+            .profile
+            .as_ref()
+            .is_some_and(|p| app.evidence_for_profile(at, Some(p)).0 == "passes");
         scored.push((rank, !compatible, name, app));
     }
     scored.sort_by(|a, b| (&a.0, &a.1, &a.2, &a.3.id).cmp(&(&b.0, &b.1, &b.2, &b.3.id)));

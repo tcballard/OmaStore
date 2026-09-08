@@ -39,10 +39,15 @@ fn respond(line: &[u8], client: &mut catalogue::Client) -> Value {
     }
     let now = chrono::Utc::now();
     let result: Result<Value, &str> = match request.method.as_str() {
+        "candidate.prepare" => {
+            serde_json::from_value::<omastore_catalogue::preparation::Fields>(request.params)
+                .map(omastore_catalogue::preparation::prepare)
+                .map_err(|_| "invalid_request")
+        }
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get"]}),
+            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "candidate.prepare"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),

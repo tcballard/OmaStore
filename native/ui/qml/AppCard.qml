@@ -7,6 +7,8 @@ ItemDelegate {
     required property var app
     required property var theme
     signal chosen()
+    signal removeRequested()
+    property bool bookmark: false
     objectName: "app-" + app.id
     implicitHeight: contentItem.implicitHeight + 36
     padding: 18
@@ -42,6 +44,11 @@ ItemDelegate {
             Label { text: "View →"; color: theme.accent; font.bold: true }
         }
         Label { text: card.app.evidenceLabel; color: theme.muted; font.pixelSize: 11 * theme.scale; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
+        RowLayout {
+            visible: card.bookmark
+            Label { text: "Saved copy · open for current details"; color: theme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 11 * theme.scale }
+            ToolButton { text: "Remove"; Accessible.name: "Remove " + card.app.name + " from saved"; onClicked: card.removeRequested() }
+        }
     }
     onClicked: chosen()
 }

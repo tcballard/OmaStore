@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use url::Url;
 
 pub mod http;
+pub mod preparation;
 pub mod query;
 
 pub const MAX_CATALOGUE_BYTES: usize = 8 * 1024 * 1024;
@@ -572,6 +573,11 @@ impl Catalogue {
                     "invalid_https_url",
                 );
                 if let Some(money) = &offer.price {
+                    check(
+                        offer.model != OfferModel::Free || money.minor_units == 0,
+                        format!("{p}.offers.price"),
+                        "free_offer_has_price",
+                    );
                     // Deliberately supported ISO currencies; expand with a reviewed exponent table.
                     let exponent = match money.currency.as_str() {
                         "USD" | "GBP" | "EUR" | "CAD" | "AUD" | "CHF" => Some(2),
@@ -668,7 +674,14 @@ impl Catalogue {
                     "invalid_component_dependency",
                 );
             }
-            check(!recipe_has_cycle(recipe), p, "cyclic_components");
+            check(
+                recipe.components.len() <= 128,
+                p.clone(),
+                "too_many_components",
+            );
+            if recipe.components.len() <= 128 {
+                check(!recipe_has_cycle(recipe), p, "cyclic_components");
+            }
         }
         check(
             self.editorial
@@ -755,6 +768,14 @@ impl App {
 
     /// Evidence is tied to release bytes and elapsed time, never just a displayed date.
     pub fn evidence(&self, now: DateTime<Utc>) -> (&'static str, &'static str) {
+        self.evidence_for_profile(now, None)
+    }
+
+    pub fn evidence_for_profile(
+        &self,
+        now: DateTime<Utc>,
+        profile: Option<&str>,
+    ) -> (&'static str, &'static str) {
         let release = self.current_release();
         let candidate = self.candidate_digest();
         let Some(test) = self
@@ -764,6 +785,7 @@ impl App {
                 t.release_id == release.id
                     && t.executed_identity == release.identity
                     && t.candidate_digest == candidate
+                    && profile.is_none_or(|p| t.environment == p)
             })
             .max_by(|a, b| a.tested_at.cmp(&b.tested_at))
         else {
@@ -772,7 +794,7 @@ impl App {
                 if self.tests.is_empty() {
                     "Not tested on Omarchy"
                 } else {
-                    "Only another release was tested"
+                    "Only another release or environment was tested"
                 },
             );
         };

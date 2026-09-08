@@ -1,54 +1,64 @@
 # OmaStore
 
-A native application storefront for Omarchy.
+A native community application storefront for Omarchy. Discover useful software, understand what it needs and support the people who make it.
 
-The aim is to discover useful software, understand what it does, support its makers and adopt selected parts of a shared setup. OmaStore opens in its own Qt/QML desktop window, backed by a Rust core.
+OmaStore runs in its own Qt Quick window with a Rust core. The current preview includes search and filters, app details, source and seller links, evidence labels, cached browsing, a local saved list and a submission worksheet that can be checked and exported. Desktop colour scheme and text scaling follow the settings portal.
 
-**Current state: development scaffold.** The window, six navigation destinations and versioned local core handshake are implemented. Catalogue discovery, installed-app scanning, author submissions, package operations and payments are not implemented yet. Empty views deliberately contain no invented app listings or compatibility claims.
+**Development preview.** The public catalogue is empty until genuine listings are reviewed. A separate demo build contains six explicitly fictional listings for exercising the interface. Author accounts, public submission/review, setup adoption, installed-app management and checkout are not implemented yet.
 
-## Build and run
+![Actual native preview showing explicitly fictional development listings](docs/qa/native-discovery.png)
 
-Requirements: Linux, Qt 6.4+ with Quick/Quick Controls/QML development files, CMake 3.22+, Ninja, a C++17 compiler, Python 3.10+ for process tests and Rust via rustup. The repository pins Rust in `rust-toolchain.toml` and dependencies in `Cargo.lock`.
+## Build and try it on Omarchy
 
-On Omarchy/Arch, install the development prerequisites through the normal system package manager:
+Requirements: Linux, Qt 6.4+, CMake 3.22+, Ninja, C++17 and the pinned Rust toolchain. On Omarchy/Arch:
 
 ```sh
-sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools qt6-wayland rustup python
+sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools qt6-wayland xdg-desktop-portal rustup python
 rustup show
-cmake --preset dev
-cmake --build --preset dev
+./bin/build demo
+./build-demo/bin/omastore --demo
+```
+
+For the ordinary build, with no synthetic catalogue embedded:
+
+```sh
+./bin/build dev
 ./build/bin/omastore
 ```
 
-The program locates `omastore-core` alongside the desktop executable. CMake builds and places both in `build/bin`. It uses Qt's normal platform selection on a Wayland desktop; no browser, webview or running catalogue service is needed for this scaffold.
+Both executables, `omastore` and `omastore-core`, must stay together. No browser runtime, web frontend, local server or cloud account is required to open the app. External seller/source actions open the system browser. Refresh reads only the configured public catalogue origin; a failed refresh keeps the last valid view. The Git origin will serve the new catalogue once this change is merged to `main`.
 
-## Check the scaffold
+`Ctrl+K` or `Ctrl+F` focuses search, `Alt+Left`/`Escape` leaves app detail, `Ctrl+R` refreshes and `Ctrl+Q` quits. App cards and actions support keyboard focus/Space activation. Filters and saved items persist locally; sample mode uses separate preferences.
 
-```sh
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo test --workspace --locked
-ctest --preset dev
-```
+## Prepare a listing
 
-CTest covers the actual Rust child process and an offscreen Qt startup/core handshake. Offscreen Linux checks do not establish appearance, accessibility, launcher behaviour or compatibility on a real Omarchy desktop. Those observations remain recorded separately in [the handoff](docs/BUILD_HANDOFF.md).
+Open **Submit** to prepare one local worksheet. Save partial work on this device, check fields, inspect the exact candidate and export through the native file dialog. Another window's edits cannot be silently overwritten. Closing with unsaved work asks whether to save or discard it.
 
-To rehearse packaging without changing the machine:
+An export is a development candidate, with an unclaimed maker and no compatibility evidence. It is not submitted, approved or published. The initial form prepares one external route and one offer; real media, declared capabilities, release notes and evidence remain later author/reviewer work. Free submissions and 0% OmaStore fees on external author sales/support remain the product policy.
+
+## Verify and package
 
 ```sh
+./bin/test demo
+cargo run --locked --bin omastore-validate -- data/registry.json
 cmake --install build --prefix "$PWD/build/stage"
 ```
 
-The desktop entry uses the standard `system-software-install` theme icon while product artwork remains undecided. It does not register an install URI handler; that arrives with a reviewed native handoff implementation.
+Checks cover catalogue/price/evidence contracts, cache preservation, actual Rust HTTP/core parity, native keyboard flows at three logical sizes and 200% scaling, media decoding/digests, local worksheet recovery/conflicts and public-build fixture exclusion. Offscreen checks do not establish real Omarchy/Wayland/portal or assistive-technology behaviour. [The handoff](docs/BUILD_HANDOFF.md) records those remaining gates.
+
+`packaging/PKGBUILD` is a local source-checkout recipe: run `makepkg` from `packaging` on Arch after reviewing it. It has not been built on Arch here and does not imply AUR or Omarchy repository inclusion. CMake installs the app/core, desktop entry, AppStream metadata and licence. `BUILD_TESTING=OFF` excludes the Qt test harness; development data is off by default. The standard `system-software-install` theme icon remains provisional.
+
+The optional read service can be run with `./build/bin/omastore-service data/registry.json 127.0.0.1:8080`. It serves only public GET routes and needs an operator-managed HTTPS proxy before remote deployment. See [API and cache contracts](docs/API.md).
 
 ## Continue the build
 
-- [Product specification](docs/PRODUCT_SPEC.md): native product, submission and author-income contracts.
-- [Bundle status](docs/BUNDLE_STATUS.md): implementation order and evidence.
-- [Build handoff](docs/BUILD_HANDOFF.md): current state and next work.
-- [Native architecture](docs/adr/0001-native-first.md): Qt/QML, Rust and process boundary.
+- [Product specification](docs/PRODUCT_SPEC.md): complete native product and monetisation contracts.
+- [Bundle status](docs/BUNDLE_STATUS.md) and [build handoff](docs/BUILD_HANDOFF.md): implemented work, validation and remaining gates.
+- [Catalogue contract and submission example](docs/CATALOGUE.md).
+- [Native conventions and delivery decisions](docs/adr/0002-native-discovery.md), grounded in pinned Omawrite/Omacalc sources.
+- [Local author preparation](docs/adr/0003-local-author-preparation.md): scope and the boundary with future authenticated submissions.
 - [Contributing](CONTRIBUTING.md) and [submissions](SUBMISSION.md).
 
-The next bundle is B01, the catalogue schema and validation contract. Keep the storefront native. Shared catalogue and author services support it; a web storefront is outside the initial build.
+Next server bundle: B04, publisher identity and private workspaces. Keep the existing native window and Rust core. Managed installs must wait for B09/B12–B15's status, planning, confirmation and durable lifecycle gates.
 
-Independent community project. No official Omarchy endorsement is implied. Project code is MIT licensed; upstream applications, Qt and future catalogue media retain their own licences.
+Independent community project. No official Omarchy endorsement is implied. Project code is MIT licensed; Qt, upstream applications and media retain their own licences.

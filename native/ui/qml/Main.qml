@@ -7,6 +7,8 @@ ApplicationWindow {
     required property var core
     required property var desktop
     required property var mediaPreview
+    required property var worksheet
+    property bool discardClose: false
     property int section: 0
     property bool showFilters: false
     readonly property bool showingDetail: !!core.detail.app
@@ -18,6 +20,7 @@ ApplicationWindow {
     minimumWidth: 800
     minimumHeight: 600
     title: (d.app || {}).name ? d.app.name + " · OmaStore" : "OmaStore"
+    onClosing: function(event) { if (worksheet.dirty && !discardClose) { event.accepted = false; unsaved.open(); } }
     color: storeTheme.page
     palette.window: storeTheme.page
     palette.base: storeTheme.surface
@@ -144,7 +147,7 @@ ApplicationWindow {
                 id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage)
+                sourceComponent: window.showingDetail ? detailPage : (window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             RowLayout {
@@ -217,10 +220,12 @@ ApplicationWindow {
                         AppCard {
                             required property var modelData
                             app: modelData
+                            bookmark: window.section === 3
                             theme: storeTheme
                             Layout.fillWidth: true
                             Layout.preferredWidth: (cards.width - (cards.columns - 1) * cards.columnSpacing) / cards.columns
                             onChosen: core.showApp(app.id)
+                            onRemoveRequested: core.removeSaved(app.id)
                         }
                     }
                 }
@@ -241,6 +246,24 @@ ApplicationWindow {
     Component {
         id: detailPage
         DetailPage { details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
+    }
+    Component { id: submitPage; SubmitPage { worksheet: window.worksheet; core: window.core; theme: storeTheme } }
+    Dialog {
+        id: unsaved
+        anchors.centerIn: parent
+        width: Math.min(520, window.width - 64)
+        modal: true
+        title: "Keep your worksheet changes?"
+        contentItem: ColumnLayout {
+            spacing: 14
+            Label { text: "The submission worksheet has unsaved changes on this device."; wrapMode: Text.Wrap; Layout.fillWidth: true }
+            Label { text: worksheet.status; wrapMode: Text.Wrap; Layout.fillWidth: true }
+            RowLayout {
+                Button { text: "Save & quit"; onClicked: { if (worksheet.save()) { window.discardClose = true; window.close(); } } }
+                Button { text: "Discard & quit"; onClicked: { window.discardClose = true; window.close(); } }
+                Button { text: "Keep editing"; onClicked: unsaved.close() }
+            }
+        }
     }
     Component {
         id: supportingPage

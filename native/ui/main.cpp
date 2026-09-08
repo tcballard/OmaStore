@@ -1,6 +1,7 @@
 #include "CoreBridge.h"
 #include "DesktopSettings.h"
 #include "MediaPreview.h"
+#include "Preparation.h"
 
 #include <QCommandLineParser>
 #include <QGuiApplication>
@@ -12,11 +13,15 @@
 #include <QQuickWindow>
 #include <QQuickItem>
 #include <QSettings>
+#ifdef OMASTORE_QA
 #include <QTemporaryDir>
 #include <QTest>
 #include <memory>
 #include <functional>
 #include <QAccessible>
+#endif
+#include <QStandardPaths>
+#include <QIcon>
 
 int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
@@ -24,18 +29,21 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setApplicationVersion("0.1.0");
     QCoreApplication::setOrganizationName("OmaStore");
     QGuiApplication::setDesktopFileName("io.github.tcballard.OmaStore");
+    QGuiApplication::setWindowIcon(QIcon::fromTheme("system-software-install"));
     QQuickStyle::setStyle("Fusion");
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Native application storefront for Omarchy");
     parser.addHelpOption();
     parser.addVersionOption();
+#ifdef OMASTORE_QA
     const QCommandLineOption smokeTest("smoke-test", "Exit after verifying the window and local core startup.");
     parser.addOption(smokeTest);
     const QCommandLineOption uiTest("ui-test", "Exercise native discovery interaction and quit.");
     const QCommandLineOption screenshot("screenshot", "Save an actual window capture after loading.", "path");
     const QCommandLineOption size("window-size", "Initial logical dimensions, for desktop QA.", "WIDTHxHEIGHT");
     parser.addOptions({uiTest, screenshot, size});
+#endif
 #ifdef OMASTORE_DEVELOPMENT_DATA
     const QCommandLineOption demoOption("demo", "Show explicitly fictional development listings.");
     parser.addOption(demoOption);
@@ -47,11 +55,15 @@ int main(int argc, char *argv[]) {
     demo = parser.isSet(demoOption);
 #endif
     if (demo) QCoreApplication::setApplicationName("OmaStoreDevelopment");
+    QString dataDirectory = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+#ifdef OMASTORE_QA
     QTemporaryDir testSettings;
     if (parser.isSet(smokeTest) || parser.isSet(uiTest) || parser.isSet(screenshot)) {
+        dataDirectory = testSettings.filePath("data");
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, testSettings.path());
     }
+    #endif
     DesktopSettings desktop;
     const QFont baseFont = app.font();
     QObject::connect(&desktop, &DesktopSettings::changed, &app, [&] {
@@ -61,14 +73,18 @@ int main(int argc, char *argv[]) {
     });
     CoreBridge core(demo);
     MediaPreview mediaPreview;
+    Preparation worksheet(dataDirectory);
+    QObject::connect(&worksheet, &Preparation::checkRequested, &core, &CoreBridge::prepareCandidate);
+    QObject::connect(&core, &CoreBridge::candidatePrepared, &worksheet, &Preparation::acceptResult);
     QQmlApplicationEngine engine;
     bool qmlWarning = false;
     QObject::connect(&engine, &QQmlApplicationEngine::warnings, &app, [&](const QList<QQmlError> &) { qmlWarning = true; });
-    engine.setInitialProperties({{"core", QVariant::fromValue(&core)}, {"desktop", QVariant::fromValue(&desktop)}, {"mediaPreview", QVariant::fromValue(&mediaPreview)}});
+    engine.setInitialProperties({{"core", QVariant::fromValue(&core)}, {"desktop", QVariant::fromValue(&desktop)}, {"mediaPreview", QVariant::fromValue(&mediaPreview)}, {"worksheet", QVariant::fromValue(&worksheet)}});
     engine.load(QUrl(QStringLiteral("qrc:/qt/qml/OmaStore/Main.qml")));
     if (engine.rootObjects().isEmpty()) return 1;
     auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
     if (!window) return 1;
+#ifdef OMASTORE_QA
     if (parser.isSet(size)) {
         const auto dimensions = parser.value(size).split('x');
         if (dimensions.size() != 2) return 2;
@@ -120,6 +136,25 @@ int main(int argc, char *argv[]) {
                         check(core.detail().isEmpty() && core.query().value("q").toString() == "fieldnotes", "back preserves query");
                     } else if (demo) { check(false, "search result count"); }
                     core.clearFilters(); QTest::qWait(200);
+                    auto *submit = findItem(window->contentItem(), "navSubmit");
+                    if (submit) { submit->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
+                    QTest::qWait(150);
+                    auto *name = findItem(window->contentItem(), "field-name");
+                    if (name) {
+                        name->forceActiveFocus();
+                        for (const auto character : QByteArray("My tool")) QTest::keyClick(window, character);
+                    }
+                    check(worksheet.fields().value("name").toString() == "My tool", "worksheet typing");
+                    auto *saveWorksheet = findItem(window->contentItem(), "saveWorksheet");
+                    if (saveWorksheet) { saveWorksheet->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
+                    check(!worksheet.dirty(), "worksheet save");
+                    auto *checkWorksheet = findItem(window->contentItem(), "checkWorksheet");
+                    if (checkWorksheet) { checkWorksheet->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
+                    QTest::qWait(200);
+                    check(!worksheet.result().value("valid").toBool() && !worksheet.result().value("errors").toList().isEmpty(), "worksheet validation feedback");
+                    auto *discover = findItem(window->contentItem(), "navDiscover");
+                    if (discover) { discover->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
+                    QTest::qWait(100);
                 }
                 if (parser.isSet(screenshot)) ok = window->grabWindow().save(parser.value(screenshot)) && ok;
                 app.exit(ok && !qmlWarning ? 0 : 1);
@@ -128,6 +163,7 @@ int main(int argc, char *argv[]) {
         QObject::connect(&core, &CoreBridge::stateChanged, &app, [&] { if (!core.ready() && !core.error().isEmpty()) app.exit(1); });
         QTimer::singleShot(10000, &app, [&app] { app.exit(1); });
     }
+#endif
     core.start();
     return app.exec();
 }

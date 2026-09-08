@@ -7,7 +7,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 DBus Network Test)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 DBus Network)
+if(BUILD_TESTING)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+endif()
 find_program(CARGO_EXECUTABLE cargo REQUIRED)
 qt_standard_project_setup()
 
@@ -43,19 +46,26 @@ qt_add_executable(omastore
     native/ui/DesktopSettings.h
     native/ui/MediaPreview.cpp
     native/ui/MediaPreview.h
+    native/ui/Preparation.cpp
+    native/ui/Preparation.h
 )
 set_source_files_properties(native/ui/qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(native/ui/qml/AppCard.qml PROPERTIES QT_RESOURCE_ALIAS AppCard.qml)
 set_source_files_properties(native/ui/qml/DetailPage.qml PROPERTIES QT_RESOURCE_ALIAS DetailPage.qml)
+set_source_files_properties(native/ui/qml/SubmitPage.qml PROPERTIES QT_RESOURCE_ALIAS SubmitPage.qml)
 qt_add_qml_module(omastore
     URI OmaStore
     VERSION 1.0
     RESOURCE_PREFIX /qt/qml
-    QML_FILES native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml
+    QML_FILES native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml
 )
 target_link_libraries(omastore PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network Qt6::Test
+    Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network
 )
+if(BUILD_TESTING)
+    target_link_libraries(omastore PRIVATE Qt6::Test)
+    target_compile_definitions(omastore PRIVATE OMASTORE_QA)
+endif()
 add_dependencies(omastore omastore-core)
 if(OMASTORE_DEVELOPMENT_DATA)
     target_compile_definitions(omastore PRIVATE OMASTORE_DEVELOPMENT_DATA)
@@ -70,7 +80,7 @@ install(FILES packaging/io.github.tcballard.OmaStore.metainfo.xml
 install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
 
 if(BUILD_TESTING)
-    qt_add_executable(native-contracts tests/native_contracts.cpp native/ui/MediaPreview.cpp native/ui/MediaPreview.h)
+    qt_add_executable(native-contracts tests/native_contracts.cpp native/ui/MediaPreview.cpp native/ui/MediaPreview.h native/ui/Preparation.cpp native/ui/Preparation.h)
     target_include_directories(native-contracts PRIVATE native/ui)
     target_link_libraries(native-contracts PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test)
     add_test(NAME native-contracts COMMAND native-contracts)

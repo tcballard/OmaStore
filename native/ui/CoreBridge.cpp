@@ -50,6 +50,7 @@ void CoreBridge::start() {
 void CoreBridge::request(const QString &method, const QVariantMap &params) {
     if (m_process.state() != QProcess::Running || m_pending.size() >= 16) return;
     const QString id = QString::number(++m_sequence);
+    if (method == "candidate.prepare") m_candidateRequest = id;
     m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor")});
     const QJsonObject envelope{{"protocol_version", 1}, {"id", id}, {"method", method}, {"params", QJsonObject::fromVariantMap(params)}};
     m_process.write(QJsonDocument(envelope).toJson(QJsonDocument::Compact) + '\n'); emit stateChanged();
@@ -75,6 +76,10 @@ void CoreBridge::acceptReply(const QByteArray &line) {
     const auto pending = m_pending.take(id);
     if (!reply.value("ok").toBool()) {
         const auto code = reply.value("error").toObject().value("code").toString();
+        if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
+            emit candidatePrepared({{"valid", false}, {"errors", QVariantList{QVariantMap{{"path", "fields"}, {"code", "invalid_or_unsupported_fields"}}}}});
+            emit stateChanged(); return;
+        }
         if (code == "snapshot_changed" || code == "cursor_expired") { m_cursor.clear(); search(); }
         else if (code == "not_found") m_error = "This listing is no longer in the current catalogue.";
         else if (code == "invalid_filter" || code == "invalid_cursor") m_error = "These filters are no longer supported. Clear filters to continue.";
@@ -83,7 +88,9 @@ void CoreBridge::acceptReply(const QByteArray &line) {
     }
     if (!reply.value("result").isObject()) { fail("The local service sent an invalid result."); return; }
     const auto result = reply.value("result").toObject().toVariantMap();
-    if (pending.method == "core.info") {
+    if (pending.method == "candidate.prepare" && id == m_candidateRequest) {
+        emit candidatePrepared(result);
+    } else if (pending.method == "core.info") {
         if (result.value("service").toString() != "omastore-core" || result.value("version").toString().isEmpty()) { fail("Unsupported local service."); return; }
         m_ready = true; m_version = result.value("version").toString(); request("catalogue.info");
     } else if (pending.method == "catalogue.info" || pending.method == "catalogue.refresh") {
@@ -119,6 +126,12 @@ void CoreBridge::nextPage() { if (!m_ready || loading() || m_cursor.isEmpty()) r
 void CoreBridge::showApp(const QString &id) { if (!m_ready) return; m_error.clear(); m_detailRequested = id; request("apps.get", {{"id", id}}); }
 void CoreBridge::closeDetail() { m_detailRequested.clear(); m_detail.clear(); emit detailChanged(); }
 bool CoreBridge::isSaved(const QString &id) const { for (const auto &entry : m_saved) if (entry.toMap().value("id").toString() == id) return true; return false; }
+void CoreBridge::removeSaved(const QString &id) {
+    for (qsizetype i = m_saved.size() - 1; i >= 0; --i) if (m_saved[i].toMap().value("id").toString() == id) m_saved.removeAt(i);
+    QSettings settings; settings.setValue("browse/saved", QJsonDocument::fromVariant(m_saved).toJson(QJsonDocument::Compact)); settings.sync();
+    if (settings.status() != QSettings::NoError) { m_error = "Could not update your saved list on this device."; emit stateChanged(); }
+    emit savedChanged();
+}
 void CoreBridge::toggleSaved() {
     const auto summary = m_detail.value("summary").toMap(); const auto id = summary.value("id").toString(); if (id.isEmpty()) return;
     if (isSaved(id)) { for (qsizetype i = m_saved.size() - 1; i >= 0; --i) if (m_saved[i].toMap().value("id").toString() == id) m_saved.removeAt(i); }
