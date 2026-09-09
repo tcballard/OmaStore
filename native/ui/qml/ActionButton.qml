@@ -15,7 +15,7 @@ Button {
         font.weight: Font.DemiBold
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        color: !control.enabled ? control.theme.muted : control.primary ? control.theme.onAccent : control.theme.accent
+        color: !control.enabled ? control.theme.muted : control.primary ? control.theme.accentInk : control.theme.accent
     }
     background: Rectangle {
         radius: 8

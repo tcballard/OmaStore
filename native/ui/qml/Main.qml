@@ -40,10 +40,11 @@ ApplicationWindow {
     palette.placeholderText: storeTheme.muted
 
     StoreTheme { id: storeTheme; desktop: window.desktop }
-    function navigate(index) { core.closeDetail(); if(index !== section) browsePosition = 0; section = index; }
+    function navigate(index) { core.closeDetail(); if(index !== section) browsePosition = 0; section = index; if (index === 0 && Object.keys(core.query).length) core.clearFilters(); }
     property real browsePosition: 0
     property string lastAppId: ""
-    function openApp(id) { lastAppId = id; core.showApp(id); }
+    property string lastFocusName: ""
+    function openApp(id, origin) { lastAppId = id; lastFocusName = origin || "app-" + id; core.showApp(id); }
     function readable(value) { return String(value || "unknown").replace(/_/g, " "); }
     function focusSearch() { navigate(1); searchField.forceActiveFocus(); searchField.selectAll(); }
     Shortcut { sequence: "Ctrl+K"; onActivated: window.focusSearch() }
@@ -178,8 +179,17 @@ ApplicationWindow {
         ScrollView {
             id: browseScroll
             objectName: "browseScroll"
-            Component.onCompleted: Qt.callLater(function() { contentItem.contentY = window.browsePosition; })
-            Component.onDestruction: window.browsePosition = contentItem.contentY
+            Component.onCompleted: Qt.callLater(function() {
+                function locate(item) {
+                    if (item.objectName === window.lastFocusName) return item;
+                    const children = item.children || [];
+                    for (let i=0; i<children.length; ++i) { const found=locate(children[i]); if(found) return found; }
+                    return null;
+                }
+                if (window.lastFocusName) { const control=locate(browseScroll); if(control) control.forceActiveFocus(Qt.BacktabFocusReason); }
+                contentItem.contentY = window.browsePosition;
+            })
+            Component.onDestruction: { if (contentItem) window.browsePosition = contentItem.contentY; }
             clip: true
             contentWidth: availableWidth
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -200,7 +210,7 @@ ApplicationWindow {
                     visible: window.section === 0 && core.apps.some(a => a.id === "repo-omacalc")
                     Layout.fillWidth: true; Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset
                     theme: storeTheme
-                    onChosen: window.openApp("repo-omacalc")
+                    onChosen: window.openApp("repo-omacalc", "discoverCalculator")
                 }
                 ColumnLayout {
                     visible: window.section === 0 && (core.catalogue.categories || []).length > 0
@@ -213,6 +223,7 @@ ApplicationWindow {
                             model: core.catalogue.categories || []
                             ActionButton {
                                 required property string modelData
+                                objectName: "purpose-" + modelData
                                 theme: storeTheme
                                 text: ({writing:"Write something",video:"Work with video",presentations:"Tell a story",utilities:"Everyday essentials",games:"Take a break"})[modelData] || window.readable(modelData)
                                 Accessible.name: "Browse " + window.readable(modelData)
@@ -226,8 +237,8 @@ ApplicationWindow {
                     Layout.fillWidth: true; Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset
                     Label { text: window.section === 0 ? "Explore the apps" : core.total + (core.total === 1 ? " application" : " applications"); font.pixelSize: storeTheme.sectionSize * storeTheme.scale; font.weight: Font.DemiBold; color: storeTheme.ink }
                     Item { Layout.fillWidth: true }
-                    Button { text: window.showFilters ? "Hide filters" : "Filters"; visible: window.section !== 3; onClicked: window.showFilters = !window.showFilters }
-                    Button { text: "Clear"; visible: window.section !== 3 && Object.keys(core.query).length > 0; onClicked: core.clearFilters() }
+                    ActionButton { theme: storeTheme; text: window.showFilters ? "Hide filters" : "Filters"; visible: window.section !== 3; onClicked: window.showFilters = !window.showFilters }
+                    ActionButton { theme: storeTheme; text: "Clear"; visible: window.section !== 3 && Object.keys(core.query).length > 0; onClicked: core.clearFilters() }
                 }
                 Flow {
                     visible: window.showFilters && window.section !== 3

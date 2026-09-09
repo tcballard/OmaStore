@@ -83,7 +83,7 @@ ScrollView {
                 Layout.fillWidth: true
                 columns: 2; columnSpacing: 24; rowSpacing: 10
                 Repeater {
-                    model: ["Works offline", page.readable(page.release.offline), "Account required", page.readable(page.release.account), "Activation required", page.readable(page.release.activation), "Architecture", (page.release.architectures || []).join(", "), "Service costs", page.release.serviceCosts || "Unknown", "Omarchy evidence", page.summary.evidenceLabel || "Not tested"]
+                    model: ["App type", page.readable(page.app.appType), "Release maturity", page.readable(page.app.maturity), "Works offline", page.readable(page.release.offline), "Account required", page.readable(page.release.account), "Activation required", page.readable(page.release.activation), "Architecture", (page.release.architectures || []).join(", "), "Service costs", page.release.serviceCosts || "Unknown", "Omarchy evidence", page.summary.evidenceLabel || "Not tested"]
                     Label { required property int index; required property string modelData; text: modelData; color: index % 2 ? theme.ink : theme.muted; font.bold: index % 2 === 0; Layout.fillWidth: true; Layout.preferredWidth: index % 2 ? 400 : 150; wrapMode: Text.Wrap; textFormat: Text.PlainText }
                 }
             }
@@ -96,7 +96,7 @@ ScrollView {
                     Label { text: "Recorded test · " + page.readable(modelData.result); font.bold: true; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
                     Label { text: modelData.environment + " · " + modelData.testedAt + "\nRelease: " + modelData.releaseId + "\nTested by: " + modelData.actor + " · " + modelData.toolVersion; color: theme.muted; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
                     Label { text: modelData.limitations || "No limitations recorded."; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
-                    Button { text: "Read test evidence ↗"; onClicked: core.openLink("evidence", index) }
+                    ActionButton { theme: page.theme; text: "Read test evidence ↗"; onClicked: core.openLink("evidence", index) }
                 }
             }
             Label { visible: (page.app.media || []).length > 0; text: "See it in use"; font.pixelSize: 22 * theme.scale; font.bold: true; Layout.topMargin: 12 }
@@ -113,9 +113,9 @@ ScrollView {
                     required property var modelData
                     required property int index
                     Layout.fillWidth: true
-                    Button { text: modelData.kind === "demo" ? "Play demonstration in browser ↗" : "Preview image"; onClicked: modelData.kind === "demo" ? core.openLink("media", index) : mediaPreview.load(modelData) }
+                    ActionButton { theme: page.theme; text: modelData.kind === "demo" ? "Play demonstration in browser ↗" : "Preview image"; onClicked: modelData.kind === "demo" ? core.openLink("media", index) : mediaPreview.load(modelData) }
                     Label { text: modelData.alt; Layout.fillWidth: true; textFormat: Text.PlainText; wrapMode: Text.Wrap }
-                    Button { text: "Open ↗"; Accessible.name: "Open " + modelData.kind + ": " + modelData.alt; onClicked: core.openLink("media", index) }
+                    ActionButton { theme: page.theme; text: "Open ↗"; Accessible.name: "Open " + modelData.kind + ": " + modelData.alt; onClicked: core.openLink("media", index) }
                 }
             }
             Image { visible: mediaPreview.status === "ready"; source: mediaPreview.source; Layout.fillWidth: true; Layout.preferredHeight: visible ? Math.min(380, page.width * 0.6) : 0; fillMode: Image.PreserveAspectFit; Accessible.role: Accessible.Graphic; Accessible.name: "Application media preview" }
@@ -131,10 +131,10 @@ ScrollView {
                     Label { text: modelData.entitlement; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
                     Flow {
                         Layout.fillWidth: true; spacing: 8
-                        Button { text: "Seller ↗"; onClicked: core.openLink("offer", index) }
-                        Button { text: "Terms ↗"; onClicked: core.openLink("terms", index) }
-                        Button { text: "Refunds ↗"; visible: !!modelData.refund; onClicked: core.openLink("refund", index) }
-                        Button { text: "Cancellation ↗"; visible: !!modelData.cancellation; onClicked: core.openLink("cancellation", index) }
+                        ActionButton { theme: page.theme; text: "Seller ↗"; onClicked: core.openLink("offer", index) }
+                        ActionButton { theme: page.theme; text: "Terms ↗"; onClicked: core.openLink("terms", index) }
+                        ActionButton { theme: page.theme; text: "Refunds ↗"; visible: !!modelData.refund; onClicked: core.openLink("refund", index) }
+                        ActionButton { theme: page.theme; text: "Cancellation ↗"; visible: !!modelData.cancellation; onClicked: core.openLink("cancellation", index) }
                     }
                 }
             }
@@ -159,8 +159,8 @@ ScrollView {
             TextArea {id:reportMessage;placeholderText:"Describe a security, integrity or compatibility concern privately";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText;Accessible.name:"Private distribution report"}
             Flow {
                 Layout.fillWidth:true;spacing:8
-                Button {text:core.workspace.actor ? "Send private report" : "Sign in from Submit to report";enabled:!!core.workspace.actor && reportMessage.text.length>0 && reportMessage.text.length<=2000 && !core.loading;onClicked:core.workspaceAction("command",{command:"distribution",operation:{action:"report",app_id:page.app.id,kind:reportKind.currentText,message:reportMessage.text}})}
-                Button {text:"Appeal as listing steward";visible:!!core.workspace.actor && core.distribution.distribution==="suspended";enabled:reportMessage.text.length>0 && reportMessage.text.length<=2000 && !core.loading;onClicked:core.workspaceAction("command",{command:"distribution",operation:{action:"appeal",app_id:page.app.id,message:reportMessage.text}})}
+                ActionButton { theme: page.theme;text:core.workspace.actor ? "Send private report" : "Sign in from Submit to report";enabled:!!core.workspace.actor && reportMessage.text.length>0 && reportMessage.text.length<=2000 && !core.loading;onClicked:core.workspaceAction("command",{command:"distribution",operation:{action:"report",app_id:page.app.id,kind:reportKind.currentText,message:reportMessage.text}})}
+                ActionButton { theme: page.theme;text:"Appeal as listing steward";visible:!!core.workspace.actor && core.distribution.distribution==="suspended";enabled:reportMessage.text.length>0 && reportMessage.text.length<=2000 && !core.loading;onClicked:core.workspaceAction("command",{command:"distribution",operation:{action:"appeal",app_id:page.app.id,message:reportMessage.text}})}
             }
             Label {visible:core.workspaceReply.command==="distribution" && core.workspaceReply.appId===page.app.id && !!core.workspaceReply.id;text:"Your private request was recorded. Reference: " + (core.workspaceReply.id || "");Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}
             }

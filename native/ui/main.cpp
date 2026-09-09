@@ -426,6 +426,12 @@ int main(int argc, char *argv[]) {
                     QTest::qWait(100);
                 }
                 if (!demo && (parser.isSet(storefrontTest) || parser.value(captureView) != "discover")) {
+                    if (parser.isSet(storefrontTest)) {
+                        auto *browse=window->findChild<QObject*>("browseScroll");
+                        auto *flick=browse ? browse->property("contentItem").value<QObject*>() : nullptr;
+                        check(flick != nullptr, "browse scroll surface");
+                        if(flick) flick->setProperty("contentY",100);
+                    }
                     auto *feature = findItem(window->contentItem(), "discoverCalculator");
                     check(feature != nullptr, "repository discovery feature");
                     if (feature) { feature->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
@@ -458,6 +464,14 @@ int main(int argc, char *argv[]) {
                             QTest::qWait(100);
                             check(core.detail().isEmpty(), "return to discovery");
                             check(core.isSaved("repo-omacalc"), "saved app survives return");
+                            check(window->property("browsePosition").toReal()>=99, "browse position retained");
+                            auto *restored=findItem(window->contentItem(),"discoverCalculator");
+                            check(restored && restored->hasActiveFocus(), "focus returns to originating feature");
+                            auto *purpose=findItem(window->contentItem(),"purpose-utilities");
+                            check(purpose != nullptr, "purpose navigation available");
+                            if(purpose){purpose->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                            for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                            check(core.query().value("category").toString()=="utilities", "purpose opens filtered catalogue");
                         }
                     }
                 }

@@ -13,7 +13,7 @@ Rectangle {
     border.color: theme.line
     Label {
         anchors.centerIn: parent
-        text: symbol.category === "writing" ? "¶" : symbol.category === "video" ? "▷" : symbol.category === "games" ? "✣" : symbol.category === "presentations" ? "▤" : "⌘"
+        text: symbol.category === "writing" ? "¶" : symbol.category === "video" ? "▷" : symbol.category === "games" ? "✣" : symbol.category === "presentations" ? "▤" : "▦"
         font.family: symbol.theme.mono
         font.pixelSize: symbol.size * 0.48
         color: symbol.theme.accent

@@ -25,7 +25,7 @@ ItemDelegate {
             width: parent.width * 0.56 - 30
             spacing: 14
             Label { text: "IN THE CATALOGUE"; color: theme.featureMuted; font.family: theme.mono; font.pixelSize: 10 * theme.scale; font.letterSpacing: 1.2 }
-            Label { text: "A little app.\nA clear answer."; color: theme.onFeature; font.pixelSize: (feature.width > 720 ? 38 : 30) * theme.scale; font.weight: Font.Bold; lineHeight: 0.98; Layout.fillWidth: true; wrapMode: Text.Wrap }
+            Label { text: "A little app.\nA clear answer."; color: theme.featureInk; font.pixelSize: (feature.width > 720 ? 38 : 30) * theme.scale; font.weight: Font.Bold; lineHeight: 0.98; Layout.fillWidth: true; wrapMode: Text.Wrap }
             Label { text: "Meet OmaCalc. Everyday arithmetic,\nin its own native window."; color: theme.featureMuted; font.pixelSize: 13 * theme.scale; Layout.fillWidth: true; wrapMode: Text.Wrap }
             Label { text: "Explore OmaCalc  →"; color: theme.featureAccent; font.weight: Font.DemiBold; font.pixelSize: 13 * theme.scale; Layout.topMargin: 6; font.underline: feature.hovered }
         }
