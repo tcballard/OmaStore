@@ -339,6 +339,9 @@ int main(int argc, char *argv[]) {
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
                         check(core.workspaceReply().value("environment").toString()=="development"&&!core.workspaceReply().value("pilotEvidenceComplete").toBool(),"native readiness separates sample and public evidence");
                         check(core.workspaceReply().value("gates").toList().size()==12,"native operator report exposes every pilot gate");
+                        press(findItem(window->contentItem(),"commerceWorkspaceTab"));press(findItem(window->contentItem(),"loadCommerce"));
+                        for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        check(core.workspaceReply().value("environment").toString()=="development"&&!core.workspaceReply().value("realCheckoutEnabled").toBool()&&!core.workspaceReply().value("missing").toList().isEmpty(),"native commerce shows missing facts with real charges disabled");
 
                         core.refresh();
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);

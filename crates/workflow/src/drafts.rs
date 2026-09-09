@@ -12,6 +12,15 @@ pub const MAX_DRAFT_BYTES: usize = 80 * 1024;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    CommerceModel {
+        version: i64,
+        model: Box<crate::commerce_model::OperatingModel>,
+        report_digest: String,
+    },
+    CommercePause {
+        paused: bool,
+        reason: String,
+    },
     ReleaseEvidence {
         evidence: crate::operations::Evidence,
     },
@@ -74,7 +83,9 @@ pub enum Command {
 impl Command {
     pub fn role(&self) -> &'static str {
         match self {
-            Self::ReleaseEvidence { .. } => "operator",
+            Self::ReleaseEvidence { .. }
+            | Self::CommerceModel { .. }
+            | Self::CommercePause { .. } => "operator",
             Self::StartReview { .. } => "reviewer",
             Self::Distribution { operation }
                 if matches!(
@@ -182,6 +193,14 @@ impl Store {
 }
 fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Result<Value> {
     match command {
+        Command::CommerceModel {
+            version,
+            model,
+            report_digest,
+        } => crate::commerce::record_model(t, actor, version, *model, &report_digest, now),
+        Command::CommercePause { paused, reason } => {
+            crate::commerce::pause(t, actor, paused, &reason, now)
+        }
         Command::ReleaseEvidence { evidence } => {
             crate::operations::evidence(t, actor, evidence, now)
         }

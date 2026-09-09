@@ -317,3 +317,20 @@ pub async fn operations(State(s): State<AppState>, headers: HeaderMap) -> ApiRes
         .await
         .map(Json)
 }
+
+pub async fn commerce_status(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Value>> {
+    let a = if headers
+        .get("Authorization")
+        .is_some_and(|v| v.as_bytes() != b"Bearer ")
+    {
+        Some(actor(&s, &headers).await?)
+    } else {
+        None
+    };
+    db(&s, move |store| store.commerce_status(a.as_ref()))
+        .await
+        .map(Json)
+}

@@ -93,6 +93,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/submissions/{id}", get(publication::submitted))
         .route("/api/v1/github/webhook", post(publication::webhook))
         .route("/api/v1/operations", get(workspace::operations))
+        .route("/api/v1/commerce/status", get(workspace::commerce_status))
         .route("/api/v1/review", get(workspace::review_queue))
         .route("/api/v1/review/{id}", get(workspace::review_detail))
         .route("/api/v1/commands", post(workspace::command))

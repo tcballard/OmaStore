@@ -318,6 +318,28 @@ impl Client {
                 )?;
                 store.sample_runtime(&actor, record_id(&params)?, omastore_workflow::now())?
             }
+            "commerce.status" => {
+                #[cfg(feature = "development-catalogue")]
+                let local = if let Some(store) = &self.sandbox {
+                    let actor = self
+                        .token
+                        .as_ref()
+                        .map(|t| store.actor(t, omastore_workflow::now()))
+                        .transpose()?;
+                    Some(store.commerce_status(actor.as_ref())?)
+                } else {
+                    None
+                };
+                #[cfg(not(feature = "development-catalogue"))]
+                let local: Option<Value> = None;
+                match local {
+                    Some(v) => v,
+                    None if self.origin.is_none() => {
+                        omastore_workflow::commerce_model::OperatingModel::default().readiness()
+                    }
+                    None => self.http("GET", "/api/v1/commerce/status", &json!({}))?,
+                }
+            }
             "operations.dashboard" => {
                 #[cfg(feature = "development-catalogue")]
                 let local = if let Some(store) = &self.sandbox {

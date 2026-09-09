@@ -1,6 +1,9 @@
 //! Private workflow authority. Published catalogue content remains Git-owned.
 pub mod auth;
 pub mod checks;
+pub mod commerce;
+pub mod commerce_model;
+pub mod commerce_provider;
 mod context;
 pub mod drafts;
 pub mod feeds;

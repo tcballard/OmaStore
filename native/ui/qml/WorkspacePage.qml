@@ -31,6 +31,7 @@ ColumnLayout {
         TabButton { objectName: "reviewWorkspaceTab"; text: "Review" }
         TabButton {objectName:"operationsWorkspaceTab";text:"Operations"}
         TabButton {objectName:"readinessWorkspaceTab";text:"Readiness"}
+        TabButton {objectName:"commerceWorkspaceTab";text:"Commerce"}
     }
     StackLayout {
         currentIndex: tabs.currentIndex
@@ -111,5 +112,6 @@ ColumnLayout {
         ScrollView {id:reviewScroll;clip:true;contentWidth:availableWidth;ReviewPanel {width:reviewScroll.availableWidth;core:page.core;theme:page.theme}}
         ScrollView {id:operationsScroll;clip:true;contentWidth:availableWidth;MonitoringPanel {width:operationsScroll.availableWidth;core:page.core;theme:page.theme}}
         ScrollView {id:readinessScroll;clip:true;contentWidth:availableWidth;ReadinessPanel {width:readinessScroll.availableWidth;core:page.core;theme:page.theme}}
+        ScrollView {id:commerceScroll;clip:true;contentWidth:availableWidth;CommercePanel {width:commerceScroll.availableWidth;core:page.core;theme:page.theme}}
     }
 }

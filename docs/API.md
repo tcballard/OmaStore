@@ -30,3 +30,5 @@ B16 adds authenticated GET `/api/v1/operations`, native `workspace.operations.da
 
 
 Local remix RPCs: `remixes.create` (published selection, explicit supported settings, local name), `remixes.list`, `remixes.get`, `remixes.rename` (expected local version), `remixes.export` (ID, reviewed digest, portal file URL), and `remixes.import` (portal file URL). Only typed portable intent is serialized. Preview returns current differences and a separate local settings projection. The application planner accepts `kind: apps` with at most 100 unique exact `appId`/`releaseId` references; obsolete/missing releases are rejected, never substituted. `workspace.drafts.remix` creates an ordinary private setup draft from the strict portable schema; it does not submit or publish.
+
+B20 adds `workspace.commerce.status` and `GET /api/v1/commerce/status`, plus operator commands `commerce_model {version,model,report_digest}` and `commerce_pause {paused,reason}`. Operating evidence is bounded, versioned and private to current operators. Public readiness never projects author-demand identities or legal-entity evidence contents.

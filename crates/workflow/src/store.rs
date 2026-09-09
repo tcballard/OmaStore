@@ -72,7 +72,7 @@ impl Store {
             "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = c.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if version > 8 {
+        if version > 9 {
             return Err(Error::new(500, "unsupported_database_version"));
         }
         if version > 0 {
@@ -147,6 +147,11 @@ impl Store {
         if version < 8 {
             let t = c.transaction()?;
             t.execute_batch(include_str!("../migrations/008_operations.sql"))?;
+            t.commit()?;
+        }
+        if version < 9 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/009_commerce_model.sql"))?;
             t.commit()?;
         }
         Ok(Self {
