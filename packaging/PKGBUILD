@@ -6,6 +6,9 @@ pkgdesc='Native community application storefront for Omarchy (development previe
 arch=('x86_64')
 url='https://github.com/tcballard/OmaStore'
 license=('MIT')
+# GCC LTO objects from bundled SQLite cannot be linked by Rust's lld.
+# Keep this desktop preview as one package, without a separate debug archive.
+options=('!lto' '!debug')
 depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'xdg-desktop-portal')
 makedepends=('cmake' 'ninja' 'gcc' 'rustup')
 source=()

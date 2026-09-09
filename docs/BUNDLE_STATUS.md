@@ -36,3 +36,5 @@ All implementable software bundles B00–B22 are complete. The native playground
 Repository preview continuation (B01/B03/B12): six published stable x86_64 application identities are bundled with archived source observations and reproducible generation. Maturity remains unknown; no test or author participation is inferred. Current-host planning and live execution gates remain distinct. See ADR 0010 and BUILD_HANDOFF.md.
 
 Repository preview packaging: Arch artifact workflow and package-content check implemented; local syntax checks pass. Actual Arch workflow artifact and real Omarchy installation remain unverified.
+
+Arch packaging correction: first real CI build exposed unresolved bundled SQLite symbols under makepkg LTO. The recipe now uses `!lto` and a single non-debug-split desktop archive; replacement CI remains required.
