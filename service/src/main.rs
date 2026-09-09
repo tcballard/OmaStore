@@ -27,12 +27,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 state.sandbox = true;
                 index += 1;
             }
+            #[cfg(feature = "development-workflow")]
+            "--commerce-test" => {
+                state.commerce_test = true;
+                index += 1;
+            }
             _ => return Err("unsupported service argument".into()),
         }
     }
     if let Some(path) = database {
         #[cfg(feature = "development-workflow")]
-        let store = if state.sandbox {
+        let store = if state.sandbox || state.commerce_test {
             Store::development(&path)?
         } else {
             Store::open(&path)?
@@ -117,6 +122,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     } else {
         None
     };
+    omastore_service::commerce::configure(&mut state)?;
+    let commerce_worker = if state.commerce.mode() != "disabled" {
+        Some(omastore_service::commerce::start_worker(state.clone()))
+    } else {
+        None
+    };
     let listener = tokio::net::TcpListener::bind(addr).await?;
     println!("LISTENING {}", listener.local_addr()?);
     axum::serve(listener, router(state))
@@ -124,6 +135,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let _ = tokio::signal::ctrl_c().await;
         })
         .await?;
+    if let Some(worker) = commerce_worker {
+        worker.abort();
+    }
     if let Some(worker) = worker {
         worker.abort();
     }

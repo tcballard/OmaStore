@@ -106,6 +106,48 @@ pub(crate) fn pause(
         json!({"newPurchasesPaused":paused,"realCheckoutEnabled":false,"notice":"Receipt recovery and existing buyer obligations remain available. The commercial release gate remains closed."}),
     )
 }
+
+impl Store {
+    pub fn commerce_bind_provider(&self, mode: &str) -> Result<()> {
+        if !cfg!(feature = "development-workflow") || !["sample", "stripe_test"].contains(&mode) {
+            return Err(Error::new(503, "managed_checkout_disabled"));
+        }
+        self.transaction(|t| {
+            let env: String = t.query_row(
+                "SELECT value FROM metadata WHERE key='environment'",
+                [],
+                |r| r.get(0),
+            )?;
+            if env != "development" {
+                return Err(Error::new(503, "commerce_test_database_required"));
+            }
+            let current: Option<String> = t
+                .query_row(
+                    "SELECT value FROM metadata WHERE key='commerce_provider'",
+                    [],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            if current.as_deref().is_some_and(|m| m != mode) {
+                return Err(Error::new(503, "commerce_database_provider_mismatch"));
+            }
+            let other: bool = t.query_row(
+                "SELECT EXISTS(SELECT 1 FROM commerce_orders WHERE mode!=?1)",
+                [mode],
+                |r| r.get(0),
+            )?;
+            if other {
+                return Err(Error::new(503, "commerce_database_provider_mismatch"));
+            }
+            t.execute(
+                "INSERT OR IGNORE INTO metadata VALUES('commerce_provider',?1)",
+                [mode],
+            )?;
+            Ok(())
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

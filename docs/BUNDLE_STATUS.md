@@ -26,8 +26,8 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B18 | Setting apply, conflict and restore | B17 | implemented_unverified; 67 Rust and nine native checks pass; live customised-desktop evidence remains external |
 | B19 | Recipe remix and private-data-safe export | B18 | implemented_unverified; 70 Rust and nine native checks pass; real Omarchy portal/author evidence remains external |
 | B20 | Commerce operating model and disabled integration | B16 | implemented_unverified; 72 Rust tests and nine native checks pass; actual commercial facts/provider gate remain external |
-| B21 | Checkout, delivery and entitlements | B20 | in_progress; B21a authority/provider/offline-grant contracts pass 79 Rust tests; native and service wiring next |
-| B22 | Refunds, disputes, payouts and commerce readiness | B21 | not_started |
+| B21 | Checkout, delivery and entitlements | B20 | implemented_unverified; 81 Rust tests and nine native checks pass; real provider sandbox/issuer and commercial evidence remain external |
+| B22 | Refunds, disputes, payouts and commerce readiness | B21 | in_progress |
 
 B00–B03 are implemented and checked on offscreen Linux, including actual process/HTTP interactions. [CI passed for implementation revision 887d449](https://github.com/tcballard/OmaStore/actions/runs/34218944477); the handoff records its full revision and tree. R1 still needs real Omarchy desktop validation. B03b is a bounded local preparation extension; it does not complete B04 or B05. Public listings remain empty. Publisher identity, submission/review and publication software are implemented; live provider, Omarchy and pilot evidence remain release gates. The sample installation lifecycle is implemented; live installation and commerce have separate release gates.
 

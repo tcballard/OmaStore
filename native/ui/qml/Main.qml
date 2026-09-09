@@ -57,8 +57,8 @@ ApplicationWindow {
     function focusSearch() { navigate(1); searchField.forceActiveFocus(); searchField.selectAll(); }
     Shortcut { sequence: "Ctrl+K"; onActivated: window.focusSearch() }
     Shortcut { sequence: "Ctrl+F"; onActivated: window.focusSearch() }
-    Shortcut { sequence: "Alt+Left"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible; onActivated: window.back() }
-    Shortcut { sequence: "Escape"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible; onActivated: window.back() }
+    Shortcut { sequence: "Alt+Left"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible && !purchasesDialog.visible; onActivated: window.back() }
+    Shortcut { sequence: "Escape"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible && !purchasesDialog.visible; onActivated: window.back() }
     Shortcut { sequence: "Ctrl+R"; onActivated: core.refresh() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
 
@@ -66,8 +66,9 @@ ApplicationWindow {
         target:window.core
         function onHandoffReady(identity){if(identity.kind==="setup"){window.setupSelection=identity.id;window.setupRevision=identity.revision;window.navigate(2);}}
     }
-    Component {id:libraryPage;LibraryPage {core:window.core;theme:storeTheme;onRemixesRequested:remixDialog.openFor(null);onSettingsRequested:settingsDialog.openFor([])}}
+    Component {id:libraryPage;LibraryPage {core:window.core;theme:storeTheme;onPurchasesRequested:purchasesDialog.openFor("");onRemixesRequested:remixDialog.openFor(null);onSettingsRequested:settingsDialog.openFor([])}}
     RemixDialog {id:remixDialog;core:window.core;theme:storeTheme;onSettingsRequested:(refs)=>settingsDialog.openFor(refs);onAuthorCreated:window.navigate(5)}
+    PurchasesDialog {id:purchasesDialog;core:window.core;theme:storeTheme}
     SettingsDialog {id:settingsDialog;core:window.core;theme:storeTheme}
     PlanDialog {id:planDialog;core:window.core;theme:storeTheme}
 
@@ -261,7 +262,7 @@ ApplicationWindow {
 
     Component {
         id: detailPage
-        DetailPage { onMakerChosen:(id)=>window.showMaker(id); details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
+        DetailPage { onPurchasesRequested:(id)=>purchasesDialog.openFor(id);onMakerChosen:(id)=>window.showMaker(id); details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
     }
     Component {id:setupsPage;SetupsPage {core:window.core;theme:storeTheme;mediaPreview:window.mediaPreview;selectedId:window.setupSelection;selectedRevision:window.setupRevision;onChosen:(id,revision)=>{window.setupSelection=id;window.setupRevision=revision;};onMakerChosen:(id)=>window.showMaker(id);onRemixRequested:(selection)=>remixDialog.openFor(selection);onSettingsRequested:(references)=>settingsDialog.openFor(references)}}
     Component {id:makersPage;MakersPage {core:window.core;theme:storeTheme;selectedId:window.makerSelection;onChosen:(id)=>window.makerSelection=id;onBrowseApps:(id)=>{window.navigate(1);core.clearFilters();core.setFilter("makerId",id);}}}

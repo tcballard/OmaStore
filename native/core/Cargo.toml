@@ -9,6 +9,7 @@ repository.workspace = true
 development-catalogue = ["omastore-workflow/development-workflow"]
 
 [dependencies]
+tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 omastore-catalogue.workspace = true

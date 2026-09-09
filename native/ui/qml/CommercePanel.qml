@@ -29,7 +29,9 @@ ColumnLayout {
  TextField {id:reportDigest;visible:panel.operator;placeholderText:"Reviewed report SHA-256";maximumLength:64;Layout.fillWidth:true;Accessible.name:placeholderText}
  CheckBox {id:ack;visible:panel.operator;text:"I reviewed these actual operating facts";Layout.fillWidth:true}
  Button {visible:panel.operator;text:"Save operating record";enabled:ack.checked&&reportDigest.text.length===64&&!core.loading;onClicked:{try{core.workspaceAction("command",{command:"commerce_model",version:panel.report.version || 0,model:JSON.parse(modelText.text),report_digest:reportDigest.text});}catch(e){panel.notice="Enter a valid operating record.";}}}
- TextField {id:pauseReason;visible:panel.operator;placeholderText:"Reason for changing purchase availability";maximumLength:1000;Layout.fillWidth:true;Accessible.name:placeholderText}
- Button {visible:panel.operator;text:panel.report.newPurchasesPaused?"Allow test purchases":"Pause new purchases";enabled:pauseReason.text.length>0&&!core.loading;onClicked:core.workspaceAction("command",{command:"commerce_pause",paused:!panel.report.newPurchasesPaused,reason:pauseReason.text})}
+ TextField {id:pauseReason;objectName:"commercePauseReason";visible:panel.operator;placeholderText:"Reason for changing purchase availability";maximumLength:1000;Layout.fillWidth:true;Accessible.name:placeholderText}
+ Button {objectName:"commercePause";visible:panel.operator;text:panel.report.newPurchasesPaused?"Allow test purchases":"Pause new purchases";enabled:pauseReason.text.length>0&&!core.loading;onClicked:core.workspaceAction("command",{command:"commerce_pause",paused:!panel.report.newPurchasesPaused,reason:pauseReason.text})}
  Label {text:"Pausing purchases preserves receipt recovery, delivery retries, refunds and reconciliation. Free software and open-source rights remain independent.";Layout.fillWidth:true;wrapMode:Text.Wrap}
+ CommerceOffersPanel {core:panel.core;theme:panel.theme}
+
 }

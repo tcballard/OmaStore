@@ -65,11 +65,18 @@ set_source_files_properties(native/ui/qml/WorkspacePage.qml PROPERTIES QT_RESOUR
 set_source_files_properties(native/ui/qml/ReviewPanel.qml PROPERTIES QT_RESOURCE_ALIAS ReviewPanel.qml)
 set_source_files_properties(native/ui/qml/DraftPanel.qml PROPERTIES QT_RESOURCE_ALIAS DraftPanel.qml)
 set_source_files_properties(native/ui/qml/ValueEditor.qml PROPERTIES QT_RESOURCE_ALIAS ValueEditor.qml)
+set_source_files_properties(native/ui/qml/CommerceOffersPanel.qml PROPERTIES QT_RESOURCE_ALIAS CommerceOffersPanel.qml)
+set_source_files_properties(native/ui/qml/PurchasesDialog.qml PROPERTIES QT_RESOURCE_ALIAS PurchasesDialog.qml)
+set_source_files_properties(native/ui/qml/CommercePanel.qml PROPERTIES QT_RESOURCE_ALIAS CommercePanel.qml)
+set_source_files_properties(native/ui/qml/RemixDialog.qml PROPERTIES QT_RESOURCE_ALIAS RemixDialog.qml)
+set_source_files_properties(native/ui/qml/SettingsDialog.qml PROPERTIES QT_RESOURCE_ALIAS SettingsDialog.qml)
+set_source_files_properties(native/ui/qml/ReadinessPanel.qml PROPERTIES QT_RESOURCE_ALIAS ReadinessPanel.qml)
+set_source_files_properties(native/ui/qml/MonitoringPanel.qml PROPERTIES QT_RESOURCE_ALIAS MonitoringPanel.qml)
 qt_add_qml_module(omastore
     URI OmaStore
     VERSION 1.0
     RESOURCE_PREFIX /qt/qml
-    QML_FILES native/ui/qml/CommercePanel.qml native/ui/qml/RemixDialog.qml native/ui/qml/SettingsDialog.qml native/ui/qml/ReadinessPanel.qml native/ui/qml/LibraryPage.qml native/ui/qml/PlanDialog.qml native/ui/qml/SetupsPage.qml native/ui/qml/CataloguePicker.qml native/ui/qml/MakersPage.qml native/ui/qml/EditorialPanel.qml native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
+    QML_FILES native/ui/qml/CommerceOffersPanel.qml native/ui/qml/PurchasesDialog.qml native/ui/qml/CommercePanel.qml native/ui/qml/RemixDialog.qml native/ui/qml/SettingsDialog.qml native/ui/qml/ReadinessPanel.qml native/ui/qml/LibraryPage.qml native/ui/qml/PlanDialog.qml native/ui/qml/SetupsPage.qml native/ui/qml/CataloguePicker.qml native/ui/qml/MakersPage.qml native/ui/qml/EditorialPanel.qml native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
 )
 target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network

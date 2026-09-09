@@ -6,6 +6,7 @@ ScrollView {
     id:page
     signal settingsRequested()
     signal remixesRequested()
+    signal purchasesRequested()
     required property var core
     required property var theme
     property int tab:0
@@ -48,6 +49,7 @@ ScrollView {
             Label {visible:!!page.notice;text:page.notice;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
             Flow {
                 Layout.fillWidth:true;spacing:8
+                Button {objectName:"openPurchases";text:"Purchases and licences";onClicked:page.purchasesRequested()}
                 Button {objectName:"openRemixes";text:"My setup remixes";onClicked:page.remixesRequested()}
                 Button {objectName:"openSettings";text:"Desktop settings";onClicked:page.settingsRequested()}
                 Button {objectName:"libraryInstalled";text:"Installed";highlighted:page.tab===0;onClicked:page.tab=0}

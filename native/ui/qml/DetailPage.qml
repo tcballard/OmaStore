@@ -9,6 +9,7 @@ ScrollView {
     required property var core
     required property var mediaPreview
     signal makerChosen(string id)
+    signal purchasesRequested(string id)
     property int savedRevision: 0
     readonly property var app: details.app || ({})
     readonly property var release: details.release || ({})
@@ -43,6 +44,7 @@ ScrollView {
                 Button { objectName: "acquireButton"; enabled:core.distributionCurrent && core.distribution.distribution!=="suspended"; text: (page.details.acquisition || {}).label + " ↗"; onClicked: core.openLink("acquisition") }
                 Button { objectName: "saveButton"; text: { page.savedRevision; return core.isSaved(page.app.id || "") ? "Remove from saved" : "Save for later"; } onClicked: core.toggleSaved() }
                 Button { text: "Source ↗"; visible: !!page.app.source; onClicked: core.openLink("source") }
+                Button { text:"Purchases and licences";onClicked:page.purchasesRequested(page.app.id)}
                 Button { text: "Support ↗"; onClicked: core.openLink("support") }
             }
             Label { text: (page.summary.routeLabel || "") + ". Opens in your browser. Final availability, price and terms belong to the seller."; color: theme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; textFormat: Text.PlainText }

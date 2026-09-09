@@ -343,6 +343,26 @@ int main(int argc, char *argv[]) {
                         for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
                         check(core.workspaceReply().value("environment").toString()=="development"&&!core.workspaceReply().value("realCheckoutEnabled").toBool()&&!core.workspaceReply().value("missing").toList().isEmpty(),"native commerce shows missing facts with real charges disabled");
 
+                        auto *pauseCommerce=findItem(window->contentItem(),"commercePauseReason");if(pauseCommerce){pauseCommerce->forceActiveFocus();for(const auto character:QByteArray("Fictional purchase rehearsal"))QTest::keyClick(window,character);}
+                        press(findItem(window->contentItem(),"commercePause"));for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
+                        press(findItem(window->contentItem(),"navLibrary"));for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
+                        press(findItem(window->contentItem(),"openPurchases"));for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
+                        press(findItem(window->contentItem(),"reviewPurchase-sample-perpetual"));for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
+                        auto *purchaseButton=findItem(window->contentItem(),"confirmPurchase");check(purchaseButton&&purchaseButton->isVisible()&&!purchaseButton->isEnabled(),"native purchase displays exact terms and requires consent");
+                        press(findItem(window->contentItem(),"purchaseConsent"));press(purchaseButton);for(int i=0;i<120&&core.loading();++i)QTest::qWait(50);
+                        auto *purchases=window->findChild<QObject*>("purchasesDialog");auto purchaseOrder=purchases?purchases->property("order").toMap():QVariantMap{};
+                        check(purchaseOrder.value("paymentState").toString()=="payment_pending","native checkout is not labelled paid from creation");
+                        press(findItem(window->contentItem(),"sampleDeliveryFailure"));press(findItem(window->contentItem(),"sampleCapture"));for(int i=0;i<120&&core.loading();++i)QTest::qWait(50);
+                        purchaseOrder=purchases?purchases->property("order").toMap():QVariantMap{};check(purchaseOrder.value("paymentState").toString()=="paid"&&purchaseOrder.value("deliveryState").toString()=="delivery_failed","native paid order retains a failed delivery");
+                        press(findItem(window->contentItem(),"retryPurchaseDelivery"));for(int i=0;i<120&&core.loading();++i)QTest::qWait(50);
+                        purchaseOrder=purchases?purchases->property("order").toMap():QVariantMap{};check(purchaseOrder.value("deliveryState").toString()=="delivered"&&!purchaseOrder.value("licenceDigest").toString().isEmpty(),"native retry recovers the signed licence");
+                        QTemporaryDir licenceDirectory;const auto licencePath=licenceDirectory.filePath("licence.json");
+                        core.workspaceAction("commerce.licence.export",{{"id",purchaseOrder.value("id")},{"digest",purchaseOrder.value("licenceDigest")},{"file",QUrl::fromLocalFile(licencePath).toString()}});for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
+                        check(QFileInfo::exists(licencePath),"actual private licence export");
+                        core.workspaceAction("commerce.licence.verify",{{"file",QUrl::fromLocalFile(licencePath).toString()}});for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
+                        check(core.workspaceReply().value("verifiedOffline").toBool(),"native offline verification uses the pinned sample issuer");
+                        press(findItem(window->contentItem(),"closePurchases"));
+                        press(findItem(window->contentItem(),"navSubmit"));for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
                         core.refresh();
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
 

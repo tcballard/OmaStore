@@ -1,5 +1,9 @@
 # Build handoff
 
+B21b connects the service routes/workers, provider-bound development databases, operator-configured hosted fulfilment, exact service receipts, native purchase consent, persisted local request keys, recovery with a fresh login, licence export/offline verification, and native managed-offer/seller forms. All 81 Rust tests and both Clippy modes pass. Nine native checks pass in 34.81 seconds, covering keyboard purchase, paid-but-failed delivery, retry, actual private export and pinned-key verification at four sizes/scales. Resource aliases and the subsequent worksheet navigation were corrected from the native tests. Local D-Bus remains skipped. The updated lockfile again has zero audit findings. Provider and real Omarchy evidence remain external; no live key or charge is accepted. Next: B22 lifecycle/accounting.
+
+B21a local `06eff965eea14ae9c961c1fe490ddae56edac1a1` is published as `4eab483760db312fac7800c6a94ce5b487a14289`, matching tree `ec4cf828e8807e70858a45d7c8f17a57f8107c4d`.
+
 B21a adds immutable commercial prices/orders, current seller and listing authority checks, retained buyer request keys, durable checkout claims, exact provider amount/fee/account checks, verified raw webhooks, paid/delivery state separation, support history and pinned-key Ed25519 perpetual licences. A fixed-origin Stripe test adapter and persistent fictional provider implement creation/reconciliation; no live key or production database is accepted. All 79 Rust tests and both Clippy modes pass, including lost replies/restart, delayed/forged/duplicate events, price and buyer tampering, expired provider idempotency, failed/retried delivery and offline recovery. The updated lockfile has zero audit findings. Native/service wiring and hosted fulfilment follow in B21b.
 
 B20 local `f64df8f3b3b1dec1a2cd4231e2867dbf28178853` is published as `f7ca9babe6897c7a2a9f9efbfafbb84c0612fb32`, matching tree `2d0d54fd40c9b635f0180b3de519c585ad33f8a7`.

@@ -3,6 +3,7 @@ pub mod auth;
 pub mod checks;
 pub mod commerce;
 pub mod commerce_checkout;
+pub mod commerce_delivery;
 pub mod commerce_license;
 pub mod commerce_model;
 pub mod commerce_provider;

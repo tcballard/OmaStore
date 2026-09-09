@@ -145,6 +145,7 @@ impl Store {
         if !self.is_development()? {
             return Err(Error::new(403, "sample_mode_required"));
         }
+        self.commerce_bind_provider("sample")?;
         self.development_login("author", now)?;
         self.transaction(|t|{
    provider_guard(t,"sample")?;

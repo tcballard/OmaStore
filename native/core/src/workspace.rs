@@ -9,6 +9,9 @@ use std::{
 };
 use url::Url;
 
+#[path = "commerce_client.rs"]
+mod commerce_client;
+
 pub struct Client {
     origin: Option<String>,
     token: Option<String>,
@@ -144,6 +147,30 @@ impl Client {
                 "delivery_in_progress" => "delivery_in_progress",
                 "publication_busy" => "publication_busy",
                 "invalid_fields" => "invalid_fields",
+                "managed_checkout_disabled" => "managed_checkout_disabled",
+                "new_purchases_paused" => "new_purchases_paused",
+                "approved_seller_required" => "approved_seller_required",
+                "price_preview_changed" => "price_preview_changed",
+                "purchase_consent_required" => "purchase_consent_required",
+                "checkout_requires_provider_reconciliation" => {
+                    "checkout_requires_provider_reconciliation"
+                }
+                "checkout_in_progress" => "checkout_in_progress",
+                "payment_provider_ambiguous" => "payment_provider_ambiguous",
+                "payment_order_mismatch" => "payment_order_mismatch",
+                "payment_fee_or_identity_mismatch" => "payment_fee_or_identity_mismatch",
+                "commerce_offer_unavailable" => "commerce_offer_unavailable",
+                "order_unavailable" => "order_unavailable",
+                "fulfilment_needs_reconciliation" => "fulfilment_needs_reconciliation",
+                "service_fulfilment_unconfigured" => "service_fulfilment_unconfigured",
+                "service_period_mismatch" => "service_period_mismatch",
+                "untrusted_licence_issuer" => "untrusted_licence_issuer",
+                "licence_expired_or_future" => "licence_expired_or_future",
+                "no_hosted_delivery" => "no_hosted_delivery",
+                "subscription_fee_contract_unsupported" => "subscription_fee_contract_unsupported",
+                "immutable_price_identity" => "immutable_price_identity",
+                "commerce_database_provider_mismatch" => "commerce_database_provider_mismatch",
+
                 "invalid_release_evidence" => "invalid_release_evidence",
                 "new_publisher_intake_paused" => "new_publisher_intake_paused",
                 _ => "workspace_request_failed",
@@ -318,6 +345,21 @@ impl Client {
                 )?;
                 store.sample_runtime(&actor, record_id(&params)?, omastore_workflow::now())?
             }
+            "commerce.author"
+            | "commerce.prices"
+            | "commerce.prepare"
+            | "commerce.purchase"
+            | "commerce.orders"
+            | "commerce.order"
+            | "commerce.reconcile"
+            | "commerce.retry"
+            | "commerce.recover"
+            | "commerce.support"
+            | "commerce.sample.capture"
+            | "commerce.pending"
+            | "commerce.resume"
+            | "commerce.licence.export"
+            | "commerce.licence.verify" => self.commerce_action(method, &params)?,
             "commerce.status" => {
                 #[cfg(feature = "development-catalogue")]
                 let local = if let Some(store) = &self.sandbox {

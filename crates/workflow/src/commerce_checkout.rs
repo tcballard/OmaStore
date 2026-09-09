@@ -46,6 +46,16 @@ pub(crate) fn provider_guard(c: &Connection, mode: &str) -> Result<()> {
         [],
         |r| r.get(0),
     )?;
+    let actual: Option<String> = c
+        .query_row(
+            "SELECT value FROM metadata WHERE key='commerce_provider'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if actual.as_deref() != Some(mode) {
+        return Err(Error::new(503, "commerce_database_provider_mismatch"));
+    }
     if env != "development"
         || !cfg!(feature = "development-workflow")
         || !["sample", "stripe_test"].contains(&mode)
@@ -462,6 +472,63 @@ pub(crate) fn order_projection(c: &Connection, id: &str, grant: bool) -> Result<
         };
     }
     Ok(v)
+}
+
+impl Store {
+    /// The worker only observes existing provider effects; it never starts a purchase.
+    pub fn commerce_payment_queue(&self, mode: &str, now: i64) -> Result<Vec<String>> {
+        self.transaction(|t|{provider_guard(t,mode)?;let mut q=t.prepare("SELECT id FROM commerce_orders WHERE mode=?1 AND payment_state!='paid' AND attempt_at IS NOT NULL AND last_reconciled_at<?2 ORDER BY last_reconciled_at,created_at LIMIT 20")?;let ids:Vec<String>=q.query_map(params![mode,now-300],|r|r.get(0))?.collect::<std::result::Result<_,_>>()?;for id in &ids{t.execute("UPDATE commerce_orders SET last_reconciled_at=?2 WHERE id=?1",params![id,now])?;}Ok(ids)})
+    }
+    pub async fn commerce_poll_payment(
+        &self,
+        id: &str,
+        provider: &dyn Provider,
+        now: i64,
+    ) -> Result<()> {
+        let (i, mode, session) = {
+            let c = self.connection()?;
+            let (i, m) = intent(&c, id)?;
+            provider_guard(&c, &m)?;
+            let s: Option<String> = c.query_row(
+                "SELECT session_id FROM commerce_orders WHERE id=?1",
+                [id],
+                |r| r.get(0),
+            )?;
+            (i, m, s)
+        };
+        if mode != provider.mode() {
+            return Err(Error::new(503, "payment_provider_mode_mismatch"));
+        }
+        let observation = match session {
+            Some(s) => Some(provider.lookup(&i.price.connected_account, &s).await?),
+            None => provider.reconcile_creation(&i).await?,
+        };
+        if let Some(o) = observation {
+            if o.order_id != id {
+                return Err(Error::new(409, "payment_order_mismatch"));
+            }
+            self.commerce_observe(&mode, &o, now)?;
+        }
+        Ok(())
+    }
+}
+
+impl Store {
+    pub fn commerce_author(&self, a: &Actor) -> Result<Value> {
+        let c = self.connection()?;
+        recheck(&c, a, "author")?;
+        let mut q=c.prepare("SELECT id,account,name FROM commerce_sellers WHERE owner=?1 AND active=1 ORDER BY id LIMIT 100")?;
+        let sellers:Vec<Value>=q.query_map([&a.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"account":r.get::<_,String>(1)?,"name":r.get::<_,String>(2)?})))?.collect::<std::result::Result<_,_>>()?;
+        let mut q=c.prepare("SELECT entity_id FROM entity_owners WHERE owner=?1 AND kind='app' ORDER BY entity_id LIMIT 100")?;
+        let apps: Vec<String> = q
+            .query_map([&a.id], |r| r.get(0))?
+            .collect::<std::result::Result<_, _>>()?;
+        let mut q=c.prepare("SELECT p.body,o.active FROM commerce_prices p JOIN commerce_offers o ON o.id=p.id AND o.version=p.version JOIN commerce_sellers s ON s.id=json_extract(p.body,'$.sellerId') WHERE s.owner=?1 ORDER BY p.id LIMIT 100")?;
+        let offers:Vec<Value>=q.query_map([&a.id],|r|{let b:String=r.get(0)?;Ok(json!({"price":serde_json::from_str::<Value>(&b).unwrap_or(Value::Null),"active":r.get::<_,bool>(1)?}))})?.collect::<std::result::Result<_,_>>()?;
+        Ok(
+            json!({"sellers":sellers,"apps":apps,"offers":offers,"notice":"Only a current listing steward with an approved commercial seller can publish a price. Commercial actions cannot approve or rank an app."}),
+        )
+    }
 }
 
 #[cfg(all(test, feature = "development-workflow"))]
