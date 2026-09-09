@@ -74,11 +74,17 @@ set_source_files_properties(native/ui/qml/RemixDialog.qml PROPERTIES QT_RESOURCE
 set_source_files_properties(native/ui/qml/SettingsDialog.qml PROPERTIES QT_RESOURCE_ALIAS SettingsDialog.qml)
 set_source_files_properties(native/ui/qml/ReadinessPanel.qml PROPERTIES QT_RESOURCE_ALIAS ReadinessPanel.qml)
 set_source_files_properties(native/ui/qml/MonitoringPanel.qml PROPERTIES QT_RESOURCE_ALIAS MonitoringPanel.qml)
+set_source_files_properties(native/ui/qml/StoreTheme.qml PROPERTIES QT_RESOURCE_ALIAS StoreTheme.qml)
+set_source_files_properties(native/ui/qml/ActionButton.qml PROPERTIES QT_RESOURCE_ALIAS ActionButton.qml)
+set_source_files_properties(native/ui/qml/AppSymbol.qml PROPERTIES QT_RESOURCE_ALIAS AppSymbol.qml)
+set_source_files_properties(native/ui/qml/DiscoveryFeature.qml PROPERTIES QT_RESOURCE_ALIAS DiscoveryFeature.qml)
+set_source_files_properties(native/ui/assets/omacalc-upstream.png PROPERTIES QT_RESOURCE_ALIAS assets/omacalc-upstream.png)
 qt_add_qml_module(omastore
     URI OmaStore
     VERSION 1.0
     RESOURCE_PREFIX /qt/qml
-    QML_FILES native/ui/qml/RefundsPanel.qml native/ui/qml/FinancesPanel.qml native/ui/qml/CommerceOffersPanel.qml native/ui/qml/PurchasesDialog.qml native/ui/qml/CommercePanel.qml native/ui/qml/RemixDialog.qml native/ui/qml/SettingsDialog.qml native/ui/qml/ReadinessPanel.qml native/ui/qml/LibraryPage.qml native/ui/qml/PlanDialog.qml native/ui/qml/SetupsPage.qml native/ui/qml/CataloguePicker.qml native/ui/qml/MakersPage.qml native/ui/qml/EditorialPanel.qml native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
+    RESOURCES native/ui/assets/omacalc-upstream.png
+    QML_FILES native/ui/qml/StoreTheme.qml native/ui/qml/ActionButton.qml native/ui/qml/AppSymbol.qml native/ui/qml/DiscoveryFeature.qml native/ui/qml/RefundsPanel.qml native/ui/qml/FinancesPanel.qml native/ui/qml/CommerceOffersPanel.qml native/ui/qml/PurchasesDialog.qml native/ui/qml/CommercePanel.qml native/ui/qml/RemixDialog.qml native/ui/qml/SettingsDialog.qml native/ui/qml/ReadinessPanel.qml native/ui/qml/LibraryPage.qml native/ui/qml/PlanDialog.qml native/ui/qml/SetupsPage.qml native/ui/qml/CataloguePicker.qml native/ui/qml/MakersPage.qml native/ui/qml/EditorialPanel.qml native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
 )
 target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network
@@ -98,6 +104,7 @@ install(FILES packaging/io.github.tcballard.OmaStore.desktop
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 install(FILES packaging/io.github.tcballard.OmaStore.metainfo.xml
     DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo")
+install(FILES native/ui/assets/OMACALC-LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
 install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
 
 if(BUILD_TESTING)
@@ -111,6 +118,11 @@ if(BUILD_TESTING)
     add_test(NAME native-instance COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/native_instance.py" "$<TARGET_FILE:omastore>")
     set_tests_properties(native-instance PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
     add_test(NAME native-startup COMMAND omastore --smoke-test)
+    if(NOT OMASTORE_DEVELOPMENT_DATA)
+        add_test(NAME repository-journey COMMAND omastore --storefront-test)
+        add_test(NAME repository-journey-small COMMAND omastore --storefront-test --window-size 800x600)
+        set_tests_properties(repository-journey repository-journey-small PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
+    endif()
     if(OMASTORE_DEVELOPMENT_DATA)
         add_test(NAME native-lifecycle COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/lifecycle_process.py" "${CORE_BINARY}")
         set_tests_properties(native-lifecycle PROPERTIES TIMEOUT 20)
