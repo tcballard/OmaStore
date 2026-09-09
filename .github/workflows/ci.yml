@@ -28,7 +28,10 @@ jobs:
       - name: Test Rust protocol boundaries
         run: cargo test --workspace --all-features --locked
       - name: Validate the public catalogue
-        run: cargo run --locked --bin omastore-validate -- data/registry.json
+        run: |
+          ./bin/build-repository-catalogue --check
+          cargo run --locked --bin omastore-validate -- data/registry.json
+          cargo run --locked --bin omastore-validate -- data/repository/catalogue.json
       - name: Configure native app
         run: cmake --preset dev
       - name: Build native app

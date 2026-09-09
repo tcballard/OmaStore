@@ -283,8 +283,11 @@ pub fn rehearse(
     }
     store.reset_sample_publication(actor, id)?;
     let base = store.delivered_catalogue()?.unwrap_or(
-        Catalogue::parse(include_bytes!("../../../data/registry.json"), false)
-            .map_err(|_| Error::new(500, "sample_base_invalid"))?,
+        Catalogue::parse(
+            include_bytes!("../../../tests/fixtures/empty-catalogue.json"),
+            false,
+        )
+        .map_err(|_| Error::new(500, "sample_base_invalid"))?,
     );
     let api = SampleGithub::new(&base);
     let target = Target {
@@ -382,7 +385,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let s = Store::development(&dir.path().join("workflow.db")).unwrap();
         let (a, id) = prepared(&s);
-        let base = Catalogue::parse(include_bytes!("../../../data/registry.json"), false).unwrap();
+        let base = Catalogue::parse(
+            include_bytes!("../../../tests/fixtures/empty-catalogue.json"),
+            false,
+        )
+        .unwrap();
         let api = SampleGithub::new(&base);
         let objects = LocalObjects::new(&dir.path().join("objects")).unwrap();
         let target = Target {

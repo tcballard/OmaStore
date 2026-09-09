@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Build the reviewed repository selection; never execute a PKGBUILD or fetch code."""
+import argparse
+import hashlib
+import json
+import tarfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def build(observation, selection):
+    if (observation["repository"], observation["channel"], observation["architecture"]) != (
+        "omarchy", "stable", "x86_64"
+    ):
+        raise ValueError("This selection is reviewed for Omarchy stable x86_64 only")
+    packages = {p["NAME"]: p for p in observation["packages"]}
+    if len(packages) != len(observation["packages"]):
+        raise ValueError("Duplicate package observation")
+    apps, makers = [], {}
+    for item in selection:
+        p = packages[item["package"]]
+        if p["ARCH"] != "x86_64":
+            raise ValueError("Package architecture differs from the observed index")
+        app_id = "repo-" + p["NAME"]
+        maker_id = "upstream-" + item["makerId"]
+        makers[maker_id] = {
+            "id": maker_id, "slug": maker_id, "name": item["makerName"],
+            "bio": "Upstream attribution from public project information. This community entry does not imply participation in OmaStore.",
+            "homepage": item["makerHomepage"], "claim": "unclaimed", "claimEvidence": None,
+        }
+        homepage = p["URL"]
+        apps.append({
+            "id": app_id, "slug": p["NAME"], "name": item["name"],
+            "summary": item["summary"],
+            "description": item["summary"] + "\n\nCommunity-indexed from the Omarchy stable x86_64 package repository. "
+                "The upstream maker has not claimed this listing. Screenshots and an independent OmaStore desktop test are not yet recorded.",
+            "tags": [item["category"], "omarchy-repository"], "category": item["category"],
+            "appType": "desktop", "maturity": "unknown",
+            "licence": {"class": "open_source", "identifier": p["LICENSE"].replace("\n", " AND "), "url": None},
+            "makerIds": [maker_id], "homepage": homepage,
+            "source": homepage if homepage.startswith("https://github.com/") else None,
+            "support": homepage, "media": [], "capabilities": [], "currentReleaseId": "repository-release",
+            "releases": [{
+                "id": "repository-release", "version": p["VERSION"],
+                "identity": {"kind": "repository_package", "repository": "omarchy", "package": p["NAME"], "version": p["VERSION"], "signature": None},
+                "architectures": ["x86_64"],
+                "route": {"kind": "arch_package", "repository": "omarchy", "package": p["NAME"], "url": "https://github.com/omacom/omarchy-pkgs/tree/master/pkgbuilds/" + p["NAME"]},
+                "notes": "Observed in the stable x86_64 index at " + observation["observedAt"]
+                    + ". Published package metadata is not an OmaStore runtime test. Current local availability and signatures must be checked before installation.",
+                "offline": "unknown", "account": "unknown", "activation": "unknown",
+                "serviceCosts": "The application package is free; external services or game purchases may have separate costs. Check upstream terms.",
+                "privileges": ["system-package-installation"], "services": [],
+                "removal": "Remove the application package through the system package manager. Keep personal documents and application data.",
+            }],
+            "offers": [{"sellerId": maker_id, "model": "free", "url": homepage, "price": None,
+                "billingInterval": None, "tax": "unknown", "checkedAt": observation["observedAt"],
+                "entitlement": "Open-source package under its upstream licence. This is a community reference, not a managed seller offer.",
+                "terms": homepage, "refund": None, "cancellation": None}],
+            "tests": [],
+        })
+    if len({a["id"] for a in apps}) != len(apps):
+        raise ValueError("Duplicate selected application")
+    return {"schemaVersion": 1, "channel": "public", "revision": "repository-preview-" + observation["indexSha256"][:12],
+        "buildRevision": "repository-preview-v1", "generatedAt": observation["observedAt"],
+        "apps": apps, "makers": list(makers.values()), "recipes": [], "editorial": []}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", help="Check the committed catalogue without writing")
+    args = parser.parse_args()
+    folder = ROOT / "data/repository"
+    observation = json.loads((folder / "stable-x86_64.json").read_text())
+    if hashlib.sha256((folder / "omarchy.db.zst").read_bytes()).hexdigest() != observation["indexSha256"]:
+        raise ValueError("Archived repository index digest mismatch")
+    archive = folder / "omarchy.db.tar.gz"
+    if hashlib.sha256(archive.read_bytes()).hexdigest() != observation["archiveSha256"]:
+        raise ValueError("Readable repository archive digest mismatch")
+    observed = {}
+    with tarfile.open(archive) as index:
+        for member in index:
+            if not member.isfile() or not member.name.endswith("/desc"):
+                continue
+            if member.size > 65536:
+                raise ValueError("Oversized package descriptor")
+            text = index.extractfile(member).read().decode()
+            fields = dict(section.split("\n", 1) for section in text.strip().split("\n\n"))
+            fields = {key.strip("%"): value.strip() for key, value in fields.items()}
+            if fields["NAME"] in observed:
+                raise ValueError("Duplicate package in archived index")
+            observed[fields["NAME"]] = fields
+    for package in observation["packages"]:
+        if any(observed[package["NAME"]].get(key) != value for key, value in package.items()):
+            raise ValueError("Selected metadata differs from archived package index")
+    catalogue = build(observation, json.loads((folder / "selection.json").read_text()))
+    rendered = json.dumps(catalogue, indent=2) + "\n"
+    target = folder / "catalogue.json"
+    if args.check:
+        if target.read_text() != rendered:
+            raise SystemExit("Catalogue differs from the reviewed repository selection")
+        print("Repository selection matches the bundled catalogue")
+    else:
+        target.write_text(rendered)
+
+
+if __name__ == "__main__":
+    main()

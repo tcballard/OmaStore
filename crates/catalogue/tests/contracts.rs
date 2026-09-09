@@ -11,13 +11,66 @@ fn fixture() -> Catalogue {
 }
 
 #[test]
-fn empty_public_and_complete_example_are_valid_but_demo_is_not_public() {
-    assert!(
-        Catalogue::parse(include_bytes!("../../../data/registry.json"), false)
+fn repository_preview_keeps_package_identity_separate_from_runtime_evidence() {
+    let c = Catalogue::parse(
+        include_bytes!("../../../data/repository/catalogue.json"),
+        false,
+    )
+    .unwrap();
+    let observation: Value = serde_json::from_slice(include_bytes!(
+        "../../../data/repository/stable-x86_64.json"
+    ))
+    .unwrap();
+    let now = Utc::now();
+    assert!(!c.apps.is_empty());
+    for app in &c.apps {
+        let ReleaseIdentity::RepositoryPackage {
+            repository,
+            package,
+            version,
+            signature,
+        } = &app.current_release().identity
+        else {
+            panic!("repository preview lost package identity");
+        };
+        let p = observation["packages"]
+            .as_array()
             .unwrap()
-            .apps
-            .is_empty()
-    );
+            .iter()
+            .find(|p| p["NAME"] == *package)
+            .unwrap();
+        assert_eq!(repository, "omarchy");
+        assert_eq!(p["VERSION"], *version);
+        assert_eq!(
+            app.current_release().architectures,
+            vec![p["ARCH"].as_str().unwrap()]
+        );
+        assert!(signature.is_none());
+        assert_eq!(app.evidence(now).0, "not_tested");
+        assert_eq!(app.maturity, Maturity::Unknown);
+        let detail = query::app_detail(&c, &app.id, now).unwrap();
+        assert_eq!(detail["acquisition"]["kind"], "external");
+        assert!(c
+            .makers
+            .iter()
+            .filter(|m| app.maker_ids.contains(&m.id))
+            .all(|m| m.claim == Claim::Unclaimed));
+    }
+}
+
+#[test]
+fn empty_public_and_complete_example_are_valid_but_demo_is_not_public() {
+    let mut empty = fixture();
+    empty.channel = Channel::Public;
+    empty.apps.clear();
+    empty.makers.clear();
+    empty.recipes.clear();
+    empty.editorial.clear();
+    empty.stories.clear();
+    assert!(Catalogue::parse(&empty.canonical_bytes(), false)
+        .unwrap()
+        .apps
+        .is_empty());
     assert!(Catalogue::parse(
         include_bytes!("../../../docs/examples/submission.json"),
         true

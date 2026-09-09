@@ -127,7 +127,7 @@ if(BUILD_TESTING)
     else()
         add_test(NAME production-fixture-exclusion COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/fixture_exclusion.py" "${CORE_BINARY}")
         add_test(NAME catalogue-http COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/http_process.py"
-            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-service" "${CORE_BINARY}" "${CMAKE_SOURCE_DIR}/data/registry.json")
+            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-service" "${CORE_BINARY}" "${CMAKE_SOURCE_DIR}/data/repository/catalogue.json")
     endif()
     set_tests_properties(catalogue-http PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
     set_tests_properties(core-process-contract native-startup PROPERTIES TIMEOUT 20)
