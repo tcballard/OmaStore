@@ -101,6 +101,16 @@ pub(crate) fn register_seller(
     if !active {
         return Err(Error::new(422, "seller_owner_unavailable"));
     }
+    let old: Option<(String, String)> = t
+        .query_row(
+            "SELECT owner,account FROM commerce_sellers WHERE id=?1",
+            [&s.id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
+    if old.is_some_and(|(owner, account)| owner != s.owner || account != s.account) {
+        return Err(Error::new(409, "seller_identity_frozen"));
+    }
     t.execute("INSERT INTO commerce_sellers VALUES(?1,?2,?3,?4,?5,?6,?7) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,account=excluded.account,name=excluded.name,active=excluded.active,report_url=excluded.report_url,report_digest=excluded.report_digest",params![s.id,s.owner,s.account,s.name,s.active,s.report_url,s.report_digest])?;
     audit(
         t,
@@ -367,7 +377,7 @@ if lease>now{return Err(Error::new(409,"checkout_in_progress"));}
    if state=="paid" {return Ok(());} // Out-of-order unpaid observations cannot undo payment/delivery.
    t.execute("UPDATE commerce_orders SET session_id=?2,creation_state='created',lease_until=0,checkout_url=?3,provider_observation=?4,payment_state=?5,payment_id=?6,fee_id=?7,subscription_id=?8,customer_id=?9 WHERE id=?1",params![o.order_id,o.session_id,o.url,serde_json::to_string(o)?,if o.paid{"paid"}else{"payment_pending"},o.payment_id,o.fee_id,o.subscription_id,o.customer_id])?;
    event(t,&o.order_id,if o.paid{"paid"}else{"payment_pending"},json!({"provider":mode}),now)?;
-   if o.paid{t.execute("UPDATE commerce_orders SET delivery_state='delivery_pending' WHERE id=?1 AND delivery_state='not_started'",[&o.order_id])?;event(t,&o.order_id,"delivery_pending",json!({}),now)?;}Ok(())
+   if o.paid{crate::commerce_accounting::sale(t,&o.order_id,now)?;t.execute("UPDATE commerce_orders SET delivery_state='delivery_pending' WHERE id=?1 AND delivery_state='not_started'",[&o.order_id])?;event(t,&o.order_id,"delivery_pending",json!({}),now)?;}Ok(())
   })
     }
     pub async fn commerce_reconcile(

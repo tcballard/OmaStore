@@ -130,14 +130,20 @@ impl Provider for Sample {
         })
         .transpose()
     }
-    async fn refund(&self, _: &str, _: &str, _: u64, _: &str) -> Result<RefundObservation> {
-        Err(Error::new(503, "refund_adapter_unconfigured"))
+    async fn refund(
+        &self,
+        account: &str,
+        charge: &str,
+        amount: u64,
+        key: &str,
+    ) -> Result<RefundObservation> {
+        self.refund_effect(account, charge, amount, key)
     }
-    async fn refund_status(&self, _: &str, _: &str) -> Result<RefundObservation> {
-        Err(Error::new(503, "refund_adapter_unconfigured"))
+    async fn refund_status(&self, account: &str, id: &str) -> Result<RefundObservation> {
+        self.read_refund(account, id)
     }
-    async fn cancel_subscription(&self, _: &str, _: &str, _: &str) -> Result<Value> {
-        Err(Error::new(503, "cancellation_adapter_unconfigured"))
+    async fn cancel_subscription(&self, account: &str, id: &str, key: &str) -> Result<Value> {
+        self.cancel_effect(account, id, key)
     }
 }
 impl Store {

@@ -1,5 +1,9 @@
 # Build handoff
 
+B22a implements durable refund requests/approval/reconciliation, cumulative exact platform-fee reversal, append-only proceeds/reserve records, actual provider fee observations, dispute movements/evidence, and account-level payout/failure reports. Repeated or ambiguous effects retain their original keys; expired provider retention never authorises a blind retry. Outside-store refund mismatches and unobserved processing costs remain explicit. Seller owner/account identities are frozen. All 85 Rust tests pass; both Clippy configurations pass. Native controls, recurring cycles and cancellation follow in B22b. The real provider sandbox lifecycle remains an external gate.
+
+B21b local `32a4fe9377b39cbde1c67a5acb4bdb251fdf6c14` is published as `b4006849b9c7520e2a012fb7713252d58d711005`, matching tree `aa4856ed7ac9bd668fe91fecece9d6b3818966b1`. Its full [CI run passed](https://github.com/tcballard/OmaStore/actions/runs/34300696480).
+
 B21b connects the service routes/workers, provider-bound development databases, operator-configured hosted fulfilment, exact service receipts, native purchase consent, persisted local request keys, recovery with a fresh login, licence export/offline verification, and native managed-offer/seller forms. All 81 Rust tests and both Clippy modes pass. Nine native checks pass in 34.81 seconds, covering keyboard purchase, paid-but-failed delivery, retry, actual private export and pinned-key verification at four sizes/scales. Resource aliases and the subsequent worksheet navigation were corrected from the native tests. Local D-Bus remains skipped. The updated lockfile again has zero audit findings. Provider and real Omarchy evidence remain external; no live key or charge is accepted. Next: B22 lifecycle/accounting.
 
 B21a local `06eff965eea14ae9c961c1fe490ddae56edac1a1` is published as `4eab483760db312fac7800c6a94ce5b487a14289`, matching tree `ec4cf828e8807e70858a45d7c8f17a57f8107c4d`.

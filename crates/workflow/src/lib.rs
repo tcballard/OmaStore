@@ -2,14 +2,20 @@
 pub mod auth;
 pub mod checks;
 pub mod commerce;
+pub mod commerce_accounting;
 pub mod commerce_checkout;
 pub mod commerce_delivery;
+pub mod commerce_finance_provider;
 pub mod commerce_license;
 pub mod commerce_model;
 pub mod commerce_provider;
+pub mod commerce_refunds;
 #[cfg(feature = "development-workflow")]
 pub mod commerce_sample;
+#[cfg(feature = "development-workflow")]
+pub mod commerce_sample_finance;
 pub mod commerce_stripe;
+pub mod commerce_stripe_finance;
 pub mod commerce_webhook;
 mod context;
 pub mod drafts;
