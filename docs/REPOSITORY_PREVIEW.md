@@ -2,6 +2,8 @@
 
 The ordinary build includes OmaCalc, OmaCut, OmaWrite, OmaPresent, LocalSend and Heroic Games Launcher. Their package identities were observed in Omarchy's stable x86_64 index. These are community entries with upstream attribution, not claimed author accounts. Use the ordinary app without `--demo`; sample mode still shows fictional apps and transactions.
 
+A verified package is available from the artifacts section of [Arch build 34398115220](https://github.com/tcballard/OmaStore/actions/runs/34398115220), built from commit `94214915628ba532dc0d7262c442534785c1dbb7`. Download `omastore-preview-arch-x86_64`, extract it, and run `sha256sum -c SHA256SUMS` before using the package installation command below. This has passed the Arch build and content checks; actual Omarchy desktop acceptance remains pending.
+
 ## Build an installable package on Omarchy
 
 Update Omarchy through its normal updater first. Install the build prerequisites listed in the README, then run from the repository checkout:

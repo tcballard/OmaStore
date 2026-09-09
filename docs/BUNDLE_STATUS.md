@@ -38,3 +38,7 @@ Repository preview continuation (B01/B03/B12): six published stable x86_64 appli
 Repository preview packaging: Arch artifact workflow and package-content check implemented; local syntax checks pass. Actual Arch workflow artifact and real Omarchy installation remain unverified.
 
 Arch packaging correction: first real CI build exposed unresolved bundled SQLite symbols under makepkg LTO. The recipe now uses `!lto` and a single non-debug-split desktop archive; replacement CI remains required.
+
+Repository preview native verification: full ordinary/sample native CI and isolated-media checks passed in [run 34397410622](https://github.com/tcballard/OmaStore/actions/runs/34397410622). The local ordinary Qt build also passed five checks (D-Bus skipped), and its actual six-entry window was inspected. This is offscreen Linux evidence; real Omarchy acceptance remains outstanding.
+
+Arch package verification: [run 34398115220](https://github.com/tcballard/OmaStore/actions/runs/34398115220) passed at `94214915628ba532dc0d7262c442534785c1dbb7`, including the unprivileged package build, archive-content inspection and artifact upload. The `omastore-preview-arch-x86_64` artifact contains the installable preview, checksum and source revision. Disabling makepkg LTO resolved the observed SQLite linker failure. No package was installed on an actual Omarchy host.
