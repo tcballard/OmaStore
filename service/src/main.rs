@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
         }
     }
-    if !state.sandbox && state.store.is_some() && !state.origin.is_empty() {
+    if !state.sandbox && !state.commerce_test && state.store.is_some() && !state.origin.is_empty() {
         match omastore_workflow::github::Config::from_env() {
             Ok(Some(config)) => {
                 state.github = Some(omastore_workflow::github::Github::new(config));
@@ -100,6 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     state.read_catalogue()?;
     let monitoring_worker = if state.store.is_some()
         && !state.sandbox
+        && !state.commerce_test
         && std::env::var("OMASTORE_MONITORING_PAUSED").ok().as_deref() != Some("1")
     {
         Some(omastore_service::monitoring::start_worker(state.clone()))
@@ -108,6 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
     let worker = if state.store.is_some()
         && !state.sandbox
+        && !state.commerce_test
         && std::env::var("OMASTORE_CHECKS_PAUSED").ok().as_deref() != Some("1")
     {
         Some(omastore_service::start_checks_worker(state.clone()))
@@ -116,6 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
     let maintenance_worker = if state.store.is_some()
         && !state.sandbox
+        && !state.commerce_test
         && std::env::var("OMASTORE_MAINTENANCE_PAUSED").ok().as_deref() != Some("1")
     {
         Some(omastore_service::start_maintenance_worker(state.clone()))

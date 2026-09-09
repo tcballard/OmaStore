@@ -101,8 +101,20 @@ pub struct Invoice {
     pub period_end: i64,
     pub paid: bool,
 }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Subscription {
+    pub id: String,
+    pub account: String,
+    pub root_order: String,
+    pub customer: String,
+    pub state: String,
+    pub cancel_at_period_end: bool,
+    pub current_period_end: i64,
+}
 #[async_trait]
 pub trait Finance: Provider {
+    async fn subscription(&self, account: &str, id: &str) -> Result<Subscription>;
     async fn find_refund(
         &self,
         account: &str,
@@ -124,6 +136,9 @@ pub trait Finance: Provider {
 }
 #[async_trait]
 impl Finance for crate::commerce_provider::Disabled {
+    async fn subscription(&self, _: &str, _: &str) -> Result<Subscription> {
+        Err(Error::new(503, "payment_provider_unconfigured"))
+    }
     async fn find_refund(&self, _: &str, _: &str, _: &str) -> Result<Option<RefundObservation>> {
         Err(Error::new(503, "payment_provider_unconfigured"))
     }

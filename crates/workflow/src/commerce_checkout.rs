@@ -450,6 +450,7 @@ if lease>now{return Err(Error::new(409,"checkout_in_progress"));}
         self.transaction(|t|{let(i,mode)=intent(t,id)?;provider_guard(t,&mode)?;
    let (paid,state,obs):(String,String,Option<String>)=t.query_row("SELECT payment_state,delivery_state,provider_observation FROM commerce_orders WHERE id=?1",[id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)))?;
    if state=="delivered"{return Ok(false);}
+crate::commerce_lifecycle::delivery_allowed(t,id,now)?;
 if paid!="paid"{return Err(Error::new(409,"confirmed_payment_required"));}
    if ["service","subscription"].contains(&i.price.delivery_kind.as_str()){return Err(Error::new(409,"service_fulfilment_required"));}
    t.execute("UPDATE commerce_orders SET delivery_attempts=delivery_attempts+1 WHERE id=?1",[id])?;
@@ -459,12 +460,12 @@ if paid!="paid"{return Err(Error::new(409,"confirmed_payment_required"));}
   })
     }
     pub fn commerce_retry_delivery(&self, a: &Actor, id: &str, now: i64) -> Result<Value> {
-        self.transaction(|t|{access(t,a,id)?;let state:String=t.query_row("SELECT delivery_state FROM commerce_orders WHERE id=?1",[id],|r|r.get(0))?;if state=="delivery_failed"{t.execute("UPDATE commerce_orders SET delivery_state='delivery_pending',delivery_error=NULL WHERE id=?1",[id])?;event(t,id,"delivery_retry_requested",json!({"actor":a.id}),now)?;}Ok(())})?;
+        self.transaction(|t|{access(t,a,id)?;crate::commerce_lifecycle::delivery_allowed(t,id,now)?;let state:String=t.query_row("SELECT delivery_state FROM commerce_orders WHERE id=?1",[id],|r|r.get(0))?;if state=="delivery_failed"{t.execute("UPDATE commerce_orders SET delivery_state='delivery_pending',delivery_error=NULL WHERE id=?1",[id])?;event(t,id,"delivery_retry_requested",json!({"actor":a.id}),now)?;}Ok(())})?;
         self.commerce_order(a, id)
     }
     pub fn commerce_pending_delivery(&self) -> Result<Vec<String>> {
         let c = self.connection()?;
-        let mut q=c.prepare("SELECT id FROM commerce_orders WHERE payment_state='paid' AND delivery_state='delivery_pending' ORDER BY created_at LIMIT 20")?;
+        let mut q=c.prepare("SELECT id FROM commerce_orders WHERE payment_state='paid' AND delivery_state='delivery_pending' AND NOT EXISTS(SELECT 1 FROM commerce_cycles WHERE cycle_order=commerce_orders.id AND period_start>unixepoch()) ORDER BY created_at LIMIT 20")?;
         let ids = q
             .query_map([], |r| r.get(0))?
             .collect::<std::result::Result<_, _>>()?;
@@ -475,6 +476,12 @@ pub(crate) fn order_projection(c: &Connection, id: &str, grant: bool) -> Result<
     let (i, mode) = intent(c, id)?;
     let (payment,delivery,code,raw,url):(String,String,Option<String>,Option<String>,Option<String>)=c.query_row("SELECT payment_state,delivery_state,delivery_error,grant,checkout_url FROM commerce_orders WHERE id=?1",[id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?)))?;
     let mut v = json!({"id":id,"mode":mode,"createdAt":i.created_at,"price":i.price.public()?,"paymentState":payment,"deliveryState":delivery,"deliveryError":code,"checkoutUrl":if payment=="paid"{None}else{url},"receiptAvailable":payment=="paid","openSourceRightsIndependent":true});
+    let refunded:i64=c.query_row("SELECT COALESCE(SUM(amount),0) FROM commerce_refunds WHERE order_id=?1 AND state='succeeded'",[id],|r|r.get(0))?;
+    v["refunded"] = json!(refunded);
+    v["fullyRefunded"] = json!(refunded as u64 >= i.price.amounts()?["total"].as_u64().unwrap());
+    if i.price.delivery_kind == "subscription" && payment == "paid" {
+        v["subscription"] = crate::commerce_subscriptions::summary(c, id, crate::now())?;
+    }
     if grant {
         v["grant"] = match raw {
             Some(s) => json!(serde_json::from_str::<Envelope>(&s)?),

@@ -21,7 +21,7 @@ use tokio::sync::Semaphore;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub commerce: Arc<dyn omastore_workflow::commerce_provider::Provider>,
+    pub commerce: Arc<dyn omastore_workflow::commerce_finance_provider::Finance>,
     pub fulfilment: Arc<dyn omastore_workflow::commerce_delivery::Fulfilment>,
     pub commerce_issuer: Option<Arc<omastore_workflow::commerce_license::Issuer>>,
     pub commerce_webhook_secret: Option<String>,
@@ -106,6 +106,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/operations", get(workspace::operations))
         .route("/api/v1/commerce/status", get(workspace::commerce_status))
         .route("/api/v1/commerce/prices", get(commerce::prices))
+        .route("/api/v1/commerce/lifecycle", post(commerce::lifecycle))
         .route("/api/v1/commerce/author", get(commerce::author))
         .route(
             "/api/v1/commerce/orders/{id}/sample-capture",

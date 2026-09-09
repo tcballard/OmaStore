@@ -20,6 +20,26 @@ pub struct Page {
     #[serde(default)]
     before: i64,
 }
+pub async fn lifecycle(
+    State(s): State<AppState>,
+    h: HeaderMap,
+    Json(p): Json<omastore_workflow::commerce_actions::Action>,
+) -> ApiResult<Json<Value>> {
+    let a = actor(&s, &h).await?;
+    let key = h
+        .get("Idempotency-Key")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let store = s
+        .store
+        .as_ref()
+        .ok_or(Error::new(503, "workspace_unconfigured"))?;
+    Ok(Json(
+        store
+            .commerce_lifecycle_action(&a, key, p, s.commerce.as_ref(), now())
+            .await?,
+    ))
+}
 pub async fn prices(
     State(s): State<AppState>,
     Query(p): Query<PriceQuery>,
@@ -148,7 +168,7 @@ pub async fn webhook(
         .ok_or(Error::new(503, "workspace_unconfigured"))?;
     Ok(Json(
         store
-            .commerce_webhook(s.commerce.as_ref(), secret, signature, &body, now())
+            .commerce_all_webhooks(s.commerce.as_ref(), secret, signature, &body, now())
             .await?,
     ))
 }
@@ -161,6 +181,9 @@ pub fn start_worker(s: AppState) -> tokio::task::JoinHandle<()> {
         loop {
             tick.tick().await;
             if let Some(store) = &s.store {
+                let _ = store
+                    .commerce_lifecycle_tick(s.commerce.as_ref(), now())
+                    .await;
                 if let Ok(ids) = store.commerce_payment_queue(s.commerce.mode(), now()) {
                     for id in ids {
                         let _ = store
@@ -484,7 +507,7 @@ mod tests {
             .unwrap();
         let fresh = store.development_login("author", now()).unwrap();
         let (status, receipt) = call(
-            app,
+            app.clone(),
             fresh["token"].as_str().unwrap(),
             "GET",
             &path,
@@ -496,5 +519,60 @@ mod tests {
         assert_eq!(receipt["deliveryState"], "delivered");
         assert!(receipt["grant"].is_object());
         assert!(receipt.to_string().find("acct_samplemaker").is_none());
+        let key = omastore_workflow::nonce().unwrap();
+        let action = serde_json::json!({"action":"request_refund","request":{"orderId":id,"amount":200,"expectedRefunded":0,"reason":"HTTP fixture refund","accepted":true}});
+        let (status, refund) = call(
+            app.clone(),
+            token,
+            "POST",
+            "/api/v1/commerce/lifecycle",
+            action.clone(),
+            &key,
+        )
+        .await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            call(
+                app.clone(),
+                token,
+                "POST",
+                "/api/v1/commerce/lifecycle",
+                action,
+                &key
+            )
+            .await
+            .1["id"],
+            refund["id"]
+        );
+        let action = serde_json::json!({"action":"execute_refund","id":refund["id"]});
+        assert_eq!(
+            call(
+                app.clone(),
+                token,
+                "POST",
+                "/api/v1/commerce/lifecycle",
+                action.clone(),
+                ""
+            )
+            .await
+            .0,
+            403
+        );
+        let operator = store.development_login("operator", now()).unwrap();
+        let op_token = operator["token"].as_str().unwrap();
+        let (status, refund) = call(
+            app.clone(),
+            op_token,
+            "POST",
+            "/api/v1/commerce/lifecycle",
+            action,
+            "",
+        )
+        .await;
+        assert_eq!(status, 200);
+        assert_eq!(refund["state"], "succeeded");
+        assert_eq!(refund["feeAmount"], 8);
+        let (_,report)=call(app,token,"POST","/api/v1/commerce/lifecycle",serde_json::json!({"action":"finances","seller_id":"sample-maker","refresh":true,"cursor":null}),"").await;
+        assert_eq!(report["currencies"][0]["recordedProceeds"], 828);
     }
 }

@@ -138,6 +138,18 @@ impl Sample {
             .ok_or(Error::new(404, "sample_charge_unavailable"))?;
         self.0.transaction(|t|{recheck(t,a,"operator")?;
    match scenario{
+    "renewal"=>{
+        let sid=o.subscription_id.clone().ok_or(Error::new(409,"paid_subscription_required"))?;
+        let canceled:bool=t.query_row("SELECT EXISTS(SELECT 1 FROM commerce_sample_provider WHERE kind='cancellation' AND json_extract(body,'$.id')=?1)",[&sid],|r|r.get(0))?;
+        if canceled{return Err(Error::new(409,"sample_subscription_canceled"));}
+        let start:i64=t.query_row("SELECT MAX(json_extract(body,'$.observation.paidUntil')) FROM commerce_sample_provider WHERE kind='checkout' AND json_extract(body,'$.observation.subscriptionId')=?1",[&sid],|r|r.get(0))?;
+        let iid=format!("in_{}",nonce()?);let suffix=nonce()?;
+        let inv=Invoice{id:iid.clone(),account:o.account.clone(),root_order:o.order_id.clone(),subscription:sid,customer:o.customer_id.clone().unwrap(),charge:format!("ch_{suffix}"),fee:format!("fee_{suffix}"),currency:o.currency.clone(),total:o.total,tax:o.tax,application_fee:o.fee_amount.unwrap_or(0),period_start:start,period_end:start+30*86400,paid:true};
+        let mut observed=o.clone();observed.order_id=format!("sampleinvoice-{suffix}");observed.payment_id=Some(inv.charge.clone());observed.fee_id=Some(inv.fee.clone());observed.paid_until=Some(inv.period_end);observed.session_id=format!("cs_test_{suffix}");observed.url=None;
+        t.execute("INSERT INTO commerce_sample_provider VALUES('invoice',?1,?2)",params![iid,serde_json::to_string(&inv)?])?;
+        t.execute("INSERT INTO commerce_sample_provider VALUES('checkout',?1,?2)",params![format!("invoice-{iid}"),json!({"observation":observed}).to_string()])?;
+        Ok(json!({"invoiceId":iid,"fictional":true}))
+    },
     "payout_pending"|"payout_failed"|"payout_paid"=>{let id=format!("po_{}",o.order_id);let p=Payout{id:id.clone(),account:o.account,amount:500,currency:o.currency,state:match scenario{"payout_failed"=>"failed","payout_paid"=>"paid",_=>"in_transit"}.into(),arrival_at:Some(now+86400),failure_code:if scenario=="payout_failed"{Some("insufficient_funds".into())}else{None},balance_transaction:Some(format!("txn_payout_{}",o.order_id)),failure_transaction:if scenario=="payout_failed"{Some(format!("txn_return_{}",o.order_id))}else{None}};t.execute("INSERT INTO commerce_sample_provider VALUES('payout',?1,?2) ON CONFLICT(kind,key) DO UPDATE SET body=excluded.body",params![id,serde_json::to_string(&p)?])?;Ok(json!({"payoutId":id,"fictional":true}))},
     "dispute_open"|"dispute_won"|"dispute_lost"=>{let id=format!("du_{}",o.order_id);let mut movements=vec![BalanceEffect{id:format!("txn_dispute_{}",o.order_id),currency:o.currency.clone(),net:-(o.total as i64)-15,fee:15}];if scenario=="dispute_won"{movements.push(BalanceEffect{id:format!("txn_dispute_return_{}",o.order_id),currency:o.currency.clone(),net:o.total as i64,fee:0});}let d=Dispute{id:id.clone(),account:o.account,charge:o.payment_id.unwrap(),amount:o.total,currency:o.currency,state:match scenario{"dispute_won"=>"won","dispute_lost"=>"lost",_=>"needs_response"}.into(),evidence_due:Some(now+7*86400),movements};t.execute("INSERT INTO commerce_sample_provider VALUES('dispute',?1,?2) ON CONFLICT(kind,key) DO UPDATE SET body=excluded.body",params![id,serde_json::to_string(&d)?])?;Ok(json!({"disputeId":id,"fictional":true}))},
     "next_refund_pending"=>{t.execute("INSERT INTO metadata VALUES('sample_next_refund_state','pending') ON CONFLICT(key) DO UPDATE SET value='pending'",[])?;Ok(json!({"fictional":true}))},
@@ -149,6 +161,31 @@ impl Sample {
 }
 #[async_trait]
 impl Finance for Sample {
+    async fn subscription(&self, account: &str, id: &str) -> Result<Subscription> {
+        let rows = self.checkouts()?;
+        let o = rows
+            .iter()
+            .filter(|o| o.account == account && o.subscription_id.as_deref() == Some(id) && o.paid)
+            .min_by_key(|o| o.paid_until)
+            .ok_or(Error::new(404, "sample_subscription_unavailable"))?;
+        let end = rows
+            .iter()
+            .filter(|o| o.account == account && o.subscription_id.as_deref() == Some(id) && o.paid)
+            .filter_map(|o| o.paid_until)
+            .max()
+            .unwrap();
+        let canceled:bool=self.0.connection()?.query_row("SELECT EXISTS(SELECT 1 FROM commerce_sample_provider WHERE kind='cancellation' AND json_extract(body,'$.id')=?1)",[id],|r|r.get(0))?;
+        Ok(Subscription {
+            id: id.into(),
+            account: account.into(),
+            root_order: o.order_id.clone(),
+            customer: o.customer_id.clone().unwrap(),
+            state: "active".into(),
+            cancel_at_period_end: canceled,
+            current_period_end: end,
+        })
+    }
+
     async fn find_refund(
         &self,
         account: &str,

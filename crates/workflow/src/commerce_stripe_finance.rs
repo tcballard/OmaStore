@@ -116,6 +116,38 @@ impl StripeTest {
 }
 #[async_trait]
 impl Finance for StripeTest {
+    async fn subscription(&self, account: &str, sid: &str) -> Result<Subscription> {
+        id(sid, "sub_")?;
+        let v = self
+            .request(
+                "GET",
+                &format!("/v1/subscriptions/{sid}"),
+                Some(account),
+                None,
+                vec![],
+            )
+            .await?;
+        let items = data(&v["items"])?;
+        if v["id"] != sid
+            || v["livemode"] != false
+            || v["items"]["has_more"] != false
+            || items.len() != 1
+        {
+            return Err(Error::new(409, "subscription_identity_mismatch"));
+        }
+        Ok(Subscription {
+            id: sid.into(),
+            account: account.into(),
+            root_order: field(&v["metadata"], "omastore_order")?,
+            customer: field(&v, "customer")?,
+            state: field(&v, "status")?,
+            cancel_at_period_end: v["cancel_at_period_end"]
+                .as_bool()
+                .ok_or(Error::new(503, "invalid_provider_response"))?,
+            current_period_end: signed(&items[0], "current_period_end")?,
+        })
+    }
+
     async fn find_refund(
         &self,
         account: &str,

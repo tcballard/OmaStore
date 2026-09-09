@@ -196,11 +196,23 @@ impl Store {
         if local {
             return self.commerce_deliver_local(id, issuer, now);
         }
+        let allowed = {
+            let c = self.connection()?;
+            crate::commerce_lifecycle::delivery_allowed(&c, id, now)
+        };
+        if let Err(e) = allowed {
+            if e.code == "subscription_period_not_started" {
+                return Ok(false);
+            }
+            self.delivery_failure(id, e.code, now)?;
+            return Ok(false);
+        }
         let Some(issuer) = issuer else {
             self.delivery_failure(id, "licence_issuer_unconfigured", now)?;
             return Ok(false);
         };
         let claim=self.transaction(|t|{let(i,mode)=intent(t,id)?;provider_guard(t,&mode)?;let(paid,state,until):(String,String,i64)=t.query_row("SELECT payment_state,delivery_state,delivery_until FROM commerce_orders WHERE id=?1",[id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)))?;if state=="delivered"{return Ok(None);}
+crate::commerce_lifecycle::delivery_allowed(t,id,now)?;
 if paid!="paid"{return Err(Error::new(409,"confirmed_payment_required"));}
 if until>now{return Err(Error::new(409,"delivery_in_progress"));}let lease=nonce()?;t.execute("UPDATE commerce_orders SET delivery_state='delivery_pending',delivery_lease=?2,delivery_until=?3,delivery_attempts=delivery_attempts+1 WHERE id=?1",params![id,lease,now+60])?;event(t,id,"service_delivery_attempt",json!({}),now)?;Ok(Some((i,lease)))})?;
         let Some((i, lease)) = claim else {
@@ -259,6 +271,7 @@ if state=="delivered"{return Ok(());}t.execute("UPDATE commerce_orders SET deliv
             let c = self.connection()?;
             access(&c, a, id)?;
             let (i, _) = intent(&c, id)?;
+            crate::commerce_lifecycle::delivery_allowed(&c, id, now)?;
             let (state, reference): (String, Option<String>) = c.query_row(
                 "SELECT delivery_state,delivery_reference FROM commerce_orders WHERE id=?1",
                 [id],

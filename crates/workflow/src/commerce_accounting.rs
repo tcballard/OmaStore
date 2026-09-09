@@ -266,13 +266,26 @@ impl Store {
         r: &AccountReport,
         now: i64,
     ) -> Result<Value> {
-        self.transaction(|t|{provider_guard(t,mode)?;let account=seller(t,a,seller_id)?;if r.account!=account||r.balances.len()>20||r.payouts.len()>100{return Err(Error::new(409,"provider_report_mismatch"));}let mut seen=std::collections::BTreeSet::new();for b in &r.balances{crate::commerce_model::exponent(&b.currency)?;if !seen.insert(&b.currency)||b.available.unsigned_abs()>9_000_000_000_000||b.pending.unsigned_abs()>9_000_000_000_000{return Err(Error::new(409,"invalid_provider_balance"));}}
+        {
+            let c = self.connection()?;
+            seller(&c, a, seller_id)?;
+        }
+        self.record_account_report(seller_id, mode, r, now)?;
+        self.commerce_finances(a, seller_id)
+    }
+    pub(crate) fn record_account_report(
+        &self,
+        seller_id: &str,
+        mode: &str,
+        r: &AccountReport,
+        now: i64,
+    ) -> Result<()> {
+        self.transaction(|t|{provider_guard(t,mode)?;let account:String=t.query_row("SELECT account FROM commerce_sellers WHERE id=?1",[seller_id],|r|r.get(0)).optional()?.ok_or(Error::new(404,"seller_unavailable"))?;if r.account!=account||r.balances.len()>20||r.payouts.len()>100{return Err(Error::new(409,"provider_report_mismatch"));}let mut seen=std::collections::BTreeSet::new();for b in &r.balances{crate::commerce_model::exponent(&b.currency)?;if !seen.insert(&b.currency)||b.available.unsigned_abs()>9_000_000_000_000||b.pending.unsigned_abs()>9_000_000_000_000{return Err(Error::new(409,"invalid_provider_balance"));}}
   for p in &r.payouts{if p.account!=account||!crate::commerce_model::provider_id(&p.id,"po_")||!["pending","in_transit","paid","failed","canceled"].contains(&p.state.as_str())||p.amount>9_000_000_000_000{return Err(Error::new(409,"invalid_provider_payout"));}crate::commerce_model::exponent(&p.currency)?;let raw=serde_json::to_string(p)?;let old:Option<String>=t.query_row("SELECT body FROM commerce_payouts WHERE id=?1",[&p.id],|r|r.get(0)).optional()?;
   if let Some(raw)=&old { let prior:crate::commerce_finance_provider::Payout=serde_json::from_str(raw)?; if prior.account!=p.account || prior.amount!=p.amount || prior.currency!=p.currency {return Err(Error::new(409,"payout_identity_conflict"));}}
   t.execute("INSERT INTO commerce_payouts VALUES(?1,?2,?3,?4,?5) ON CONFLICT(id) DO UPDATE SET body=excluded.body,observed_at=excluded.observed_at",params![p.id,seller_id,account,raw,now])?;if old.as_deref()!=Some(&raw){t.execute("INSERT INTO commerce_reconciliation_events(seller_id,kind,detail,at) VALUES(?1,'payout_observed',?2,?3)",params![seller_id,raw,now])?;}}
   t.execute("INSERT INTO commerce_provider_reports VALUES(?1,?2,?3,?4) ON CONFLICT(seller_id) DO UPDATE SET account=excluded.account,body=excluded.body,observed_at=excluded.observed_at",params![seller_id,account,serde_json::to_string(r)?,now])?;Ok(())
- })?;
-        self.commerce_finances(a, seller_id)
+ })
     }
     pub async fn commerce_reconcile_finances(
         &self,
@@ -282,9 +295,31 @@ impl Store {
         after: Option<&str>,
         now: i64,
     ) -> Result<Value> {
+        {
+            let c = self.connection()?;
+            seller(&c, a, seller_id)?;
+        }
+        self.reconcile_seller(seller_id, provider, after, now)
+            .await?;
+        self.commerce_finances(a, seller_id)
+    }
+    pub(crate) async fn reconcile_seller(
+        &self,
+        seller_id: &str,
+        provider: &dyn Finance,
+        after: Option<&str>,
+        now: i64,
+    ) -> Result<()> {
         let (account, charges) = {
             let c = self.connection()?;
-            let account = seller(&c, a, seller_id)?;
+            let account: String = c
+                .query_row(
+                    "SELECT account FROM commerce_sellers WHERE id=?1",
+                    [seller_id],
+                    |r| r.get(0),
+                )
+                .optional()?
+                .ok_or(Error::new(404, "seller_unavailable"))?;
             provider_guard(&c, provider.mode())?;
             let mut q=c.prepare("SELECT o.id,o.payment_id FROM commerce_orders o LEFT JOIN commerce_charge_checks c ON c.order_id=o.id WHERE o.payment_state='paid' AND json_extract(o.price,'$.sellerId')=?1 ORDER BY COALESCE(c.checked_at,0),o.id LIMIT 20")?;
             let charges: Vec<(String, String)> = q
@@ -303,7 +338,7 @@ impl Store {
             }
         }
         let report = provider.report(&account, after).await?;
-        self.commerce_record_report(a, seller_id, provider.mode(), &report, now)
+        self.record_account_report(seller_id, provider.mode(), &report, now)
     }
     pub async fn commerce_reconcile_dispute(
         &self,
