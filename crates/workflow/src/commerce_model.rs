@@ -186,6 +186,13 @@ impl Price {
         {
             return Err(Error::new(422, "invalid_billing_interval"));
         }
+        if self
+            .tax_rate_id
+            .as_ref()
+            .is_some_and(|s| !provider_id(s, "txr_"))
+        {
+            return Err(Error::new(422, "configured_tax_rate_required"));
+        }
         if self.tax > 0
             && !self
                 .tax_rate_id

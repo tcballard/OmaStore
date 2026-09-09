@@ -25,3 +25,4 @@ chrono-tz = "0.10.4"
 async-trait = "0.1"
 jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 hmac = "0.12"
+ring = "0.17"

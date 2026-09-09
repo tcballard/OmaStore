@@ -1,5 +1,9 @@
 # Build handoff
 
+B21a adds immutable commercial prices/orders, current seller and listing authority checks, retained buyer request keys, durable checkout claims, exact provider amount/fee/account checks, verified raw webhooks, paid/delivery state separation, support history and pinned-key Ed25519 perpetual licences. A fixed-origin Stripe test adapter and persistent fictional provider implement creation/reconciliation; no live key or production database is accepted. All 79 Rust tests and both Clippy modes pass, including lost replies/restart, delayed/forged/duplicate events, price and buyer tampering, expired provider idempotency, failed/retried delivery and offline recovery. The updated lockfile has zero audit findings. Native/service wiring and hosted fulfilment follow in B21b.
+
+B20 local `f64df8f3b3b1dec1a2cd4231e2867dbf28178853` is published as `f7ca9babe6897c7a2a9f9efbfafbb84c0612fb32`, matching tree `2d0d54fd40c9b635f0180b3de519c585ad33f8a7`.
+
 B20 adds a closed commercial release gate, bounded operating facts, immutable versioned operator records, purchase pause, integer price/fee contracts, disabled provider interfaces, and a native Commerce view. All 72 Rust tests and both Clippy modes pass. Nine native checks pass in 30.87 seconds after fixing test response ordering; the local session bus skips. Missing operator/author/provider/legal facts remain explicit and do not stop disabled B21–B22 software under Tom’s full-scope instruction. No live key or charge is accepted.
 
 B19 local `354e7a051cec24d130427b18dab459cbe85a22fe` is published as `78cb8508169dbf71d713226d35b18555a549ac69`, matching tree `2b8bfdeaf60f9124ffbf12ab53fac4c908232f5a`. CI run 34296407290 is in progress.

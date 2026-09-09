@@ -12,6 +12,15 @@ pub const MAX_DRAFT_BYTES: usize = 80 * 1024;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    CommerceSeller {
+        seller: Box<crate::commerce_checkout::Seller>,
+    },
+    CommercePrice {
+        price: Box<crate::commerce_model::Price>,
+    },
+    CommerceWithdraw {
+        id: String,
+    },
     CommerceModel {
         version: i64,
         model: Box<crate::commerce_model::OperatingModel>,
@@ -83,7 +92,8 @@ pub enum Command {
 impl Command {
     pub fn role(&self) -> &'static str {
         match self {
-            Self::ReleaseEvidence { .. }
+            Self::CommerceSeller { .. }
+            | Self::ReleaseEvidence { .. }
             | Self::CommerceModel { .. }
             | Self::CommercePause { .. } => "operator",
             Self::StartReview { .. } => "reviewer",
@@ -193,6 +203,15 @@ impl Store {
 }
 fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Result<Value> {
     match command {
+        Command::CommerceSeller { seller } => {
+            crate::commerce_checkout::register_seller(t, actor, *seller, now)
+        }
+        Command::CommercePrice { price } => {
+            crate::commerce_checkout::publish_price(t, actor, *price, now)
+        }
+        Command::CommerceWithdraw { id } => {
+            crate::commerce_checkout::withdraw_offer(t, actor, &id, now)
+        }
         Command::CommerceModel {
             version,
             model,

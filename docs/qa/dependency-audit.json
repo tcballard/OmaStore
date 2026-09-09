@@ -1,8 +1,8 @@
 {
-  "date": "2026-09-08",
+  "date": "2026-09-09",
   "tool": "cargo-audit 0.22.2",
   "advisoryDatabaseCommit": "bf25f6575a93a35f30796c65c0ed91bee7fa19fd",
-  "lockfileSha256": "fa4c21a8d0bd8fd88d7a80a88e0e0ed81185a258cd686d57caefff9e3cd46984",
+  "lockfileSha256": "70d8b5df03654d05ef4aa201271fd30a5a9b969912a3868a0618d3f2e64db84f",
   "dependencies": 249,
   "vulnerabilities": 0,
   "warnings": {},

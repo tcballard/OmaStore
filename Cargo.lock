@@ -1144,6 +1144,7 @@ dependencies = [
  "jsonwebtoken",
  "omastore-catalogue",
  "reqwest",
+ "ring",
  "rusqlite",
  "rustls",
  "serde",

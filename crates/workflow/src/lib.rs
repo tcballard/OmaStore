@@ -2,8 +2,14 @@
 pub mod auth;
 pub mod checks;
 pub mod commerce;
+pub mod commerce_checkout;
+pub mod commerce_license;
 pub mod commerce_model;
 pub mod commerce_provider;
+#[cfg(feature = "development-workflow")]
+pub mod commerce_sample;
+pub mod commerce_stripe;
+pub mod commerce_webhook;
 mod context;
 pub mod drafts;
 pub mod feeds;
