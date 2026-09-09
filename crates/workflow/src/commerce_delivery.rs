@@ -453,6 +453,23 @@ mod tests {
             .await
             .unwrap()["recoveryUrl"]
             .is_string());
+
+        // Withdrawal alone preserves recovery. An active distribution hold stops a fresh effect.
+        again.connection().unwrap().execute("INSERT INTO distribution_holds(id,app_id,code,created_by,created_at) VALUES('fixture-paid-hold','demo-fieldnotes','artifact_mismatch','fixture-operator',1010)",[]).unwrap();
+        assert_eq!(
+            again
+                .commerce_recover_download(&a, &id, &delivery, 1011)
+                .await
+                .unwrap_err()
+                .code,
+            "app_distribution_held"
+        );
+        assert!(again.commerce_order(&a, &id).unwrap()["grant"].is_object());
+        assert_eq!(
+            again.commerce_order(&a, &id).unwrap()["distributionHeld"],
+            true
+        );
+        assert!(again.commerce_refunds(&a, &id).is_ok());
         assert!(again.commerce_bind_provider("stripe_test").is_err());
         assert_eq!(provider.mode(), "sample");
     }

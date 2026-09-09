@@ -171,6 +171,7 @@ impl Client {
                 "immutable_price_identity" => "immutable_price_identity",
                 "commerce_database_provider_mismatch" => "commerce_database_provider_mismatch",
 
+                "app_distribution_held" => "app_distribution_held",
                 "seller_identity_frozen" => "seller_identity_frozen",
                 "refund_unavailable" => "refund_unavailable",
                 "invalid_refund_request" => "invalid_refund_request",

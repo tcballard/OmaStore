@@ -9,6 +9,15 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{json, Value};
 pub(crate) fn delivery_allowed(c: &Connection, id: &str, now: i64) -> Result<()> {
     let (i, _) = intent(c, id)?;
+    let held: bool = c.query_row(
+        "SELECT EXISTS(SELECT 1 FROM distribution_holds WHERE app_id=?1 AND state='open')",
+        [&i.price.app_id],
+        |r| r.get(0),
+    )?;
+    if held {
+        return Err(Error::new(409, "app_distribution_held"));
+    }
+
     let refunded:i64=c.query_row("SELECT COALESCE(SUM(amount),0) FROM commerce_refunds WHERE order_id=?1 AND state='succeeded'",[id],|r|r.get(0))?;
     if refunded as u64 >= i.price.amounts()?["total"].as_u64().unwrap() {
         return Err(Error::new(409, "refunded_order_requires_support"));

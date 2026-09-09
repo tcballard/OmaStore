@@ -70,12 +70,13 @@ Dialog {
    Label {objectName:"purchaseState";text:"Payment: "+(dialog.order.paymentState || "unknown").replace(/_/g," ")+" · Delivery: "+(dialog.order.deliveryState || "unknown").replace(/_/g," ");font.bold:true;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
    TextField {text:dialog.order.id || "";readOnly:true;selectByMouse:true;Layout.fillWidth:true;Accessible.name:"Order reference"}
    Label {text:(dialog.order.price || {}).title || "";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+   Label {visible:!!dialog.order.distributionHeld;text:"Distribution is paused for this app. New delivery and hosted recovery require a reviewed resolution. Receipts, issued licences and refund support remain available.";Layout.fillWidth:true;wrapMode:Text.Wrap}
    Label {visible:!!dialog.order.deliveryError;text:(dialog.order.deliveryError || "").replace(/_/g," ")+". Your paid order remains recorded; retry delivery or contact support.";Layout.fillWidth:true;wrapMode:Text.Wrap}
    Flow {Layout.fillWidth:true;spacing:8
     Button {visible:!!dialog.order.checkoutUrl;text:"Open secure provider checkout ↗";onClicked:Qt.openUrlExternally(dialog.order.checkoutUrl)}
     Button {text:"Check payment";enabled:!core.loading;onClicked:core.workspaceAction("commerce.reconcile",{id:dialog.order.id})}
-    Button {objectName:"retryPurchaseDelivery";visible:dialog.order.paymentState==="paid"&&dialog.order.deliveryState!=="delivered"&&!dialog.order.fullyRefunded;text:"Retry delivery";enabled:!core.loading;onClicked:core.workspaceAction("commerce.retry",{id:dialog.order.id})}
-    Button {visible:!!dialog.order.grant;text:"Recover hosted access/download";enabled:!core.loading;onClicked:core.workspaceAction("commerce.recover",{id:dialog.order.id})}
+    Button {objectName:"retryPurchaseDelivery";visible:dialog.order.paymentState==="paid"&&dialog.order.deliveryState!=="delivered"&&!dialog.order.fullyRefunded&&!dialog.order.distributionHeld;text:"Retry delivery";enabled:!core.loading;onClicked:core.workspaceAction("commerce.retry",{id:dialog.order.id})}
+    Button {visible:!!dialog.order.grant&&!dialog.order.distributionHeld&&!dialog.order.fullyRefunded;text:"Recover hosted access/download";enabled:!core.loading;onClicked:core.workspaceAction("commerce.recover",{id:dialog.order.id})}
     Button {text:"Contact seller support ↗";onClicked:Qt.openUrlExternally(dialog.order.price.supportUrl)}
    }
    CheckBox {id:failDelivery;objectName:"sampleDeliveryFailure";visible:dialog.sample&&dialog.order.paymentState!=="paid";text:"Rehearse a paid order with failed delivery";Layout.fillWidth:true}

@@ -477,6 +477,12 @@ pub(crate) fn order_projection(c: &Connection, id: &str, grant: bool) -> Result<
     let (payment,delivery,code,raw,url):(String,String,Option<String>,Option<String>,Option<String>)=c.query_row("SELECT payment_state,delivery_state,delivery_error,grant,checkout_url FROM commerce_orders WHERE id=?1",[id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?)))?;
     let mut v = json!({"id":id,"mode":mode,"createdAt":i.created_at,"price":i.price.public()?,"paymentState":payment,"deliveryState":delivery,"deliveryError":code,"checkoutUrl":if payment=="paid"{None}else{url},"receiptAvailable":payment=="paid","openSourceRightsIndependent":true});
     let refunded:i64=c.query_row("SELECT COALESCE(SUM(amount),0) FROM commerce_refunds WHERE order_id=?1 AND state='succeeded'",[id],|r|r.get(0))?;
+    let held: bool = c.query_row(
+        "SELECT EXISTS(SELECT 1 FROM distribution_holds WHERE app_id=?1 AND state='open')",
+        [&i.price.app_id],
+        |r| r.get(0),
+    )?;
+    v["distributionHeld"] = json!(held);
     v["refunded"] = json!(refunded);
     v["fullyRefunded"] = json!(refunded as u64 >= i.price.amounts()?["total"].as_u64().unwrap());
     if i.price.delivery_kind == "subscription" && payment == "paid" {
