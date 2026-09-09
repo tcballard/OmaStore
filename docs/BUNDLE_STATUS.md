@@ -34,3 +34,5 @@ B00–B03 are implemented and checked on offscreen Linux, including actual proce
 All implementable software bundles B00–B22 are complete. The native playground includes settings, attributed remixes and the full test commerce lifecycle. The remaining work is actual Omarchy/portal/accessibility/lifecycle validation, genuine authors/listings/setups and pilot participation, deployment/provider credentials and independently reviewed commercial responsibilities. No sample receipt opens those live release gates. BUILD_HANDOFF.md records exact verification and publication receipts.
 
 Repository preview continuation (B01/B03/B12): six published stable x86_64 application identities are bundled with archived source observations and reproducible generation. Maturity remains unknown; no test or author participation is inferred. Current-host planning and live execution gates remain distinct. See ADR 0010 and BUILD_HANDOFF.md.
+
+Repository preview packaging: Arch artifact workflow and package-content check implemented; local syntax checks pass. Actual Arch workflow artifact and real Omarchy installation remain unverified.
