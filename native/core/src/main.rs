@@ -6,6 +6,7 @@ mod lifecycle;
 mod planner;
 mod platform;
 mod recovery;
+mod remixes;
 mod settings;
 mod settings_apply;
 mod setups;
@@ -75,7 +76,8 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
             Err(e) => error(Some(&request.id), e.code),
         };
     }
-    if request.method.starts_with("settings.")
+    if request.method.starts_with("remixes.")
+        || request.method.starts_with("settings.")
         || request.method.starts_with("library.")
         || request.method.starts_with("operations.")
         || request.method == "handoff.open"
@@ -114,7 +116,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["settings.apply","settings.history","settings.restore_preview","settings.restore","settings.reconcile","settings.adapters","settings.preview","settings.get","workspace.operations.dashboard","workspace.feed.info","operations.reconcile", "operations.replan", "operations.diagnostics", "operations.diagnostics.export", "library.setups", "library.detach_setup", "library.remember_setup","operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["remixes.create","remixes.list","remixes.get","remixes.rename","remixes.export","remixes.import","settings.apply","settings.history","settings.restore_preview","settings.restore","settings.reconcile","settings.adapters","settings.preview","settings.get","workspace.operations.dashboard","workspace.feed.info","operations.reconcile", "operations.replan", "operations.diagnostics", "operations.diagnostics.export", "library.setups", "library.detach_setup", "library.remember_setup","operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.remix", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
@@ -298,6 +300,15 @@ fn local_request(runtime: &mut Runtime, method: &str, params: Value) -> platform
         return execution::system_handoff(&p.kind, runtime.demo);
     }
     let mut store = library::Store::open(runtime.demo)?;
+    if method.starts_with("remixes.") {
+        return remixes::request(
+            &store,
+            &runtime.catalogue.catalogue,
+            method,
+            params,
+            chrono::Utc::now().timestamp(),
+        );
+    }
     if method.starts_with("settings.") {
         return settings::request(&store, method, params, chrono::Utc::now().timestamp());
     }

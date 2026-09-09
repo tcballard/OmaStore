@@ -25,7 +25,7 @@ CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(dem
     m_timeout.setInterval(1000);
     connect(&m_timeout, &QTimer::timeout, this, [this] {
         for (const auto &pending : m_pending) {
-            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("settings.") || pending.method.startsWith("system.") || pending.method.startsWith("library.") || pending.method.startsWith("operations.") ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
+            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("remixes.") || pending.method.startsWith("settings.") || pending.method.startsWith("system.") || pending.method.startsWith("library.") || pending.method.startsWith("operations.") ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
         }
     });
     connect(&m_process, &QProcess::started, this, [this] { request("core.info"); });
@@ -55,7 +55,7 @@ void CoreBridge::start() {
 void CoreBridge::request(const QString &method, const QVariantMap &params) {
     if (m_process.state() != QProcess::Running || m_pending.size() >= 16) return;
     const QString id = QString::number(++m_sequence);
-    if (method.startsWith("settings.") || method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick" || method.startsWith("system.") || method.startsWith("library.") || method.startsWith("operations.") || method=="handoff.open") m_communityRequests[method]=id;
+    if (method.startsWith("remixes.") || method.startsWith("settings.") || method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick" || method.startsWith("system.") || method.startsWith("library.") || method.startsWith("operations.") || method=="handoff.open") m_communityRequests[method]=id;
     if (method == "candidate.prepare") m_candidateRequest = id;
     if (method == "apps.get") m_detailRequestId=id;
     m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor")});
@@ -97,7 +97,7 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         if(m_communityRequests.value(pending.method)==id) {
             m_community.insert(pending.method,QVariantMap{{"error",code}});emit communityChanged();
             m_error=code=="snapshot_changed"?"The catalogue changed. Reload the selection before continuing.":"This selection is unavailable or no longer matches the catalogue.";
-            if(pending.method.startsWith("settings.") || pending.method.startsWith("operations.") || pending.method.startsWith("library.")) m_error="Local operation unavailable: "+QString(code).replace('_',' ')+".";
+            if(pending.method.startsWith("remixes.") || pending.method.startsWith("settings.") || pending.method.startsWith("operations.") || pending.method.startsWith("library.")) m_error="Local operation unavailable: "+QString(code).replace('_',' ')+".";
             emit stateChanged();return;
         }
         if (code == "snapshot_changed" || code == "cursor_expired") { m_cursor.clear(); search(); }
@@ -178,7 +178,7 @@ void CoreBridge::fail(const QString &message) {
 }
 void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
 void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
-    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export","status.get","monitor.queue","monitor.sample","feed.export","feed.info","operations.dashboard"};
+    static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.remix","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export","status.get","monitor.queue","monitor.sample","feed.export","feed.info","operations.dashboard"};
     if (!m_ready || !actions.contains(action)) return;
     request("workspace."+action,params);
 }
@@ -234,8 +234,8 @@ bool CoreBridge::openLink(const QString &kind, int index) {
 bool CoreBridge::distributionCurrent() const {return !m_distribution.isEmpty() && m_distributionUntil>QDateTime::currentSecsSinceEpoch();}
 
 void CoreBridge::communityAction(const QString &method,const QVariantMap &params) {
-    static const QStringList methods{"settings.apply","settings.history","settings.restore_preview","settings.restore","settings.reconcile","settings.adapters","settings.preview","settings.get","makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan","library.list","library.refresh","library.launchers","library.launch","operations.get","operations.events","operations.status","operations.confirm","operations.cancel","operations.reconcile","operations.replan","operations.diagnostics","operations.diagnostics.export","library.setups","library.detach_setup","library.remember_setup","system.handoff","handoff.open"};
-    if(m_ready && methods.contains(method)) { if(method.startsWith("settings.") || method=="library.detach_setup" || method=="operations.diagnostics") m_community.remove(method); if(method=="system.plan" || method=="operations.get" || method=="operations.replan") { m_community.remove("system.plan"); emit communityChanged(); } request(method,params); }
+    static const QStringList methods{"remixes.create","remixes.list","remixes.get","remixes.rename","remixes.export","remixes.import","settings.apply","settings.history","settings.restore_preview","settings.restore","settings.reconcile","settings.adapters","settings.preview","settings.get","makers.list","makers.get","editorial.list","editorial.get","setups.list","setups.select","setups.export","setups.import","apps.pick","system.probe","system.plan","library.list","library.refresh","library.launchers","library.launch","operations.get","operations.events","operations.status","operations.confirm","operations.cancel","operations.reconcile","operations.replan","operations.diagnostics","operations.diagnostics.export","library.setups","library.detach_setup","library.remember_setup","system.handoff","handoff.open"};
+    if(m_ready && methods.contains(method)) { if(method.startsWith("remixes.") || method.startsWith("settings.") || method=="library.detach_setup" || method=="operations.diagnostics") m_community.remove(method); if(method=="system.plan" || method=="operations.get" || method=="operations.replan") { m_community.remove("system.plan"); emit communityChanged(); } request(method,params); }
 }
 bool CoreBridge::openMakerLink(const QString &kind) {
     if(kind!="homepage" && kind!="support") return false;

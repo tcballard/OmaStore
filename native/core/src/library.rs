@@ -84,7 +84,7 @@ impl Store {
         let connection = db(Connection::open(path))?;
         db(connection.busy_timeout(Duration::from_secs(3)))?;
         let schema: i64 = db(connection.query_row("PRAGMA user_version", [], |r| r.get(0)))?;
-        if schema > 4 {
+        if schema > 5 {
             return Err("local_schema_upgrade_required");
         }
         let has_meta: bool = db(connection.query_row(
@@ -126,6 +126,7 @@ impl Store {
         crate::lifecycle::migrate(&connection)?;
         crate::settings::migrate(&connection)?;
         crate::settings_apply::migrate(&connection)?;
+        crate::remixes::migrate(&connection)?;
         Ok(Self { connection, demo })
     }
     pub fn observe(&mut self, c: &Catalogue, h: &Host, now: i64) -> Result<()> {

@@ -193,6 +193,16 @@ int main(int argc, char *argv[]) {
                         core.communityAction("setups.import",{{"file",selectionFile}});
                         for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
                         check(core.community().value("setups.select").toMap().value("selected").toList().size()==2,"native selection identity round trip");
+                        pressSetup(findItem(window->contentItem(),"remixSetup"));for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        auto *saveRemix=findItem(window->contentItem(),"saveRemix");check(saveRemix&&saveRemix->isVisible(),"native selected remix editor");pressSetup(saveRemix);for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        const auto remix=core.community().value("remixes.create").toMap();const auto portable=remix.value("export").toMap();
+                        check(remix.value("ready").toBool()&&portable.value("parent").toMap().value("id").toString()=="demo-writing-desk"&&portable.value("settings").toList().isEmpty(),"local remix keeps attribution and only selected settings");
+                        const auto remixFile=QUrl::fromLocalFile(selectionDirectory.filePath("remix.json")).toString();core.communityAction("remixes.export",{{"id",portable.value("id")},{"digest",remix.value("digest")},{"file",remixFile}});for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        check(core.community().value("remixes.export").toMap().value("exported").toBool(),"reviewed portable remix export");
+                        core.communityAction("remixes.import",{{"file",remixFile}});for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        check(core.community().value("remixes.import").toMap().value("ready").toBool(),"local remix import recomputes current availability");
+                        pressSetup(findItem(window->contentItem(),"planRemix"));for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        check(core.community().value("system.plan").toMap().value("selection").toMap().value("kind").toString()=="apps","local remix enters typed installation planning");pressSetup(findItem(window->contentItem(),"closePlan"));QTest::qWait(50);
                         QTest::keyClick(window,Qt::Key_Escape);QTest::qWait(50);
                         check(window->property("setupSelection").toString().isEmpty(),"back from setup selection");
                     }
@@ -251,6 +261,10 @@ int main(int argc, char *argv[]) {
                         if (sampleSignIn) {sampleSignIn->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         for (int i=0;i<40 && core.loading();++i) QTest::qWait(50);
                         check(core.workspace().value("actor").toMap().value("id").toString()=="development:author","sample author sign-in");
+                        const auto remixForAuthor=core.community().value("remixes.create").toMap().value("export").toMap();
+                        core.workspaceAction("drafts.remix",{{"remix",remixForAuthor}});for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        check(!core.workspaceReply().value("id").toString().isEmpty()&&core.workspace().value("revisions").toList().isEmpty(),"remix creates a private author draft without submitting");
+
                         auto *newDraft=findItem(window->contentItem(),"newDraft");
                         if (newDraft) {newDraft->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         for (int i=0;i<60 && (core.loading() || !findItem(window->contentItem(),"field-apps-0-name"));++i) QTest::qWait(50);

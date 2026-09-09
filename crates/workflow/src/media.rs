@@ -557,6 +557,8 @@ mod setup_tests {
         candidate.recipes[0].id = "sample-setup".into();
         candidate.recipes[0].slug = "sample-setup".into();
         candidate.recipes[0].maker_id = "setup-author".into();
+        candidate.recipes[0].parent = Some(base.recipes[0].id.clone());
+        candidate.recipes[0].parent_revision = Some(base.recipes[0].revision.clone());
         let draft = s
             .command(
                 &author,
@@ -570,6 +572,23 @@ mod setup_tests {
             )
             .unwrap();
         let id = draft["id"].as_str().unwrap();
+        let mut forged = json!(candidate);
+        forged["recipes"][0]["parent"] = Value::Null;
+        assert_eq!(
+            s.command(
+                &author,
+                &nonce().unwrap(),
+                Command::SaveDraft {
+                    id: id.into(),
+                    version: 1,
+                    candidate: forged
+                },
+                now
+            )
+            .unwrap_err()
+            .code,
+            "remix_attribution_changed"
+        );
         let mut png = Cursor::new(Vec::new());
         image::DynamicImage::new_rgba8(4, 4)
             .write_to(&mut png, ImageFormat::Png)

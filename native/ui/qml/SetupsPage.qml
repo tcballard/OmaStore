@@ -6,6 +6,7 @@ import QtQuick.Dialogs
 ScrollView {
     id:page
     signal settingsRequested(var references)
+    signal remixRequested(var selection)
     required property var core
     required property var theme
     required property var mediaPreview
@@ -127,7 +128,7 @@ ScrollView {
                 Label {text:(page.selection.costs || {}).unknownItems>0 ? "Total remains unknown · "+page.selection.costs.unknownItems+" item(s) need a current quote." : ((page.selection.costs || {}).groups || []).length===0 ? "No required purchase amount in this selection." : "Amounts above are separate estimates.";Layout.fillWidth:true;wrapMode:Text.Wrap}
                 Label {text:(page.selection.costs || {}).notice || "";Layout.fillWidth:true;wrapMode:Text.Wrap;color:page.theme.muted}
                 Label {visible:(page.recipe.settings || []).length>0;text:"Setting references: "+(page.recipe.settings || []).map(s=>s.adapter+" = "+s.valueId).join(", ")+". This selection does not apply them.";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
-                Flow {Layout.fillWidth:true;spacing:8;Button {text:"Review desktop settings";enabled:page.current&&!page.core.loading;onClicked:page.settingsRequested(page.recipe.settings || [])} Button {text:"Check distribution status";enabled:!page.core.loading;onClicked:page.checkStatus()} Button {objectName:"previewSetupPlan";text:"Review installation plan";enabled:page.current&&page.selection.valid&&!page.core.loading;onClicked:page.core.communityAction("system.plan",{kind:"setup",id:page.recipe.id,revision:page.recipe.revision,chosen:page.selection.requested || []})} Button {objectName:"previewSetupExport";text:"Preview selection export";enabled:page.current && page.selection.valid && !page.core.loading;onClicked:exportPreview.open()} Button {visible:!!(page.selection.maker || {}).support;text:"Support the creator";onClicked:page.core.openSetupLink("support")}}
+                Flow {Layout.fillWidth:true;spacing:8;Button {objectName:"remixSetup";text:"Remix this selection";enabled:page.current&&page.selection.valid&&!page.core.loading;onClicked:page.remixRequested({id:page.recipe.id,revision:page.recipe.revision,chosen:page.selection.requested || []})} Button {text:"Review desktop settings";enabled:page.current&&!page.core.loading;onClicked:page.settingsRequested(page.recipe.settings || [])} Button {text:"Check distribution status";enabled:!page.core.loading;onClicked:page.checkStatus()} Button {objectName:"previewSetupPlan";text:"Review installation plan";enabled:page.current&&page.selection.valid&&!page.core.loading;onClicked:page.core.communityAction("system.plan",{kind:"setup",id:page.recipe.id,revision:page.recipe.revision,chosen:page.selection.requested || []})} Button {objectName:"previewSetupExport";text:"Preview selection export";enabled:page.current && page.selection.valid && !page.core.loading;onClicked:exportPreview.open()} Button {visible:!!(page.selection.maker || {}).support;text:"Support the creator";onClicked:page.core.openSetupLink("support")}}
             }
         }
     }

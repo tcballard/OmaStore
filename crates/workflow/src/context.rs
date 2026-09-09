@@ -67,6 +67,26 @@ pub(crate) fn prepare(
     let base = published(db)?;
     let mut app_ids = BTreeSet::new();
     for recipe in &c.recipes {
+        if let Some(parent) = &recipe.parent {
+            let original = base
+                .as_ref()
+                .and_then(|b| {
+                    b.recipes.iter().find(|r| {
+                        &r.id == parent && Some(&r.revision) == recipe.parent_revision.as_ref()
+                    })
+                })
+                .ok_or(Error::new(409, "parent_revision_unavailable"))?;
+            if recipe.rights != original.rights
+                || recipe.media.iter().any(|asset| {
+                    original
+                        .media
+                        .iter()
+                        .any(|old| old.sha256 == asset.sha256 && old.rights != asset.rights)
+                })
+            {
+                return Err(Error::new(422, "remix_attribution_changed"));
+            }
+        }
         for part in &recipe.components {
             app_ids.insert(part.app_id.clone());
         }

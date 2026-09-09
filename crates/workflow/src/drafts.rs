@@ -256,6 +256,25 @@ fn execute(t: &Transaction<'_>, actor: &Actor, command: Command, now: i64) -> Re
             candidate,
         } => {
             owned_version(t, actor, &id, version)?;
+            let old: String =
+                t.query_row("SELECT candidate FROM drafts WHERE id=?1", [&id], |r| {
+                    r.get(0)
+                })?;
+            let old: Value = serde_json::from_str(&old)?;
+            let parent = &old["recipes"][0];
+            if parent["parent"]
+                .as_str()
+                .is_some_and(omastore_catalogue::token)
+                && parent["parentRevision"]
+                    .as_str()
+                    .is_some_and(omastore_catalogue::token)
+                && !parent["rights"].as_str().unwrap_or("").is_empty()
+                && ["parent", "parentRevision", "rights"]
+                    .iter()
+                    .any(|key| candidate["recipes"][0][*key] != parent[*key])
+            {
+                return Err(Error::new(422, "remix_attribution_changed"));
+            }
             let candidate = bounded_candidate(candidate)?;
             t.execute("UPDATE drafts SET candidate=?2,version=version+1,updated_at=?3,expiry_notice_at=NULL WHERE id=?1",params![id,candidate,now])?;
             audit(

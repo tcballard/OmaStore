@@ -255,14 +255,18 @@ impl Client {
                 candidate["apps"][0]["name"] = json!("Fieldnotes · sample submission");
                 self.command(json!({"command":"create_draft","kind":"app","candidate":candidate,"base_revision":null}))?
             }
-            "drafts.new" => {
+            "drafts.new" | "drafts.remix" => {
                 let raw = include_str!("../../../crates/workflow/templates/app.json")
                     .replace("APP_ID", &format!("app-{}", &nonce()?[..12]))
                     .replace("MAKER_ID", &format!("maker-{}", &nonce()?[..12]));
                 let mut candidate: Value = serde_json::from_str(&raw)?;
                 candidate["generatedAt"] =
                     json!(chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
-                let kind = params["kind"].as_str().unwrap_or("app");
+                let kind = if method == "drafts.remix" {
+                    "setup"
+                } else {
+                    params["kind"].as_str().unwrap_or("app")
+                };
                 if kind == "editorial" {
                     candidate["apps"] = json!([]);
                     candidate["stories"] = json!([{"id":format!("story-{}",&nonce()?[..12]),"revision":"r1","kind":"story","title":"","summary":"","body":"","authorMakerId":candidate["makers"][0]["id"],"appIds":[],"publishAt":candidate["generatedAt"],"endAt":null,"rights":""}]);
@@ -271,6 +275,22 @@ impl Client {
                     candidate["recipes"] = json!([{"id":format!("setup-{}",&nonce()?[..12]),"slug":"","name":"","summary":"","description":"","revision":"1","makerId":candidate["makers"][0]["id"],"parent":null,"parentRevision":null,"rights":"","components":[],"media":[],"settings":[]}]);
                 } else if kind != "app" {
                     return Err(Error::new(422, "invalid_draft_kind"));
+                }
+                if method == "drafts.remix" {
+                    #[derive(serde::Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Import {
+                        remix: omastore_catalogue::remix::Remix,
+                    }
+                    let imported: Import = serde_json::from_value(params.clone())?;
+                    omastore_catalogue::remix::validate(&imported.remix, self.demo)
+                        .map_err(|_| Error::new(422, "invalid_recipe_remix"))?;
+                    candidate["recipes"] = json!([omastore_catalogue::remix::as_recipe(
+                        &imported.remix,
+                        candidate["recipes"][0]["id"].as_str().unwrap(),
+                        candidate["makers"][0]["id"].as_str().unwrap()
+                    )
+                    .map_err(|_| Error::new(422, "invalid_recipe_remix"))?]);
                 }
                 self.command(json!({"command":"create_draft","kind":kind,"candidate":candidate,"base_revision":null}))?
             }

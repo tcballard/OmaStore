@@ -7,8 +7,17 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AppReference {
+    pub app_id: String,
+    pub release_id: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Selection {
+    Apps {
+        components: Vec<AppReference>,
+    },
     App {
         id: String,
     },
@@ -24,6 +33,31 @@ pub enum Selection {
 impl Selection {
     pub fn ids(&self, c: &Catalogue, now: i64) -> Result<Vec<String>> {
         match self {
+            Self::Apps { components } => {
+                if components.is_empty()
+                    || components.len() > 100
+                    || components
+                        .iter()
+                        .map(|p| &p.app_id)
+                        .collect::<BTreeSet<_>>()
+                        .len()
+                        != components.len()
+                {
+                    return Err("invalid_selection");
+                }
+                for part in components {
+                    if !omastore_catalogue::token(&part.app_id)
+                        || !omastore_catalogue::token(&part.release_id)
+                        || !c
+                            .apps
+                            .iter()
+                            .any(|a| a.id == part.app_id && a.current_release_id == part.release_id)
+                    {
+                        return Err("selected_release_changed");
+                    }
+                }
+                Ok(components.iter().map(|p| p.app_id.clone()).collect())
+            }
             Self::App { id } if omastore_catalogue::token(id) => {
                 if !c.apps.iter().any(|a| a.id == *id) {
                     return Err("not_found");
@@ -362,6 +396,35 @@ mod tests {
     use super::*;
     fn fixture() -> Catalogue {
         serde_json::from_str(include_str!("../../../tests/fixtures/catalogue.json")).unwrap()
+    }
+    #[test]
+    fn local_recipe_selection_keeps_exact_releases_and_rejects_duplicates() {
+        let c: Catalogue =
+            serde_json::from_str(include_str!("../../../tests/fixtures/catalogue.json")).unwrap();
+        let reference = AppReference {
+            app_id: c.apps[0].id.clone(),
+            release_id: c.apps[0].current_release_id.clone(),
+        };
+        assert_eq!(
+            Selection::Apps {
+                components: vec![reference.clone()]
+            }
+            .ids(&c, 1000)
+            .unwrap(),
+            vec![reference.app_id.clone()]
+        );
+        assert!(Selection::Apps {
+            components: vec![reference.clone(), reference.clone()]
+        }
+        .ids(&c, 1000)
+        .is_err());
+        let mut changed = reference;
+        changed.release_id = "unavailable-release".into();
+        assert!(Selection::Apps {
+            components: vec![changed]
+        }
+        .ids(&c, 1000)
+        .is_err());
     }
     #[test]
     fn exact_plans_are_deterministic_and_invalidate_changed_trust() {

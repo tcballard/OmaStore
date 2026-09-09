@@ -24,8 +24,8 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B16 | Pilot operations and release readiness | B09, B10, B11, B15 | software implemented; advisory audit clear and isolated-video integration passed; actual pilot evidence remains external |
 | B17 | Supported settings schema and diffs | B11, B15, B16 | implemented_unverified; typed diffs and native keyboard checks pass; live adapters remain disabled pending actual Omarchy evidence |
 | B18 | Setting apply, conflict and restore | B17 | implemented_unverified; 67 Rust and nine native checks pass; live customised-desktop evidence remains external |
-| B19 | Recipe remix and private-data-safe export | B18 | not_started |
-| B20 | Commerce operating model and disabled integration | B16 | not_started |
+| B19 | Recipe remix and private-data-safe export | B18 | implemented_unverified; 70 Rust and nine native checks pass; real Omarchy portal/author evidence remains external |
+| B20 | Commerce operating model and disabled integration | B16 | in_progress; facts and provider gate remain external; software integration continues |
 | B21 | Checkout, delivery and entitlements | B20 | not_started |
 | B22 | Refunds, disputes, payouts and commerce readiness | B21 | not_started |
 

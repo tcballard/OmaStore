@@ -15,7 +15,11 @@ use std::{
 };
 
 pub fn migrate(c: &rusqlite::Connection) -> Result<()> {
-    db(c.execute_batch("CREATE TABLE IF NOT EXISTS setting_steps(plan_id TEXT NOT NULL REFERENCES settings_plans(id),position INTEGER NOT NULL,state TEXT NOT NULL,before_json TEXT NOT NULL,after_json TEXT NOT NULL,code TEXT NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(plan_id,position)); CREATE TABLE IF NOT EXISTS setting_events(sequence INTEGER PRIMARY KEY,plan_id TEXT NOT NULL,position INTEGER NOT NULL,state TEXT NOT NULL,code TEXT NOT NULL,at INTEGER NOT NULL); PRAGMA user_version=4;"))?;
+    db(c.execute_batch("CREATE TABLE IF NOT EXISTS setting_steps(plan_id TEXT NOT NULL REFERENCES settings_plans(id),position INTEGER NOT NULL,state TEXT NOT NULL,before_json TEXT NOT NULL,after_json TEXT NOT NULL,code TEXT NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(plan_id,position)); CREATE TABLE IF NOT EXISTS setting_events(sequence INTEGER PRIMARY KEY,plan_id TEXT NOT NULL,position INTEGER NOT NULL,state TEXT NOT NULL,code TEXT NOT NULL,at INTEGER NOT NULL);"))?;
+    let v: i64 = db(c.query_row("PRAGMA user_version", [], |r| r.get(0)))?;
+    if v < 4 {
+        db(c.execute_batch("PRAGMA user_version=4;"))?;
+    }
     Ok(())
 }
 fn lock(store: &Store) -> Result<File> {

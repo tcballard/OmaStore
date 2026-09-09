@@ -9,6 +9,7 @@ pub mod editorial;
 pub mod http;
 pub mod preparation;
 pub mod query;
+pub mod remix;
 pub mod settings;
 pub mod setups;
 
