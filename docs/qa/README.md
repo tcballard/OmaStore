@@ -13,3 +13,5 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/omastore --scree
 ```
 
 The capture/interaction switches are available only with BUILD_TESTING enabled. The release packaging configuration excludes the test harness. These images establish rendered layout in the recorded environment; real Omarchy theme/tiling/portal behaviour and final visual taste still need review.
+
+The native interaction harness now also exercises actual keyboard purchase consent, paid/failed delivery recovery, signed licence export and offline verification, partial refund request/operator approval, exact fee reversal, author balances, a failed provider payout and a reviewed private dispute-packet export. Settings/remix/lifecycle and author/review flows remain in the same four-size/scale checks. These are fictional/offscreen integration receipts; they do not establish real money, actual Omarchy package/settings effects, final portals or accessibility acceptance.

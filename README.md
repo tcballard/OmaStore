@@ -2,9 +2,9 @@
 
 A native community application storefront for Omarchy. Discover useful software, understand what it needs and support the people who make it.
 
-OmaStore runs in its own Qt Quick window with a Rust core. The current preview includes search, app and maker pages, editorial stories, release feeds, selective setups, evidence labels, cached browsing and a local library. It can review exact package plans, rehearse independent installation/removal workers, reconcile interruptions and preview diagnostic exports. The native author workspace supports private drafts, media, exact previews, independent review and publication recovery. Desktop colour scheme and text scaling follow the settings portal.
+OmaStore runs in its own Qt Quick window with a Rust core. The current preview includes search, app and maker pages, editorial stories, release feeds, selective setups, evidence labels, cached browsing and a local library. It can review exact package plans, rehearse independent installation/removal workers, reconcile interruptions and preview diagnostic exports. The native author workspace supports private drafts, media, exact previews, independent review and publication recovery. Selective settings have explicit diffs, consent and conflict-aware restore; local remixes retain attribution. Purchases support durable receipts, offline perpetual licences, subscription cycles, cancellations and refunds, with separate author finance and operator support records. Desktop colour scheme and text scaling follow the settings portal.
 
-**Development preview.** The public catalogue is empty until genuine listings are reviewed. A separate demo build contains six explicitly fictional listings for exercising the interface. The demo also supports fictional author/reviewer/operator sessions and a local publication rehearsal. Real provider integration and Omarchy desktop evidence remain release gates; live package writes remain disabled until actual Omarchy lifecycle evidence is recorded. Settings and commerce are the next bundles.
+**Development preview.** The public catalogue is empty until genuine listings are reviewed. A separate demo build contains six explicitly fictional listings for exercising the interface. The demo also supports fictional author/reviewer/operator sessions and a local publication rehearsal. Real provider integration and Omarchy desktop evidence remain release gates; live package writes remain disabled until actual Omarchy lifecycle evidence is recorded. Selective settings/remixes and the full fictional commerce lifecycle are implemented. Live setting adapters and real payments remain separately gated.
 
 ![Actual native preview showing explicitly fictional development listings](docs/qa/native-discovery.png)
 
@@ -30,6 +30,8 @@ Both executables, `omastore` and `omastore-core`, must stay together. No browser
 
 `Ctrl+K` or `Ctrl+F` focuses search, `Alt+Left`/`Escape` leaves app detail, `Ctrl+R` refreshes and `Ctrl+Q` quits. App cards and actions support keyboard focus/Space activation. Filters and saved items persist locally; sample mode uses separate preferences.
 
+See [the native playground walkthrough](docs/PLAYGROUND.md) for discovery, setups, settings, submissions, purchases, refunds and provider scenarios.
+
 ## Prepare a listing
 
 Open **Submit → Author workspace** for private versioned drafts, media uploads, exact preview and independent review. The demo provides fictional sessions to exercise this flow locally. Configure the optional service for real accounts; see [author service](docs/AUTHOR_SERVICE.md), [review operations](docs/REVIEW_OPERATIONS.md) and [publication](docs/PUBLICATION.md).
@@ -52,7 +54,7 @@ Checks cover catalogue/price/evidence contracts, cache preservation, actual Rust
 
 The optional read service can be run with `./build/bin/omastore-service data/registry.json 127.0.0.1:8080`. Without a private database it serves public catalogue reads. Add the documented workspace/provider configuration for authenticated workflows, release feeds and operational status. Remote deployment needs an operator-managed HTTPS proxy. See [API and cache contracts](docs/API.md).
 
-## Continue the build
+## Product and implementation
 
 - [Product specification](docs/PRODUCT_SPEC.md): complete native product and monetisation contracts.
 - [Bundle status](docs/BUNDLE_STATUS.md) and [build handoff](docs/BUILD_HANDOFF.md): implemented work, validation and remaining gates.
@@ -60,7 +62,8 @@ The optional read service can be run with `./build/bin/omastore-service data/reg
 - [Native conventions and delivery decisions](docs/adr/0002-native-discovery.md), grounded in pinned Omawrite/Omacalc sources.
 - [Local author preparation](docs/adr/0003-local-author-preparation.md): scope and the boundary with future authenticated submissions.
 - [Contributing](CONTRIBUTING.md) and [submissions](SUBMISSION.md).
+- [Standalone note to DHH](docs/DHH_NOTE.md), prepared for Tom and unsent.
 
-B04–B15 implement the private author/reviewer flow, publication, monitoring, makers, editorial, setups and the native installation lifecycle. B16 adds operations and readiness. Continue with B17–B22 settings, remixing and optional commerce. The sample playground runs now; live release gates remain explicit in the handoff.
+The scoped software bundles B00–B22 are implemented, including operations/readiness, selective settings, attributed remixes and optional managed commerce. The playground runs locally. Real Omarchy, publisher/pilot and payment-provider evidence remain release gates; the handoff records the exact checks and limits.
 
 Independent community project. No official Omarchy endorsement is implied. Project code is MIT licensed; Qt, upstream applications and media retain their own licences.

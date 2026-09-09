@@ -29,6 +29,7 @@ Dialog {
  Connections {target:dialog.core;function onWorkspaceChanged(){
   const buyer=(dialog.core.workspace.actor || {}).id || "";
   if(!dialog.signedIn || buyer!==dialog.previousBuyer){dialog.previousBuyer=buyer;dialog.seen=({});dialog.orders=[];dialog.attempts=[];dialog.preview=({});dialog.order=({});dialog.recovery=({});}
+  if(!dialog.visible)return;
   const r=dialog.core.workspaceReply;if(!r.action||r.action.indexOf("commerce.")!==0)return;
   if(dialog.seen[r.action]===JSON.stringify(r))return;dialog.seen[r.action]=JSON.stringify(r);
   if(r.error){dialog.notice=r.error.replace(/_/g," ");return;}
@@ -73,12 +74,13 @@ Dialog {
    Flow {Layout.fillWidth:true;spacing:8
     Button {visible:!!dialog.order.checkoutUrl;text:"Open secure provider checkout ↗";onClicked:Qt.openUrlExternally(dialog.order.checkoutUrl)}
     Button {text:"Check payment";enabled:!core.loading;onClicked:core.workspaceAction("commerce.reconcile",{id:dialog.order.id})}
-    Button {objectName:"retryPurchaseDelivery";visible:dialog.order.paymentState==="paid"&&dialog.order.deliveryState!=="delivered";text:"Retry delivery";enabled:!core.loading;onClicked:core.workspaceAction("commerce.retry",{id:dialog.order.id})}
+    Button {objectName:"retryPurchaseDelivery";visible:dialog.order.paymentState==="paid"&&dialog.order.deliveryState!=="delivered"&&!dialog.order.fullyRefunded;text:"Retry delivery";enabled:!core.loading;onClicked:core.workspaceAction("commerce.retry",{id:dialog.order.id})}
     Button {visible:!!dialog.order.grant;text:"Recover hosted access/download";enabled:!core.loading;onClicked:core.workspaceAction("commerce.recover",{id:dialog.order.id})}
     Button {text:"Contact seller support ↗";onClicked:Qt.openUrlExternally(dialog.order.price.supportUrl)}
    }
    CheckBox {id:failDelivery;objectName:"sampleDeliveryFailure";visible:dialog.sample&&dialog.order.paymentState!=="paid";text:"Rehearse a paid order with failed delivery";Layout.fillWidth:true}
    Button {objectName:"sampleCapture";visible:dialog.sample&&dialog.order.paymentState!=="paid";text:"Simulate successful payment";enabled:!core.loading;onClicked:core.workspaceAction("commerce.sample.capture",{id:dialog.order.id,failDelivery:failDelivery.checked})}
+   RefundsPanel {core:dialog.core;theme:dialog.theme;order:dialog.order;visible:dialog.order.paymentState==="paid";Layout.fillWidth:true}
    TextArea {objectName:"licenceDocument";visible:!!dialog.order.licenceDocument;text:dialog.order.licenceDocument || "";readOnly:true;selectByMouse:true;wrapMode:TextEdit.Wrap;Layout.fillWidth:true;Layout.maximumHeight:220;textFormat:TextEdit.PlainText;Accessible.name:"Exact signed licence for export"}
    Button {objectName:"saveLicence";visible:!!dialog.order.licenceDigest;text:"Save signed licence";enabled:!core.loading;onClicked:saveLicence.open()}
    Label {visible:!!dialog.order.grant;text:"A perpetual licence can be verified offline with a trusted issuer key. Open-source rights remain independent. A signature records issuance; later refunds and service status have their own records.";Layout.fillWidth:true;wrapMode:Text.Wrap}

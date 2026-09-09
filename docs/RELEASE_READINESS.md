@@ -15,9 +15,9 @@ This is a development build and an implementation handoff, not a public launch s
 | Backup and restore | Populated SQLite and digest-addressed media restoration tested, including published visibility, environment isolation and tamper rejection; deployment restore pending |
 | Failed delivery, held and stale routes | Source publication/delivery/suspension/stale-status fixtures tested; deployed cycle pending |
 | Named operators, independent reviewers and support | Role enforcement and private reporting implemented; actual staffing and support ownership pending |
-| Dependency and credential review | Source/credential format scan and build checks performed; dated dependency advisory result recorded in BUILD_HANDOFF.md when available |
+| Dependency and credential review | 9 September 2026 source scan: zero credential-format findings; cargo-audit: zero vulnerabilities and warnings for the recorded lockfile/advisory revision |
 | Real money | Disabled; operator/provider/terms, requested author adoption and complete provider sandbox lifecycle are still required |
 
 For each real exercise record: exact Git/binary SHA, Omarchy version and package revision, hardware/architecture, activity timestamp, selected public app/setup identity, starting state, observed steps and outcomes, screenshots, failures, exclusions and verifier. Do not include participant credentials or unrelated device inventory. Store private participant observations outside the public catalogue; publish only consented aggregate evidence.
 
-Pilot recruitment and real desktop/provider access are external evidence dependencies. Finish implementable software through B22 while keeping the corresponding live gates closed.
+The software through B22 is implemented. Pilot recruitment and real desktop/provider access remain external evidence dependencies, and the corresponding live gates stay closed. The native walkthrough is in PLAYGROUND.md; the latest local and CI receipts are in BUILD_HANDOFF.md.

@@ -83,6 +83,38 @@ impl Client {
         )
     }
     pub(super) fn commerce_action(&mut self, method: &str, p: &Value) -> Result<Value> {
+        if method == "commerce.packet.export" {
+            let id = p["id"]
+                .as_str()
+                .filter(|s| omastore_workflow::commerce_model::provider_id(s, "du_"))
+                .ok_or(Error::new(422, "invalid_fields"))?;
+            let v =
+                self.commerce_remote("lifecycle", &json!({"action":"dispute_packet","id":id}), "")?;
+            if v["digest"] != p["digest"] {
+                return Err(Error::new(409, "evidence_preview_changed"));
+            }
+            export(p, &serde_json::to_vec_pretty(&v["packet"])?)?;
+            return Ok(json!({"exported":true}));
+        }
+        if method == "commerce.lifecycle" {
+            let action: omastore_workflow::commerce_actions::Action =
+                serde_json::from_value(p.clone())?;
+            let canonical = serde_json::to_value(action)?;
+            // An identical refund intent reuses its retained key across restarts/lost replies.
+            let key = if canonical["action"] == "request_refund" {
+                format!(
+                    "refund-{}",
+                    digest(serde_json::to_vec(
+                        &json!({"owner":self.purchase_owner()?,"intent":canonical})
+                    )?)
+                )
+            } else {
+                String::new()
+            };
+            let mut result = self.commerce_remote("lifecycle", &canonical, &key)?;
+            result["operation"] = canonical["action"].clone();
+            return Ok(result);
+        }
         if method == "commerce.pending" {
             return Ok(
                 json!({"items":self.attempts()?.iter().map(|a|json!({"id":a.id,"price":a.price,"createdAt":a.created_at,"orderId":a.order_id})).collect::<Vec<_>>()}),
@@ -209,6 +241,13 @@ impl Client {
             let issuer = omastore_workflow::commerce_license::sample_issuer()?;
             let fulfilment = omastore_workflow::commerce_delivery::SampleFulfilment(store.clone());
             return match action {
+                "lifecycle" => runtime.block_on(store.commerce_lifecycle_action(
+                    &a,
+                    key,
+                    serde_json::from_value(p.clone())?,
+                    &provider,
+                    now,
+                )),
                 "author" => store.commerce_author(&a),
                 "orders" => store.commerce_orders(&a, p["before"].as_i64().unwrap_or(0)),
                 "order" => store.commerce_order(&a, record_id(p)?),
@@ -254,6 +293,7 @@ impl Client {
             };
         }
         let (method, path) = match action {
+            "lifecycle" => ("POST", "/api/v1/commerce/lifecycle".into()),
             "prices" => {
                 let mut path = "/api/v1/commerce/prices".to_string();
                 if let Some(id) = p["appId"].as_str() {

@@ -361,8 +361,35 @@ int main(int argc, char *argv[]) {
                         check(QFileInfo::exists(licencePath),"actual private licence export");
                         core.workspaceAction("commerce.licence.verify",{{"file",QUrl::fromLocalFile(licencePath).toString()}});for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
                         check(core.workspaceReply().value("verifiedOffline").toBool(),"native offline verification uses the pinned sample issuer");
+                        auto *refundPanel=purchases?purchases->findChild<QQuickItem*>("refundsPanel"):nullptr;
+                        check(refundPanel&&refundPanel->isVisible(),"native paid receipt exposes refund controls");
+                        if(refundPanel){
+                            auto *amount=findItem(refundPanel,"refundAmount");if(amount){amount->forceActiveFocus();for(const auto character:QByteArray("2.00"))QTest::keyClick(window,character);}
+                            auto *reason=findItem(refundPanel,"refundReason");if(reason){reason->forceActiveFocus();for(const auto character:QByteArray("Fictional partial refund"))QTest::keyClick(window,character);}
+                            press(findItem(refundPanel,"refundConsent"));press(findItem(refundPanel,"requestRefund"));for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
+                            const auto refunds=refundPanel->property("report").toMap().value("items").toList();check(refunds.size()==1,"native refund request retains one intent");
+                            if(!refunds.isEmpty()){press(findItem(refundPanel,"approveRefundConsent"));press(findItem(refundPanel,"executeRefund-"+refunds.first().toMap().value("id").toString()));for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
+                                const auto report=refundPanel->property("report").toMap();check(report.value("refunded").toInt()==200,"native operator approval reconciles exact partial refund");
+                                const auto items=report.value("items").toList();check(!items.isEmpty()&&items.first().toMap().value("feeAmount").toInt()==8&&items.first().toMap().value("feeState").toString()=="succeeded","native refund reports separate exact fee reversal");}
+                        }
                         press(findItem(window->contentItem(),"closePurchases"));
                         press(findItem(window->contentItem(),"navSubmit"));for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
+                        press(findItem(window->contentItem(),"commerceWorkspaceTab"));
+                        press(findItem(window->contentItem(),"loadFinanceSellers"));for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
+                        press(findItem(window->contentItem(),"reconcileFinances"));for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
+                        auto *finances=window->findChild<QQuickItem*>("financesPanel");auto financeReport=finances?finances->property("report").toMap():QVariantMap{};
+                        check(financeReport.value("providerFeesPending").toInt()==0&&!financeReport.value("currencies").toList().isEmpty(),"native author finance report reconciles provider costs");
+                        auto *orderRef=findItem(window->contentItem(),"financeOrderReference");if(orderRef){orderRef->forceActiveFocus();for(const auto character:purchaseOrder.value("id").toString().toLatin1())QTest::keyClick(window,character);}
+                        auto *financeScenario=findItem(window->contentItem(),"financeScenario");if(financeScenario){financeScenario->forceActiveFocus();QTest::keyClick(window,Qt::Key_Home);QTest::keyClick(window,Qt::Key_Down);}
+                        press(findItem(window->contentItem(),"simulateFinance"));for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
+                        financeReport=finances?finances->property("report").toMap():QVariantMap{};const auto payouts=financeReport.value("payouts").toList();check(!payouts.isEmpty()&&payouts.first().toMap().value("state").toString()=="failed","native report retains failed provider payout");
+                        if(financeScenario){financeScenario->forceActiveFocus();QTest::keyClick(window,Qt::Key_Home);for(int i=0;i<3;++i)QTest::keyClick(window,Qt::Key_Down);}
+                        press(findItem(window->contentItem(),"simulateFinance"));for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
+                        press(findItem(window->contentItem(),"previewFinancePacket"));for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
+                        const auto packet=finances?finances->property("packet").toMap():QVariantMap{};check(!packet.value("digest").toString().isEmpty(),"native operator previews private dispute packet");
+                        const auto packetPath=licenceDirectory.filePath("dispute.json");const auto dispute=packet.value("packet").toMap().value("dispute").toMap();
+                        core.workspaceAction("commerce.packet.export",{{"id",dispute.value("id")},{"digest",packet.value("digest")},{"file",QUrl::fromLocalFile(packetPath).toString()}});for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);check(QFileInfo::exists(packetPath),"actual reviewed private dispute packet export");
+
                         core.refresh();
                         for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
 

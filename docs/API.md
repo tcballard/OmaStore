@@ -36,3 +36,23 @@ B20 adds `workspace.commerce.status` and `GET /api/v1/commerce/status`, plus ope
 B21 commerce routes: `GET /api/v1/commerce/prices?appId=…`, authenticated `GET /api/v1/commerce/author`, `GET /api/v1/commerce/orders?before=…`, `GET /api/v1/commerce/orders/{id}`, and `POST /api/v1/commerce/orders` with retained `Idempotency-Key` plus strict `{priceId,version,digest,accepted}`. Clients cannot supply payable amounts, account or currency. Order suffixes `reconcile`, `retry`, `recover` accept authenticated POST; `support` is operator-only GET. `POST /api/v1/commerce/webhook` verifies untouched raw bytes, signature time, test mode and API version before provider reconciliation. `/api/v1/commerce/return` is informational only. The isolated sandbox additionally offers `sample-capture` with `{failDelivery}`.
 
 Native methods: `workspace.commerce.author`, `commerce.prices`, `commerce.prepare {priceId}`, `commerce.purchase {id,accepted}`, `commerce.pending`, `commerce.resume {id}`, `commerce.orders {before}`, `commerce.order {id}`, `commerce.reconcile`, `commerce.retry`, `commerce.recover`, and `commerce.support`. `commerce.licence.export {id,digest,file}` exports only the previewed grant; `commerce.licence.verify {file}` works locally against pinned issuer keys. The local attempt ID retains a private request key scoped to account and configured service origin. Operator command `commerce_seller {seller}` records a reviewed seller agreement; author commands `commerce_price {price}` and `commerce_withdraw {id}` require current commercial/listing authority.
+
+B22 adds authenticated `POST /api/v1/commerce/lifecycle`, also available through the native `workspace.commerce.lifecycle` method. Its strict tagged `action` has these shapes:
+
+| Action | Fields | Authority/effect |
+| --- | --- | --- |
+| `sellers` | None | Current actor's sellers; operators see all |
+| `finances` | `seller_id, refresh, cursor` | Seller/operator report; optional provider reconciliation |
+| `refunds` | `id` (order) | Buyer/operator refund history |
+| `request_refund` | `request: {orderId, amount, expectedRefunded, reason, accepted}` | Retained `Idempotency-Key`; request only |
+| `execute_refund` / `reject_refund` | `id` (refund); rejection also `reason` | Current operator approval/rejection |
+| `poll_refund` | `id` (refund) | Buyer/operator observes an attempted effect and its fee reversal |
+| `subscription` | `id` (root/cycle order), `refresh` | Buyer/operator paid periods and provider observations |
+| `cancel_subscription` | `id, accepted` | Buyer/operator explicit future-billing cancellation |
+| `dispute` | `seller_id, id` | Retrieve provider dispute; author/operator |
+| `dispute_packet` | `id` | Private operator preview with SHA-256 |
+| `invoice_issues` / `retry_invoice` | `seller_id`; retry also `id` | Operator unresolved paid-invoice records/reconciliation |
+| `support` | `id` (order), `note` (nullable) | Operator history or append-only support note |
+| `sample_scenario` | `id` (order), `scenario` | Current operator, bound fictional provider only |
+
+All money is integer minor units and currency-specific. No route initiates a bank payout, changes discovery ranking or grants publication authority. Native refund intents derive a stable private owner/origin/request key; retrying an identical request recovers it. To submit a materially different request after rejection, change the stated reason/intent. `workspace.commerce.packet.export {id,digest,file}` rechecks current operator access and the exact reviewed packet before a private local export. Existing operator commands also accept `commerce_reserve {reserve}` and `commerce_evidence {evidence}`; each is bounded, audited and role-rechecked.

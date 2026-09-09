@@ -171,6 +171,38 @@ impl Client {
                 "immutable_price_identity" => "immutable_price_identity",
                 "commerce_database_provider_mismatch" => "commerce_database_provider_mismatch",
 
+                "seller_identity_frozen" => "seller_identity_frozen",
+                "refund_unavailable" => "refund_unavailable",
+                "invalid_refund_request" => "invalid_refund_request",
+                "refund_preview_changed" => "refund_preview_changed",
+                "refund_already_in_progress" => "refund_already_in_progress",
+                "refund_in_progress" => "refund_in_progress",
+                "refund_requires_provider_reconciliation" => {
+                    "refund_requires_provider_reconciliation"
+                }
+                "fee_refund_requires_reconciliation" => "fee_refund_requires_reconciliation",
+                "refund_provider_mismatch" => "refund_provider_mismatch",
+                "refunded_order_requires_support" => "refunded_order_requires_support",
+                "subscription_period_elapsed" => "subscription_period_elapsed",
+                "subscription_period_not_started" => "subscription_period_not_started",
+                "cancellation_consent_required" => "cancellation_consent_required",
+                "subscription_cancel_unconfirmed" => "subscription_cancel_unconfirmed",
+                "cancellation_in_progress" => "cancellation_in_progress",
+                "renewal_invoice_mismatch" => "renewal_invoice_mismatch",
+                "renewal_invoice_changed" => "renewal_invoice_changed",
+                "renewal_period_overlap" => "renewal_period_overlap",
+                "financial_reconciliation_incomplete" => "financial_reconciliation_incomplete",
+                "sample_subscription_canceled" => "sample_subscription_canceled",
+                "provider_refund_exceeds_payment" => "provider_refund_exceeds_payment",
+                "evidence_preview_changed" => "evidence_preview_changed",
+                "invalid_reserve_record" => "invalid_reserve_record",
+                "reserve_preview_changed" => "reserve_preview_changed",
+                "seller_unavailable" => "seller_unavailable",
+                "dispute_unavailable" => "dispute_unavailable",
+                "provider_costs_mismatch" => "provider_costs_mismatch",
+                "settlement_currency_requires_review" => "settlement_currency_requires_review",
+                "fee_refund_in_progress" => "fee_refund_in_progress",
+                "idempotency_key_conflict" => "idempotency_key_conflict",
                 "invalid_release_evidence" => "invalid_release_evidence",
                 "new_publisher_intake_paused" => "new_publisher_intake_paused",
                 _ => "workspace_request_failed",
@@ -345,7 +377,9 @@ impl Client {
                 )?;
                 store.sample_runtime(&actor, record_id(&params)?, omastore_workflow::now())?
             }
-            "commerce.author"
+            "commerce.lifecycle"
+            | "commerce.packet.export"
+            | "commerce.author"
             | "commerce.prices"
             | "commerce.prepare"
             | "commerce.purchase"

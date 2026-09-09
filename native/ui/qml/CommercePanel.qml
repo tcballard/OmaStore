@@ -33,5 +33,6 @@ ColumnLayout {
  Button {objectName:"commercePause";visible:panel.operator;text:panel.report.newPurchasesPaused?"Allow test purchases":"Pause new purchases";enabled:pauseReason.text.length>0&&!core.loading;onClicked:core.workspaceAction("command",{command:"commerce_pause",paused:!panel.report.newPurchasesPaused,reason:pauseReason.text})}
  Label {text:"Pausing purchases preserves receipt recovery, delivery retries, refunds and reconciliation. Free software and open-source rights remain independent.";Layout.fillWidth:true;wrapMode:Text.Wrap}
  CommerceOffersPanel {core:panel.core;theme:panel.theme}
+ FinancesPanel {core:panel.core;theme:panel.theme}
 
 }

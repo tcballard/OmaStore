@@ -1,5 +1,11 @@
 # Build handoff
 
+B22c completes the native refund, subscription/cancellation, author finance, operator support/reserve/evidence and private packet-export flows. The exact retained refund intent survives lost client replies. All 88 Rust tests pass; both final Clippy modes are clean. Nine native checks pass in 36.72 seconds, including actual keyboard partial refund/approval, GBP 0.08 fee reversal, provider-cost reconciliation, failed payout reporting, dispute preview and actual private packet export at four sizes/scales. Testing caught a provider dispute ID incorrectly passed through the internal order-ID validator; the corrected provider-ID check passed the entire suite. Local D-Bus remains skipped. Final dependency audit and source credential-format scan report zero findings for the unchanged recorded lockfile.
+
+All implementable B00–B22 software is now present. PLAYGROUND.md is the concrete native walkthrough. DHH_NOTE.md is a standalone, unsent message grounded in this implementation. README, API, commerce responsibilities and release/readiness documentation now reflect the full build. Actual Omarchy desktop/lifecycle, publisher/pilot and provider/operator evidence remain external gates; no live package/settings adapter or real-money switch was enabled.
+
+B22b local `57f60111c48ee462dfa3b5506e3a2d68e2ca5ad0` is published as `45530478dddc57b788695d2dac100c0ac4cc9157`, matching tree `669020d337fba2b3dad18fbd342dc794152ca3ea`. The isolated-media CI job has passed; the native job is still running at this checkpoint.
+
 B22b completes immutable paid renewal cycles, current provider billing observations, durable future-billing cancellation, exact invoice/subscription identity checks, verified financial webhooks, periodic lifecycle recovery, native-service action contracts and support notes. Refunds preserve issued records while preventing new delivery/access through a fully refunded receipt; future periods wait, and elapsed periods require support. Provider reporting continues for deactivated sellers without impersonating a user. The test-commerce service cannot configure public catalogue publication/monitoring/check workers. All 88 Rust tests and both Clippy configurations pass, including the HTTP refund lifecycle and signed financial-event replay. Native buyer/operator finance screens are being verified in B22c.
 
 B22a local `5020327c59542ff60509bce4d42140e49580c5a3` is published as `2b8326b89396ec8574349e20066427320eaab1bc`, matching tree `f2a60d0ab44fdd75d4b1c3164563be4be2d1913f`. Its full [CI run passed](https://github.com/tcballard/OmaStore/actions/runs/34302814706).
@@ -138,7 +144,7 @@ Date: 8 September 2026. Branch: `build/native-discovery`. Scope: B01, B02, B03 a
 
 Verified implementation: [`887d44947beee29ca45c89b7ff5f6888542d3ae6`](https://github.com/tcballard/OmaStore/commit/887d44947beee29ca45c89b7ff5f6888542d3ae6), with Git tree `3ddb5cd7b037d8838d3dd72fab187700109e633f`. The published tree exactly matches the locally checked tree. The following documentation receipt commit does not change implementation files.
 
-## Grounding and implemented outcome
+## Original scaffold grounding
 
 Started from the actual `tcballard/OmaStore` native scaffold at `53b8957335e0842289abc2966d762fe09f7bcded`. No unrelated repository was used as an application baseline. The authoritative native product spec is version 0.2. [ADR 0002](adr/0002-native-discovery.md) records pinned Omawrite/Omacalc sources inspected for desktop settings, Qt windows, shortcuts and Arch packaging conventions.
 
@@ -146,7 +152,7 @@ The application now supports native discovery/search/filter/detail, independent 
 
 The worksheet saves partial work privately on this device, rejects concurrent overwrite, checks a typed candidate, previews the exact export and uses a native file dialog. It always exports an unclaimed development candidate. B03b does not complete B04 identity or B05 server drafts. No public intake, authentication, package writes, installed-app scanning, managed checkout or desktop configuration mutation is implemented.
 
-## Validation evidence
+## Earlier preview validation evidence
 
 Local environment: Linux x86_64, Ubuntu 24.04.3, Qt 6.8.3, GCC 13.3, Rust 1.98.1. Isolated toolchain paths are verification-environment details, not project dependencies.
 
@@ -160,20 +166,18 @@ Local environment: Linux x86_64, Ubuntu 24.04.3, Qt 6.8.3, GCC 13.3, Rust 1.98.1
 
 Performance sample: Intel Xeon Platinum 8370C at 2.80 GHz, release Rust build, 1,000 synthetic entries, 100 samples. Shared query p95 10.312 ms; pure HTTP handler p95 10.527 ms. These exclude disk/socket/proxy time and do not establish GUI typing latency with 1,000 entries. The numeric target remains a target until that broader exercise is measured.
 
-## Boundaries and remaining gates
+## Current boundaries and remaining gates
 
-R1 still needs a real Omarchy desktop exercise: launcher/app identity, Wayland tiling, live portal theme/text updates, native file dialog, actual keyboard/screen-reader behaviour and visual review. Offscreen success is not that evidence. The current visual composition and theme icon are provisional.
+Real Omarchy acceptance still needs launcher identity, Wayland tiling, live portal/theme/text updates, native file dialogs, screen-reader/keyboard behaviour, actual package/settings lifecycle evidence and visual review. The offscreen receipts above are a separate form of evidence. The theme icon remains provisional.
 
-B04 is the next server bundle. Implement the real private workflow database, provider-supported browser sign-in, scoped project claims and desktop secret-service storage. An operator-owned provider registration/callback and deployment configuration have not been supplied or created. Do not put connector credentials into the product. The following author, reviewer, publication/status and installation bundles remain unimplemented and must retain their gates.
+The private author/reviewer, publication, monitoring, operations and commerce software now exists. Actual operator-owned OAuth/GitHub App/provider registrations, deployed service configuration, genuine listings/recipes, independent staffing, participant observations and commercial responsibilities remain external inputs. Keep connector credentials out of product configuration. EXECUTION.md, SETTINGS.md, COMMERCE.md and RELEASE_READINESS.md record the corresponding closed gates.
 
-The initial native catalogue origin points to this repository's `main/data/registry.json`; until the PR is merged, refresh may return an unavailable state while bundled data remains usable. The read service has not been remotely deployed. It binds to loopback and requires proxy request/time/concurrency limits before public exposure. The cache is browsing data, never permission to install.
-
-Native inline images accept only digest-addressed, inert assets under this repository's controlled `main/media/` prefix. Other publisher media remains an explicit external link pending an approved hosting adapter. No real application assets are supplied in the preview. Videos are never preloaded.
-
-Known deliberate author scope: one worksheet, one external route/offer, manual local save, no media upload or claims. The complete publication candidate will need capabilities, services/privileges, release notes, real media and evidence added/reviewed in B05–B07. No field validation or exported digest grants approval.
+Public catalogue and normalized media delivery use the protected `catalogue-live` branch after exact approved publication has been observed. The public catalogue is still empty; ordinary browsing retains its bundled/cached state when delivery is unavailable. The optional service has not been remotely deployed and requires the documented HTTPS proxy/limits. Cached browsing data never authorises installation.
 
 ## Continue and recover
 
-Read the spec, bundle status and ADRs. Preserve the native window, typed process boundary, public/private separation and current data. Use separate dependency-ready commits. Complete real-desktop R1 validation and B04 before representing the preview as a marketplace pilot.
+The full continuation branch is `build/native-marketplace`, stacked on `build/author-workflows` and `build/native-discovery` in PRs 3, 2 and 1 respectively. The current local checkout is `/tmp/omastore-worktree`. Local and connector-created commit hashes can differ; the recorded Git tree hashes match exactly. Start from the current branch and receipts at the top of this handoff, preserving later user work.
 
-Revert the relevant bundle commits to undo code. Preserve users' saved items and local worksheet files when changing versions; do not remove broad XDG directories. Stage packaging under `build/stage` for reversible rehearsal. No user applications or Omarchy settings were changed by this build session.
+B00–B22 implementation is complete. Read the spec, status and applicable ADRs before additional changes. The next release work is gathering the actual desktop, deployment, author/pilot and provider evidence; the software must not label those gates passed from fixture success. PLAYGROUND.md explains how to exercise the implemented sample flows, and DHH_NOTE.md is prepared but unsent.
+
+Undo code through explicit bundle reversions while preserving durable private records. Use the backup/new-destination restore procedure before service migrations or deployment. Never clear commerce, installation or settings errors by deleting their journals. Do not remove broad XDG directories or buyer documents. Packaging stages under `build/stage` for reversible rehearsal. No host application package, Omarchy setting or real payment was changed by this build session.
