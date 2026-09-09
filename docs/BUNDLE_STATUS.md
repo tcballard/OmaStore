@@ -25,7 +25,7 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B17 | Supported settings schema and diffs | B11, B15, B16 | implemented_unverified; typed diffs and native keyboard checks pass; live adapters remain disabled pending actual Omarchy evidence |
 | B18 | Setting apply, conflict and restore | B17 | implemented_unverified; 67 Rust and nine native checks pass; live customised-desktop evidence remains external |
 | B19 | Recipe remix and private-data-safe export | B18 | implemented_unverified; 70 Rust and nine native checks pass; real Omarchy portal/author evidence remains external |
-| B20 | Commerce operating model and disabled integration | B16 | implemented_unverified; 72 Rust tests and nine native checks pass; actual commercial facts/provider gate remain external |
+| B20 | Commerce operating model and disabled integration | B16 | implemented_unverified; Stripe confirmed as default provider on 9 September 2026; 72 Rust tests and nine native checks pass; actual commercial facts/provider gate remain external |
 | B21 | Checkout, delivery and entitlements | B20 | implemented_unverified; 81 Rust tests and nine native checks pass; real provider sandbox/issuer and commercial evidence remain external |
 | B22 | Refunds, disputes, payouts and commerce readiness | B21 | implemented_unverified; 88 Rust tests and nine native checks pass; actual provider sandbox/commercial sign-off remains external |
 

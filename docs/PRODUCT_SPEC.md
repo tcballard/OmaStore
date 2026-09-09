@@ -55,7 +55,7 @@ No cloud hosting project, domain, web framework or database account is required 
 | P11 | Compatibility evidence describes a particular release and environment. It is not official Omarchy certification or a security guarantee. |
 | P12 | Payments do not change search ranking, review priority, approval or editorial selection. Tom's apps require independent approval and editorial selection. |
 | P13 | Initial launch is an independent community project. Reference the current plugin marketplace, preserving upstream IDs and attribution. |
-| P14 | The later optional checkout proposes a 5% service fee before tax, plus disclosed provider charges. It remains disabled until the commerce gate is met. |
+| P14 | Stripe is the default payment provider for optional managed checkout (confirmed by Tom on 9 September 2026). The checkout proposes a 5% service fee before tax, plus disclosed provider charges. It remains disabled until the commerce gate is met. |
 
 Omarchy already documents commercial apps and an existing plugin publishing process. Follow the live runtime contract when implementing adapters. Do not assume plugin listing validation establishes security. [Commercial apps](https://omarchy.org/manual/commercial-apps-services/), [plugin publishing](https://plugins.omarchy.org/publish.html), [plugin runtime](https://omarchy.org/manual/shell-plugins/).
 
