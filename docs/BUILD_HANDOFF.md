@@ -1,5 +1,30 @@
 # Build handoff
 
+10 September 2026, B03 appearance integration, starting at `c94208131c1a9681063ac29203b150061bdb0d56`:
+Tom authorised Follow Omarchy as the default, with the approved OmaStore
+editorial style available through More → Appearance. The native settings reader
+now follows Omarchy v4.0.3's active colors.toml and resolved Fontconfig monospace
+family, debounces/rearms filesystem watches, recovers through a bounded polling
+interval and persists only its own appearance preference. Theme data is inert;
+desktop files, installation gates and payment capabilities are unchanged.
+Category glyphs inherit the accent; screenshots retain their upstream appearance.
+ADR 0013 records sources, fallback behaviour and the legacy-format boundary.
+Arch preview revision 5 explicitly depends on Fontconfig. New isolated tests
+cover live colour/font changes, atomic directory replacement, late creation,
+missing/invalid/oversized files, contrast fallback and preference persistence.
+Final ordinary suite: 11 passes and one local D-Bus skip in 11.98 seconds;
+sample suite: 10 passes and one local D-Bus skip in 46.07 seconds. Ordinary
+checks include full native journeys with both light and dark fixtures at
+800×600; existing 200% and sample-workflow checks also pass. Actual 1488×1056
+captures are `docs/screenshots/follow-omarchy-dark.png` and
+`follow-omarchy-light.png`. Bash recipe syntax and `git diff --check` pass.
+These are offscreen Linux checks, not real Omarchy/Wayland/theme/portal
+acceptance, which remains open. Remote CI/package results remain pending.
+Capture follow-up: inspection caught an offscreen capture occurring during the
+font-triggered redraw, before the screenshot texture reached the frame. The QA
+capture path now allows the layout/render to settle; both final captures were
+regenerated and inspected. This follow-up changes QA timing only.
+
 10 September 2026, approved authored shelf: Tom selected the final square-edged
 dark editorial concept and authorised shipping it. ADR 0012 supersedes ADR 0011.
 Native shell, bundled typefaces, app showcase, persistent keyboard shelf,

@@ -1,5 +1,12 @@
 # Bundle status
 
+10 September 2026: B03 appearance continuation is verified on offscreen Linux:
+11 ordinary and 10 sample checks passed, with one local D-Bus skip per suite.
+Real Omarchy acceptance remains pending. Follow Omarchy defaults on; the approved
+OmaStore editorial style remains selectable. Read-only theme/font integration
+and isolated live-reload tests are implemented (ADR 0013). No host settings,
+installation adapter or commerce release gate is enabled.
+
 10 September 2026: approved authored shelf completes the B03/B12 presentation
 continuation. Native square-edged dark shell, editorial app showcase and
 persistent keyboard shelf are implemented. Ordinary native checks: eight

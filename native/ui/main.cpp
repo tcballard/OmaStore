@@ -49,7 +49,8 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption storefrontTest("storefront-test", "Exercise the real catalogue browse/detail/plan journey.");
     const QCommandLineOption captureView("capture-view", "Capture discover, detail or plan in the real catalogue.", "view", "discover");
     const QCommandLineOption darkAppearance("dark-appearance", "Use a dark palette for offscreen QA.");
-    parser.addOptions({uiTest, screenshot, size, storefrontTest, captureView, darkAppearance});
+    const QCommandLineOption themeFixture("theme-fixture", "Read an isolated Omarchy theme fixture for QA.", "directory");
+    parser.addOptions({uiTest, screenshot, size, storefrontTest, captureView, darkAppearance, themeFixture});
 #endif
 #ifdef OMASTORE_DEVELOPMENT_DATA
     const QCommandLineOption demoOption("demo", "Show explicitly fictional development listings.");
@@ -88,7 +89,12 @@ int main(int argc, char *argv[]) {
         app.setPalette(palette);
     }
 #endif
+#ifdef OMASTORE_QA
+    DesktopSettings desktop(parser.isSet(themeFixture) ? parser.value(themeFixture) : QDir::homePath() + "/.local/state/omarchy/current/theme",
+        QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/fontconfig/fonts.conf");
+#else
     DesktopSettings desktop;
+#endif
     const QFont baseFont = app.font();
     QObject::connect(&desktop, &DesktopSettings::changed, &app, [&] {
         QFont font = baseFont;
@@ -487,7 +493,13 @@ int main(int argc, char *argv[]) {
                         }
                     }
                 }
-                if (parser.isSet(screenshot)) ok = window->grabWindow().save(parser.value(screenshot)) && ok;
+                if (parser.isSet(screenshot)) {
+                    // Let async font resolution and its resulting layout reach a frame.
+                    QTest::qWait(250);
+                    window->requestUpdate();
+                    QTest::qWait(100);
+                    ok = window->grabWindow().save(parser.value(screenshot)) && ok;
+                }
                 app.exit(ok && !qmlWarning ? 0 : 1);
             });
         });

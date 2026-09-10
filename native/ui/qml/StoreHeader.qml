@@ -55,6 +55,27 @@ ColumnLayout {
                 MenuItem { objectName: "navMakers"; text: "Makers"; onTriggered: header.navigate(4) }
                 MenuItem { objectName: "navSubmit"; text: "Submit"; onTriggered: header.navigate(5) }
                 MenuItem { text: "Refresh catalogue"; enabled: core.ready && !core.loading; onTriggered: core.refresh() }
+                Menu {
+                    title: "Appearance"
+                    ActionGroup { id: appearanceGroup }
+                    Action {
+                        text: "Follow Omarchy"
+                        checkable: true; checked: theme.desktop.followOmarchy
+                        ActionGroup.group: appearanceGroup
+                        onTriggered: theme.desktop.followOmarchy = true
+                    }
+                    Action {
+                        text: "OmaStore"
+                        checkable: true; checked: !theme.desktop.followOmarchy
+                        ActionGroup.group: appearanceGroup
+                        onTriggered: theme.desktop.followOmarchy = false
+                    }
+                    MenuSeparator {}
+                    MenuItem {
+                        enabled: false
+                        text: theme.following ? "Using desktop colours and font" : (theme.desktop.followOmarchy ? "Theme unavailable · using OmaStore" : "Editorial colours and fonts")
+                    }
+                }
                 MenuItem { text: "About & shortcuts"; onTriggered: header.aboutRequested() }
             }
         }

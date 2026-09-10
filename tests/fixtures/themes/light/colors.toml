@@ -1,0 +1,9 @@
+# Synthetic light palette: verifies adaptation, not an Omarchy theme claim.
+background = "#fafaf7"
+foreground = "#202f26"
+accent = "#315a3d"
+selection = "#e5ecdf"
+muted = "#b3bcb0"
+dark_background = "#eeefe8"
+lighter_background = "#ffffff"
+dark_foreground = "#58655d"

@@ -1,7 +1,7 @@
 # Local source-checkout recipe. This does not claim AUR/Omarchy repository inclusion.
 pkgname=omastore-preview
 pkgver=0.1.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Native community application storefront for Omarchy (development preview)'
 arch=('x86_64')
 url='https://github.com/tcballard/OmaStore'
@@ -9,7 +9,7 @@ license=('MIT')
 # GCC LTO objects from bundled SQLite cannot be linked by Rust's lld.
 # Keep this desktop preview as one package, without a separate debug archive.
 options=('!lto' '!debug')
-depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'qt6-wayland' 'xdg-desktop-portal')
+depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'qt6-wayland' 'xdg-desktop-portal' 'fontconfig')
 makedepends=('cmake' 'ninja' 'gcc' 'rustup')
 source=()
 sha256sums=()
