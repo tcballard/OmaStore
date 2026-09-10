@@ -1,5 +1,13 @@
 # Bundle status
 
+10 September 2026: approved authored shelf completes the B03/B12 presentation
+continuation. Native square-edged dark shell, editorial app showcase and
+persistent keyboard shelf are implemented. Ordinary native checks: eight
+passes, one local D-Bus skip; sample checks: nine passes, one D-Bus skip.
+See ADR 0012, `design-qa.md` and the handoff for actual captures and limits.
+Arch preview recipe revision 4 adds the SVG runtime dependency. Remote CI and
+package status are tracked on PR 5; real Omarchy acceptance is still pending.
+
 Product spec: version 0.2, native-first edition. Earlier web-first bundle descriptions are superseded.
 
 | Bundle | Deliverable | Dependencies | Status |

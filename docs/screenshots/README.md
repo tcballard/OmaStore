@@ -1,5 +1,17 @@
 # Native storefront verification
 
+## Approved authored shelf, 10 September 2026
+
+`authored-shelf.png` is the actual 1488×1056 native implementation of Tom's
+approved square-edged concept. `authored-small.png` captures the 800×600
+stacked layout, and `authored-installation.png` the blocked plan at 1280×800.
+These supersede the earlier visual direction below. See `../../design-qa.md`
+for comparison iterations, asset decisions, contrast and keyboard evidence.
+All three are ordinary Qt 6.8.3 captures with fresh temporary application state.
+The small view scrolls vertically while the app shelf remains visible.
+
+## Earlier polish pass (superseded design)
+
 These are actual Qt 6.8.3 offscreen captures of the ordinary six-app catalogue,
 not mockups. They were captured at local implementation `b03cc345dff97d023f86ea6c858adaaaf971d857`,
 published as `1a00cdf8f8686536318c4d96e3ba8966e55d523c`; both have tree

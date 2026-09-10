@@ -12,6 +12,7 @@ Item {
     readonly property var app: details.app || ({})
     readonly property bool calculator: app.id === "repo-omacalc"
     readonly property bool compact: width < 1000 || theme.scale > 1.4
+    readonly property real displaySize: compact ? 48 : Math.max(56, Math.min(96, (width - 680) * 0.119))
     implicitHeight: Math.max(compact ? 510 : 620, composition.implicitHeight + 80)
     GridLayout {
         id: composition
@@ -27,9 +28,9 @@ Item {
             Label { text: (hero.app.category || "APP").toUpperCase() + "  /  " + (hero.app.name || "").toUpperCase(); color: theme.muted; font.pixelSize: 10 * theme.scale; font.letterSpacing: 2; textFormat: Text.PlainText; Layout.fillWidth: true; wrapMode: Text.Wrap }
             Label {
                 text: hero.calculator ? "A little space\nfor everyday maths." : hero.app.name || ""
-                font.family: theme.display; font.pixelSize: (hero.compact ? 48 : 96) * theme.scale
+                font.family: theme.display; font.pixelSize: hero.displaySize * theme.scale
                 font.weight: Font.DemiBold
-                color: theme.ink; lineHeightMode: Text.FixedHeight; lineHeight: (hero.compact ? 48 : 92) * theme.scale; wrapMode: Text.Wrap; textFormat: Text.PlainText
+                color: theme.ink; lineHeightMode: Text.FixedHeight; lineHeight: hero.displaySize * 0.96 * theme.scale; wrapMode: Text.Wrap; textFormat: Text.PlainText
                 Layout.fillWidth: true
             }
             Label { text: hero.calculator ? "A focused calculator with keyboard input\nand your expression above the result." : hero.app.summary || ""; color: theme.muted; font.pixelSize: (hero.compact ? 17 : 24) * theme.scale; lineHeight: 1.2; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }

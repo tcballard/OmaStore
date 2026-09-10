@@ -1,5 +1,24 @@
 # Build handoff
 
+10 September 2026, approved authored shelf: Tom selected the final square-edged
+dark editorial concept and authorised shipping it. ADR 0012 supersedes ADR 0011.
+Native shell, bundled typefaces, app showcase, persistent keyboard shelf,
+responsive search, secondary navigation and information disclosure are built.
+Local `ac21ff4` is published as `5838ac788d616629749433e0d3f067e9e6c95c65`;
+local `e7bc2c2` as `962cde14e914e3fb811bdd4eb468e9ed4b422ad7`, matching tree
+`02445c7d41c66cafc514cdf026c9600fe1a809e0`. The following evidence commit also
+scales display typography smoothly at intermediate widths.
+
+Ordinary native suite: eight passes and one local D-Bus skip. Sample suite:
+nine passes and one D-Bus skip, 35.04 seconds; final typography-only correction
+was followed by ordinary tests and fresh captures. Formatting, deterministic
+catalogue reproduction and diff checks pass. `design-qa.md` records visual
+iterations and limits. All primary actions still use existing typed contracts.
+The Arch recipe is revision 4 and includes Qt SVG for bundled licensed icons.
+Remote native and Arch workflows started for the published implementation;
+their final status must be checked on the PR. No release or merge is claimed.
+Real Omarchy testing, live lifecycle and real payments remain separate gates.
+
 Storefront polish verification: implementation `b03cc345dff97d023f86ea6c858adaaaf971d857` is published as `1a00cdf8f8686536318c4d96e3ba8966e55d523c`, matching tree `e7a254b41bfdffadad93e736d50961570cd341d0`, in [draft PR 5](https://github.com/tcballard/OmaStore/pull/5), stacked on PR 4. Ordinary CTest: eight passes, D-Bus skipped, 5.59 seconds. Sample CTest: nine passes, D-Bus skipped, 36.89 seconds. The new real-catalogue keyboard journey verifies save, blocked installation, return with scroll/focus restoration and category navigation at normal/small/200% sizes. Existing sample author, settings and commerce interactions still pass. Formatting, catalogue reproduction and diff checks pass. Actual light/dark/detail/blocked-plan windows were captured and inspected; `docs/screenshots/README.md` records provenance, commands, contrast and limits. Native launch initially caught reserved QML token names, fixed before these receipts. The blocked sheet was simplified after visual inspection; actionable plans still expose privileges. Package revision 3 identifies the polish build; its remote Arch workflow is pending at this receipt. Real Omarchy acceptance remains separate. Undo through the three focused design/fix commits; user state and live gates were not changed.
 
 Storefront polish continuation starts from `b0e3b28f0afae8f12f48a46bacb4d12dfefd315e` on `design/storefront-polish`. Tom authorised the Discover and detail/install journey visual pass. ADR 0011 defines the direction, purpose navigation, attributed upstream screenshot and unchanged live gates. Native rendering and interaction verification are in progress.
