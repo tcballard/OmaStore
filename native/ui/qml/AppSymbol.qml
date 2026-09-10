@@ -8,15 +8,13 @@ Rectangle {
     property string category: "utilities"
     property int size: 56
     implicitWidth: size; implicitHeight: size
-    radius: size * 0.23
+    radius: 0
     color: theme.wash
     border.color: theme.line
-    Label {
+    Image {
         anchors.centerIn: parent
-        text: symbol.category === "writing" ? "¶" : symbol.category === "video" ? "▷" : symbol.category === "games" ? "✣" : symbol.category === "presentations" ? "▤" : "▦"
-        font.family: symbol.theme.mono
-        font.pixelSize: symbol.size * 0.48
-        color: symbol.theme.accent
+        width: symbol.size * 0.55; height: width
+        source: "qrc:/qt/qml/OmaStore/assets/icons/" + ({writing:"file-text",video:"scissors",games:"monitor",presentations:"monitor"}[symbol.category] || "grid") + ".svg"
     }
     Accessible.ignored: true
 }

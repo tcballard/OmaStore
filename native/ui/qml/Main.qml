@@ -27,6 +27,7 @@ ApplicationWindow {
     minimumHeight: 600
     title: (d.app || {}).name ? d.app.name + " · OmaStore" : "OmaStore"
     onClosing: function(event) { if (worksheet.dirty && !discardClose) { event.accepted = false; unsaved.open(); } }
+    font.family: storeTheme.body
     color: storeTheme.page
     palette.window: storeTheme.page
     palette.base: storeTheme.surface
@@ -64,47 +65,14 @@ ApplicationWindow {
     SettingsDialog {id:settingsDialog;core:window.core;theme:storeTheme}
     PlanDialog {id:planDialog;core:window.core;theme:storeTheme}
 
-    RowLayout {
+    ColumnLayout {
         anchors.fill: parent
         spacing: 0
-        Rectangle {
-            Layout.preferredWidth: window.width < 950 ? 156 : 202
-            Layout.fillHeight: true
-            color: storeTheme.sidebar
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 16
-                spacing: 6
-                Label { text: "OmaStore"; font.family: storeTheme.mono; font.pixelSize: 22 * storeTheme.scale; font.bold: true; color: storeTheme.ink; Layout.topMargin: 20; Layout.bottomMargin: 4 }
-                Label { text: "A place for good tools."; font.pixelSize: 11 * storeTheme.scale; color: storeTheme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; Layout.bottomMargin: 24 }
-                Repeater {
-                    model: window.sections
-                    ItemDelegate {
-                        required property int index
-                        required property string modelData
-                        objectName: "nav" + modelData
-                        Layout.fillWidth: true
-                        implicitHeight: Math.max(44, contentItem.implicitHeight + 20)
-                        leftPadding: 14
-                        font.pixelSize: 14 * storeTheme.scale
-                        text: modelData
-                        highlighted: window.section === index
-                        palette.highlightedText: storeTheme.ink
-                        font.bold: highlighted
-                        Accessible.role: Accessible.PageTab
-                        Accessible.name: modelData
-                        Accessible.selected: highlighted
-                        background: Rectangle { radius: 5; color: parent.highlighted ? storeTheme.wash : (parent.hovered ? storeTheme.surface : "transparent"); border.color: parent.activeFocus ? storeTheme.accent : "transparent"; border.width: 2 }
-                        onClicked: window.navigate(index)
-                    }
-                }
-                Item { Layout.fillHeight: true }
-                Label { text: "FOR OMARCHY"; font.family: storeTheme.mono; font.pixelSize: 11 * storeTheme.scale; color: storeTheme.muted; Layout.bottomMargin: 3 }
-                Label { text: "Independent community\npreview · 0.1.0"; color: storeTheme.muted; font.pixelSize: 11 * storeTheme.scale; wrapMode: Text.Wrap; Layout.fillWidth: true }
-                Button { text: "About & shortcuts"; flat: true; Layout.fillWidth: true; onClicked: about.open() }
-            }
+        StoreHeader {
+            Layout.fillWidth: true; theme: storeTheme; section: window.section
+            onNavigate: (index) => window.navigate(index)
+            onAboutRequested: about.open()
         }
-        Rectangle { Layout.preferredWidth: 1; Layout.fillHeight: true; color: storeTheme.line }
         ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: true
@@ -126,7 +94,7 @@ ApplicationWindow {
                         implicitHeight: 38
                         leftPadding: 14
                         font.pixelSize: 13 * storeTheme.scale
-                        background: Rectangle { radius: 8; color: storeTheme.surface; border.width: searchField.activeFocus ? 2 : 1; border.color: searchField.activeFocus ? storeTheme.accent : storeTheme.line }
+                        background: Rectangle { radius: 0; color: storeTheme.surface; border.width: searchField.activeFocus ? 2 : 1; border.color: searchField.activeFocus ? storeTheme.accent : storeTheme.line }
                         Accessible.name: "Search applications"
                         onTextEdited: { window.navigate(1); core.setFilter("q", text); }
                     }
@@ -161,7 +129,14 @@ ApplicationWindow {
                 id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : (window.section === 3 ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
+                sourceComponent: window.showingDetail ? detailPage : (window.section === 0 && core.apps.some(a => a.id === "repo-omacalc") ? showcasePage : (window.section === 3 ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage)))
+            }
+            AppShelf {
+                visible: (window.section === 0 || window.section === 1) && core.apps.length > 0
+                Layout.fillWidth: true; theme: storeTheme; core: window.core
+                selectedId: (core.detail.app || {}).id || "repo-omacalc"
+                onChosen: (id) => window.openApp(id, "shelf-" + id)
+                onBrowseRequested: { window.navigate(1); window.showFilters = true; }
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             RowLayout {
@@ -169,7 +144,25 @@ ApplicationWindow {
                 Layout.margins: 12
                 Label { text: core.loading ? "Loading…" : (core.ready ? (core.catalogue.demo ? "SAMPLE MODE" : "Catalogue available offline") : "CONNECTING"); color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale; textFormat: Text.PlainText }
                 Item { Layout.fillWidth: true }
-                Label { text: "Ctrl+K  Search"; color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale }
+                Label { text: "Independent community project · Not affiliated with Omacom"; color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale }
+            }
+        }
+    }
+
+    Component {
+        id: showcasePage
+        ScrollView {
+            id: showcaseScroll
+            objectName: "browseScroll"
+            contentWidth: availableWidth; clip: true
+            ColumnLayout {
+                width: showcaseScroll.availableWidth
+                AppShowcase {
+                    Layout.fillWidth: true; theme: storeTheme; core: window.core
+                    details: ({app: core.apps.find(a => a.id === "repo-omacalc") || {}})
+                    overview: true
+                    onInspectRequested: window.openApp("repo-omacalc", "discoverCalculator")
+                }
             }
         }
     }

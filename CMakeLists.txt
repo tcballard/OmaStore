@@ -86,6 +86,15 @@ qt_add_qml_module(omastore
     RESOURCES native/ui/assets/omacalc-upstream.png
     QML_FILES native/ui/qml/StoreTheme.qml native/ui/qml/ActionButton.qml native/ui/qml/AppSymbol.qml native/ui/qml/DiscoveryFeature.qml native/ui/qml/RefundsPanel.qml native/ui/qml/FinancesPanel.qml native/ui/qml/CommerceOffersPanel.qml native/ui/qml/PurchasesDialog.qml native/ui/qml/CommercePanel.qml native/ui/qml/RemixDialog.qml native/ui/qml/SettingsDialog.qml native/ui/qml/ReadinessPanel.qml native/ui/qml/LibraryPage.qml native/ui/qml/PlanDialog.qml native/ui/qml/SetupsPage.qml native/ui/qml/CataloguePicker.qml native/ui/qml/MakersPage.qml native/ui/qml/EditorialPanel.qml native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
 )
+foreach(component IN ITEMS AppShelf AppShowcase StoreHeader)
+    set_source_files_properties(native/ui/qml/${component}.qml PROPERTIES QT_RESOURCE_ALIAS ${component}.qml)
+endforeach()
+file(GLOB OMASTORE_DESIGN_ASSETS RELATIVE "${CMAKE_SOURCE_DIR}" native/ui/assets/fonts/*.ttf native/ui/assets/icons/*.svg)
+foreach(asset IN LISTS OMASTORE_DESIGN_ASSETS)
+    string(REPLACE "native/ui/" "" alias "${asset}")
+    set_source_files_properties(${asset} PROPERTIES QT_RESOURCE_ALIAS "${alias}")
+endforeach()
+qt_target_qml_sources(omastore QML_FILES native/ui/qml/AppShelf.qml native/ui/qml/AppShowcase.qml native/ui/qml/StoreHeader.qml RESOURCES ${OMASTORE_DESIGN_ASSETS})
 target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network
 )
@@ -105,6 +114,8 @@ install(FILES packaging/io.github.tcballard.OmaStore.desktop
 install(FILES packaging/io.github.tcballard.OmaStore.metainfo.xml
     DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo")
 install(FILES native/ui/assets/OMACALC-LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
+install(FILES native/ui/assets/fonts/InstrumentSerif-OFL.txt native/ui/assets/fonts/IBMPlexSans-OFL.txt DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
+install(FILES native/ui/assets/icons/LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore" RENAME Feather-LICENSE)
 install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
 
 if(BUILD_TESTING)

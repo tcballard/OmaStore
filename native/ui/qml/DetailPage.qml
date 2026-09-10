@@ -12,6 +12,7 @@ ScrollView {
     signal purchasesRequested(string id)
     property int savedRevision: 0
     property bool reporting: false
+    property bool moreDetails: false
     readonly property var app: details.app || ({})
     readonly property var release: details.release || ({})
     readonly property var summary: details.summary || ({})
@@ -24,57 +25,15 @@ ScrollView {
     ColumnLayout {
         width: page.availableWidth
         spacing: 20
-        Item { Layout.preferredHeight: 8 }
+        AppShowcase { Layout.fillWidth: true; details: page.details; theme: page.theme; core: page.core }
+        Flow {
+            Layout.fillWidth: true; Layout.leftMargin: theme.inset; Layout.rightMargin: theme.inset; spacing: 12
+            ActionButton { theme: page.theme; objectName: "saveButton"; text: { page.savedRevision; return core.isSaved(page.app.id || "") ? "Saved" : "Save for later"; } onClicked: core.toggleSaved() }
+            ActionButton { theme: page.theme; text: page.moreDetails ? "Hide app information" : "More app information"; onClicked: page.moreDetails = !page.moreDetails }
+        }
         ColumnLayout {
-            Layout.fillWidth: true; Layout.leftMargin: theme.inset; Layout.rightMargin: theme.inset
-            spacing: 14
-            RowLayout {
-                Layout.fillWidth: true; spacing: 20
-                AppSymbol { theme: page.theme; category: page.app.category || "utilities"; size: page.width < 650 ? 64 : 88; Layout.alignment: Qt.AlignTop }
-                ColumnLayout {
-                    Layout.fillWidth: true; spacing: 6
-                    Label { text: page.app.name || ""; font.pixelSize: 32 * theme.scale; font.weight: Font.Bold; color: theme.ink; wrapMode: Text.Wrap; textFormat: Text.PlainText; Layout.fillWidth: true }
-                    Label { text: page.app.summary || ""; font.pixelSize: 15 * theme.scale; color: theme.muted; wrapMode: Text.Wrap; textFormat: Text.PlainText; Layout.fillWidth: true }
-                    Label { text: (page.details.makers || []).map(m => m.name).join(" · "); color: theme.muted; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
-                }
-            }
-            Flow {
-                Layout.fillWidth: true; spacing: 10
-                ActionButton { theme: page.theme; primary: true; objectName: "previewAppPlan"; text: core.loading ? "Preparing…" : "Review installation"; enabled: core.ready && !core.loading; onClicked: core.communityAction("system.plan", {kind:"app", id:page.app.id}) }
-                ActionButton { theme: page.theme; objectName: "saveButton"; text: { page.savedRevision; return core.isSaved(page.app.id || "") ? "Saved ✓" : "Save for later"; } Accessible.name: core.isSaved(page.app.id || "") ? "Remove from saved" : "Save for later"; onClicked: core.toggleSaved() }
-                ActionButton { theme: page.theme; text: "Source ↗"; visible: !!page.app.source; onClicked: core.openLink("source") }
-            }
-            RowLayout {
-                Layout.fillWidth: true; Layout.topMargin: 8; Layout.bottomMargin: 8; spacing: 20
-                Repeater {
-                    model: [{label:"PRICE",value:page.summary.priceLabel || "Unknown"}, {label:"LICENCE",value:(page.app.licence || {}).identifier || page.readable((page.app.licence || {}).class)}, {label:"VERSION",value:page.release.version || "Unknown"}]
-                    ColumnLayout {
-                        required property var modelData
-                        Layout.fillWidth: true; Layout.preferredWidth: 1; spacing: 6
-                        Label { text:modelData.label; color:theme.muted; font.pixelSize:10*theme.scale; font.letterSpacing:1; font.family:theme.mono }
-                        Label { text:modelData.value; color:theme.ink; font.pixelSize:15*theme.scale; font.weight:Font.DemiBold; Layout.fillWidth:true; wrapMode:Text.Wrap; textFormat:Text.PlainText }
-                    }
-                }
-            }
-            Pane {
-                Layout.fillWidth: true; padding: 16
-                background: Rectangle { radius: theme.radius; color: theme.wash }
-                ColumnLayout {
-                    width: parent.width; spacing: 5
-                    Label { text: page.summary.evidenceLabel || "Not tested on Omarchy"; color: theme.ink; font.weight: Font.DemiBold; Layout.fillWidth:true; wrapMode:Text.Wrap }
-                    Label { text: !core.distributionCurrent ? "You can explore this app. Installation is unavailable until current distribution checks can be completed." : core.distribution.distribution === "suspended" ? "Distribution is suspended. Source and support remain available." : "Review the package, requirements and current availability before making changes."; color: theme.muted; Layout.fillWidth:true; wrapMode:Text.Wrap }
-                }
-            }
-            ColumnLayout {
-                visible: page.app.id === "repo-omacalc"
-                Layout.fillWidth: true; spacing: 8
-                Pane {
-                    Layout.fillWidth: true; padding: 20
-                    background: Rectangle { radius: theme.radius; color: theme.feature }
-                    Image { width: parent.width; height: 290; source: "qrc:/qt/qml/OmaStore/assets/omacalc-upstream.png"; sourceSize.width: 800; fillMode: Image.PreserveAspectFit; Accessible.role: Accessible.Graphic; Accessible.name: "Upstream OmaCalc screenshot showing its calculator keypad and the result 133" }
-                }
-                Label { text: "OmaCalc in Tokyo Night · upstream screenshot, not a compatibility test"; font.pixelSize: 11 * theme.scale; color: theme.muted; Layout.fillWidth:true; wrapMode:Text.Wrap }
-            }
+            visible: page.moreDetails
+            Layout.fillWidth: true; Layout.leftMargin: theme.inset; Layout.rightMargin: theme.inset; spacing: 14
             Label { text: "About this app"; font.pixelSize: theme.sectionSize * theme.scale; font.weight: Font.DemiBold; Layout.topMargin: 8 }
             Label { text: page.app.description || ""; wrapMode: Text.Wrap; textFormat: Text.PlainText; Layout.fillWidth: true; font.pixelSize: 14 * theme.scale; lineHeight: 1.3 }
             Rectangle { Layout.fillWidth: true; height: 1; color: theme.line }
