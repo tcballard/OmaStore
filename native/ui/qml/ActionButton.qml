@@ -5,13 +5,14 @@ Button {
     id: control
     required property var theme
     property bool primary: false
+    property int textSize: 13
     hoverEnabled: true
     implicitHeight: Math.max(theme.controlHeight, contentItem.implicitHeight + 18)
     implicitWidth: contentItem.implicitWidth + 32
     leftPadding: 16; rightPadding: 16
     contentItem: Text {
         text: control.text
-        font.pixelSize: 13 * control.theme.scale
+        font.pixelSize: control.textSize * control.theme.scale
         font.family: control.theme.body
         font.weight: Font.DemiBold
         horizontalAlignment: Text.AlignHCenter

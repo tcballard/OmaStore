@@ -9,11 +9,16 @@ ColumnLayout {
     property string selectedId: ""
     signal chosen(string id)
     signal browseRequested()
+    function moveFocus(index) {
+        list.currentIndex = Math.max(0, Math.min(index, list.count - 1));
+        list.positionViewAtIndex(list.currentIndex, ListView.Contain);
+        Qt.callLater(function() { const entry = list.itemAtIndex(list.currentIndex); if (entry) entry.forceActiveFocus(); });
+    }
     spacing: 8
     Rectangle { Layout.fillWidth: true; height: 1; color: theme.line }
     RowLayout {
         Layout.fillWidth: true; Layout.leftMargin: 32; Layout.rightMargin: 32
-        Label { text: "Browse apps"; color: theme.ink; font.pixelSize: 13 * theme.scale }
+        Label { text: "Browse apps"; color: theme.ink; font.pixelSize: 16 * theme.scale }
         Item { Layout.fillWidth: true }
         ToolButton { text: "All apps / filters"; onClicked: shelf.browseRequested() }
     }
@@ -21,9 +26,15 @@ ColumnLayout {
         id: list
         objectName: "appShelf"
         Layout.fillWidth: true; Layout.leftMargin: 32; Layout.rightMargin: 32
-        Layout.preferredHeight: 88 * theme.scale
+        Layout.preferredHeight: (shelf.width < 1000 ? 88 : 140) * theme.scale
         orientation: ListView.Horizontal; clip: true; spacing: 16
-        model: core.apps
+        model: {
+            const order = ["repo-omacalc", "repo-omawrite", "repo-localsend", "repo-omacut", "repo-omapresent", "repo-heroic-games-launcher-bin"];
+            return core.apps.slice().sort((a,b) => {
+                const ai = order.indexOf(a.id), bi = order.indexOf(b.id);
+                return (ai < 0 ? order.length : ai) - (bi < 0 ? order.length : bi);
+            });
+        }
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.horizontal: ScrollBar { }
         delegate: ItemDelegate {
@@ -36,9 +47,11 @@ ColumnLayout {
             padding: 0
             Accessible.name: modelData.name + (shelf.selectedId === modelData.id ? ", selected" : "")
             Accessible.selected: shelf.selectedId === modelData.id
+            ToolTip.visible: hovered
+            ToolTip.text: modelData.name
             onActiveFocusChanged: if (activeFocus) list.positionViewAtIndex(index, ListView.Contain)
-            Keys.onRightPressed: { list.currentIndex = Math.min(index + 1, list.count - 1); list.itemAtIndex(list.currentIndex).forceActiveFocus(); }
-            Keys.onLeftPressed: { list.currentIndex = Math.max(index - 1, 0); list.itemAtIndex(list.currentIndex).forceActiveFocus(); }
+            Keys.onRightPressed: shelf.moveFocus(index + 1)
+            Keys.onLeftPressed: shelf.moveFocus(index - 1)
             background: Rectangle {
                 color: entry.hovered ? theme.surface : "transparent"
                 border.color: entry.activeFocus ? theme.accent : "transparent"
@@ -46,10 +59,10 @@ ColumnLayout {
             }
             contentItem: RowLayout {
                 spacing: 12
-                AppSymbol { theme: shelf.theme; category: entry.modelData.category; size: 48 * theme.scale }
+                AppSymbol { theme: shelf.theme; category: entry.modelData.category; size: (shelf.width < 1000 ? 48 : 64) * theme.scale }
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 3
-                    Label { text: entry.modelData.name; color: theme.ink; font.pixelSize: 12 * theme.scale; elide: Text.ElideRight; Layout.fillWidth: true; textFormat: Text.PlainText }
+                    Label { text: entry.modelData.name; color: theme.ink; font.pixelSize: 14 * theme.scale; elide: Text.ElideRight; Layout.fillWidth: true; textFormat: Text.PlainText }
                     Label { text: entry.modelData.category; color: theme.muted; font.pixelSize: 11 * theme.scale; textFormat: Text.PlainText }
                     Label { text: (entry.modelData.priceLabel || "View details") + (shelf.selectedId === entry.modelData.id ? " · Selected" : ""); color: theme.accent; font.pixelSize: 10 * theme.scale }
                 }

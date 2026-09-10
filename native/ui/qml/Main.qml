@@ -45,15 +45,31 @@ ApplicationWindow {
     property real browsePosition: 0
     property string lastAppId: ""
     property string lastFocusName: ""
-    function openApp(id, origin) { lastAppId = id; lastFocusName = origin || "app-" + id; core.showApp(id); }
+    function openApp(id, origin) { lastAppId = id; lastFocusName = origin || "app-" + id; if (section === 0) section = 1; core.showApp(id); }
     function readable(value) { return String(value || "unknown").replace(/_/g, " "); }
-    function focusSearch() { navigate(1); searchField.forceActiveFocus(); searchField.selectAll(); }
+    function focusSearch() { navigate(1); topHeader.searchInput.forceActiveFocus(); topHeader.searchInput.selectAll(); }
     Shortcut { sequence: "Ctrl+K"; onActivated: window.focusSearch() }
     Shortcut { sequence: "Ctrl+F"; onActivated: window.focusSearch() }
     Shortcut { sequence: "Alt+Left"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible && !purchasesDialog.visible; onActivated: window.back() }
     Shortcut { sequence: "Escape"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible && !purchasesDialog.visible; onActivated: window.back() }
     Shortcut { sequence: "Ctrl+R"; onActivated: core.refresh() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
+
+    // Keep focused controls visible when the editorial view stacks under tiling.
+    onActiveFocusItemChanged: Qt.callLater(function() {
+        const item = window.activeFocusItem;
+        if (!item) return;
+        let ancestor = item.parent;
+        while (ancestor) {
+            if (typeof ancestor.contentY === "number" && ancestor.contentHeight > ancestor.height) {
+                const point = item.mapToItem(ancestor, 0, 0);
+                if (point.y < 0) ancestor.contentY += point.y - 8;
+                else if (point.y + item.height > ancestor.height) ancestor.contentY += point.y + item.height - ancestor.height + 8;
+                break;
+            }
+            ancestor = ancestor.parent;
+        }
+    })
 
     Connections {
         target:window.core
@@ -69,6 +85,10 @@ ApplicationWindow {
         anchors.fill: parent
         spacing: 0
         StoreHeader {
+            id: topHeader
+            core: window.core; canGoBack: window.showingSubpage
+            onBackRequested: window.back()
+            onSearchRequested: (query) => { window.navigate(1); core.setFilter("q", query); }
             Layout.fillWidth: true; theme: storeTheme; section: window.section
             onNavigate: (index) => window.navigate(index)
             onAboutRequested: about.open()
@@ -77,31 +97,6 @@ ApplicationWindow {
             Layout.fillHeight: true
             Layout.fillWidth: true
             spacing: 0
-            Pane {
-                Layout.fillWidth: true
-                padding: 16
-                background: Rectangle { color: storeTheme.page }
-                RowLayout {
-                    anchors.fill: parent
-                    ToolButton { objectName: "backButton"; text: "← Back"; visible: window.showingSubpage; onClicked: window.back() }
-                    TextField {
-                        id: searchField
-                        objectName: "searchField"
-                        Layout.fillWidth: true
-                        placeholderText: "Search for an app or a purpose…"
-                        text: core.query.q || ""
-                        maximumLength: 200
-                        implicitHeight: 38
-                        leftPadding: 14
-                        font.pixelSize: 13 * storeTheme.scale
-                        background: Rectangle { radius: 0; color: storeTheme.surface; border.width: searchField.activeFocus ? 2 : 1; border.color: searchField.activeFocus ? storeTheme.accent : storeTheme.line }
-                        Accessible.name: "Search applications"
-                        onTextEdited: { window.navigate(1); core.setFilter("q", text); }
-                    }
-                    ToolButton { text: "Refresh"; enabled: core.ready && !core.loading; onClicked: core.refresh(); ToolTip.visible: hovered; ToolTip.text: "Refresh the catalogue · Ctrl+R" }
-                }
-            }
-            Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             Pane {
                 visible: !!core.catalogue.demo || core.catalogue.source === "cached" || core.catalogue.source === "stale" || !!core.catalogue.warning
                 Layout.fillWidth: true
@@ -134,7 +129,7 @@ ApplicationWindow {
             AppShelf {
                 visible: (window.section === 0 || window.section === 1) && core.apps.length > 0
                 Layout.fillWidth: true; theme: storeTheme; core: window.core
-                selectedId: (core.detail.app || {}).id || "repo-omacalc"
+                selectedId: (core.detail.app || {}).id || (window.section === 0 ? "repo-omacalc" : "")
                 onChosen: (id) => window.openApp(id, "shelf-" + id)
                 onBrowseRequested: { window.navigate(1); window.showFilters = true; }
             }

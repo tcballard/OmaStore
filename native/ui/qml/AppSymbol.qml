@@ -9,7 +9,7 @@ Rectangle {
     property int size: 56
     implicitWidth: size; implicitHeight: size
     radius: 0
-    color: theme.wash
+    color: theme.symbolSurface(category)
     border.color: theme.line
     Image {
         anchors.centerIn: parent

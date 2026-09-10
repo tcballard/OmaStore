@@ -63,7 +63,7 @@ ScrollView {
                 Layout.fillWidth: true
                 visible: page.app.id !== "repo-omacalc" || (page.app.media || []).length > 0
                 padding: 20
-                background: Rectangle { color: theme.wash; radius: 5 }
+                background: Rectangle { color: theme.wash; radius: theme.radius }
                 Label { width: parent.width; text: (page.app.media || []).length === 0 ? "The maker has not supplied additional screenshots. You can explore the project through its source link." : "Media opens on demand in your browser. App details remain available if media cannot load."; wrapMode: Text.Wrap; color: theme.muted }
             }
             Repeater {

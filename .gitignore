@@ -1,5 +1,7 @@
 /build/
 /build-demo/
+/build-shelf/
+/build-shelf-demo/
 /target/
 /.cache/
 *.user

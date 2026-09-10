@@ -21,6 +21,9 @@ QtObject {
     readonly property int inset: 32
     readonly property int gap: 16
     readonly property int radius: 0
+    function symbolSurface(category) {
+        return ({writing:"#273a34",utilities:"#282b42",video:"#352445",games:"#252a28",presentations:"#71422d"})[category] || surface;
+    }
     readonly property string display: displayFont.status === FontLoader.Ready ? displayFont.name : "serif"
     readonly property string body: bodyFont.status === FontLoader.Ready ? bodyFont.name : "sans-serif"
     property FontLoader displayFont: FontLoader { source: "qrc:/qt/qml/OmaStore/assets/fonts/InstrumentSerif-Regular.ttf" }

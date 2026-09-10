@@ -16,34 +16,37 @@ Item {
     GridLayout {
         id: composition
         anchors.left: parent.left; anchors.right: parent.right
-        anchors.margins: hero.compact ? 28 : 64
+        anchors.leftMargin: hero.compact ? 28 : 92
+        anchors.rightMargin: hero.compact ? 28 : 136
         anchors.verticalCenter: parent.verticalCenter
         columns: hero.compact ? 1 : 2
-        columnSpacing: 70; rowSpacing: 30
+        columnSpacing: 90; rowSpacing: 30
         ColumnLayout {
             Layout.fillWidth: true; Layout.preferredWidth: 640
             spacing: 22
             Label { text: (hero.app.category || "APP").toUpperCase() + "  /  " + (hero.app.name || "").toUpperCase(); color: theme.muted; font.pixelSize: 10 * theme.scale; font.letterSpacing: 2; textFormat: Text.PlainText; Layout.fillWidth: true; wrapMode: Text.Wrap }
             Label {
                 text: hero.calculator ? "A little space\nfor everyday maths." : hero.app.name || ""
-                font.family: theme.display; font.pixelSize: (hero.compact ? 48 : 72) * theme.scale
-                color: theme.ink; lineHeight: 0.98; wrapMode: Text.Wrap; textFormat: Text.PlainText
+                font.family: theme.display; font.pixelSize: (hero.compact ? 48 : 96) * theme.scale
+                font.weight: Font.DemiBold
+                color: theme.ink; lineHeightMode: Text.FixedHeight; lineHeight: (hero.compact ? 48 : 92) * theme.scale; wrapMode: Text.Wrap; textFormat: Text.PlainText
                 Layout.fillWidth: true
             }
-            Label { text: hero.calculator ? "A focused calculator with keyboard input\nand your expression above the result." : hero.app.summary || ""; color: theme.muted; font.pixelSize: 18 * theme.scale; lineHeight: 1.2; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
+            Label { text: hero.calculator ? "A focused calculator with keyboard input\nand your expression above the result." : hero.app.summary || ""; color: theme.muted; font.pixelSize: (hero.compact ? 17 : 24) * theme.scale; lineHeight: 1.2; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
             RowLayout {
-                Layout.topMargin: 10; spacing: 18
-                AppSymbol { theme: hero.theme; category: hero.app.category || "utilities"; size: 64 }
+                Layout.topMargin: 10; spacing: 26
+                AppSymbol { theme: hero.theme; category: hero.app.category || "utilities"; size: 80 }
                 ColumnLayout {
                     Layout.fillWidth: true
-                    Label { text: hero.app.name || ""; color: theme.ink; font.pixelSize: 24 * theme.scale; font.bold: true; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
-                    Label { text: hero.overview ? "Community listing" : (hero.details.makers || []).map(m => m.name).join(" · ") + " · Community listing"; color: theme.muted; font.pixelSize: 13 * theme.scale; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
+                    Label { text: hero.app.name || ""; color: theme.ink; font.pixelSize: 30 * theme.scale; font.bold: true; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
+                    Label { text: hero.overview ? "Community listing" : (hero.details.makers || []).map(m => m.name + (m.claim === "unclaimed" ? " · Community listing" : "")).join(" · "); color: theme.muted; font.pixelSize: 13 * theme.scale; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
                 }
             }
             Flow {
                 Layout.fillWidth: true; spacing: 16
                 ActionButton {
                     theme: hero.theme; primary: true
+                    textSize: 18; implicitWidth: 296; implicitHeight: 56
                     objectName: hero.overview ? "discoverCalculator" : "previewAppPlan"
                     text: hero.overview ? "Explore OmaCalc" : core.loading ? "Preparing…" : "Review installation"
                     enabled: core.ready && !core.loading
@@ -62,12 +65,12 @@ Item {
         }
         ColumnLayout {
             visible: hero.calculator
-            Layout.preferredWidth: hero.compact ? 280 : 390
+            Layout.preferredWidth: hero.compact ? 280 : 400
             Layout.alignment: Qt.AlignHCenter
             spacing: 12
             Image {
                 source: "qrc:/qt/qml/OmaStore/assets/omacalc-upstream.png"
-                Layout.preferredWidth: hero.compact ? 260 : Math.min(390, hero.width * 0.30)
+                Layout.preferredWidth: hero.compact ? 260 : Math.min(400, hero.width * 0.30)
                 Layout.preferredHeight: width * 1.55
                 fillMode: Image.PreserveAspectFit; sourceSize.width: 800
                 Accessible.role: Accessible.Graphic

@@ -133,6 +133,11 @@ int main(int argc, char *argv[]) {
                     for (auto *child : parent->childItems()) if (auto *found = findItem(child, name)) return found;
                     return nullptr;
                 };
+                const auto openNavigation = [&] {
+                    auto *more = findItem(window->contentItem(), "moreNavigation");
+                    check(more != nullptr, "secondary navigation menu");
+                    if (more) { more->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); QTest::qWait(80); }
+                };
                 if (parser.isSet(uiTest)) {
                     QTest::keyClick(window, Qt::Key_K, Qt::ControlModifier);
                     QTest::qWait(100);
@@ -163,6 +168,7 @@ int main(int argc, char *argv[]) {
                     } else if (demo) { check(false, "search result count"); }
                     core.clearFilters(); QTest::qWait(200);
                     if(demo) {
+                    openNavigation();
                         auto *makers=findItem(window->contentItem(),"navMakers");
                         if(makers){makers->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}QTest::qWait(100);
                         const auto makersResult=core.community().value("makers.list").toMap().value("items").toList();
@@ -178,6 +184,7 @@ int main(int argc, char *argv[]) {
                     }
                     if(demo) {
                         auto pressSetup=[window](QQuickItem *item){if(item){item->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}};
+                    openNavigation();
                         pressSetup(findItem(window->contentItem(),"navSetups"));QTest::qWait(100);
                         pressSetup(findItem(window->contentItem(),"setup-demo-writing-desk"));
                         for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
@@ -263,6 +270,7 @@ int main(int argc, char *argv[]) {
 
                         QTest::keyClick(window,Qt::Key_Escape);QTest::qWait(50);
                     }
+                    openNavigation();
                     auto *submit = findItem(window->contentItem(), "navSubmit");
                     if (submit) { submit->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
                     QTest::qWait(150);
@@ -384,6 +392,7 @@ int main(int argc, char *argv[]) {
                                 const auto items=report.value("items").toList();check(!items.isEmpty()&&items.first().toMap().value("feeAmount").toInt()==8&&items.first().toMap().value("feeState").toString()=="succeeded","native refund reports separate exact fee reversal");}
                         }
                         press(findItem(window->contentItem(),"closePurchases"));
+                    openNavigation();
                         press(findItem(window->contentItem(),"navSubmit"));for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
                         press(findItem(window->contentItem(),"commerceWorkspaceTab"));
                         press(findItem(window->contentItem(),"loadFinanceSellers"));for(int i=0;i<80&&core.loading();++i)QTest::qWait(50);
@@ -426,12 +435,6 @@ int main(int argc, char *argv[]) {
                     QTest::qWait(100);
                 }
                 if (!demo && (parser.isSet(storefrontTest) || parser.value(captureView) != "discover")) {
-                    if (parser.isSet(storefrontTest)) {
-                        auto *browse=window->findChild<QObject*>("browseScroll");
-                        auto *flick=browse ? browse->property("contentItem").value<QObject*>() : nullptr;
-                        check(flick != nullptr, "browse scroll surface");
-                        if(flick) flick->setProperty("contentY",100);
-                    }
                     auto *feature = findItem(window->contentItem(), "discoverCalculator");
                     check(feature != nullptr, "repository discovery feature");
                     if (feature) { feature->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
@@ -464,14 +467,23 @@ int main(int argc, char *argv[]) {
                             QTest::qWait(100);
                             check(core.detail().isEmpty(), "return to discovery");
                             check(core.isSaved("repo-omacalc"), "saved app survives return");
-                            check(window->property("browsePosition").toReal()>=99, "browse position retained");
-                            auto *restored=findItem(window->contentItem(),"discoverCalculator");
-                            check(restored && restored->hasActiveFocus(), "focus returns to originating feature");
-                            auto *purpose=findItem(window->contentItem(),"purpose-utilities");
-                            check(purpose != nullptr, "purpose navigation available");
-                            if(purpose){purpose->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                            auto *shelf = findItem(window->contentItem(), "appShelf");
+                            check(shelf != nullptr, "persistent catalogue shelf");
+                            const qreal shelfX = shelf ? shelf->property("contentX").toReal() : 0;
+                            auto *entry = findItem(window->contentItem(), "shelf-repo-omacalc");
+                            check(entry != nullptr, "real app shelf selector");
+                            if (entry) { entry->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
+                            for (int i=0;i<60 && core.detail().isEmpty();++i) QTest::qWait(50);
+                            check(core.detail().value("app").toMap().value("id").toString()=="repo-omacalc", "shelf selects real app");
+                            check(shelf == findItem(window->contentItem(), "appShelf"), "shelf survives app selection");
+                            check(!shelf || qAbs(shelf->property("contentX").toReal()-shelfX)<1, "shelf position preserved");
+                            QTest::keyClick(window, Qt::Key_K, Qt::ControlModifier);
+                            for (const auto character : QByteArray("nomatchingapp")) QTest::keyClick(window, character);
+                            QTest::qWait(300);
+                            check(core.total()==0, "empty search results");
+                            core.clearFilters();
                             for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
-                            check(core.query().value("category").toString()=="utilities", "purpose opens filtered catalogue");
+                            check(core.total()>0, "search recovery restores catalogue");
                         }
                     }
                 }
