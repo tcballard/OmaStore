@@ -1,5 +1,16 @@
 # Build handoff
 
+11 September 2026, PR #9 CI correction: native run 34648363716 failed only
+`desktop-settings/atomicReplacementAndLateCreation`. The default five-second
+QTRY deadline raced the five-second recovery poll; Qt reported that the
+expected empty palette arrived at 5.1 seconds. Reload assertions now allow
+eight seconds for polling and event dispatch, retaining the same predicates
+and the enclosing 30-second suite limit. Application timing is unchanged.
+Arch package run 34648363622 passed at af5f795. Fresh native CI must verify
+the corrected test and the remaining sample-build steps.
+The focused Qt 6.4 desktop-settings suite passed three consecutive runs in
+31.12 seconds after this correction. No tests were disabled.
+
 11 September 2026, repository synchronisation, continuation from PR #5's
 1035c5c / matching local tree 346afd7:
 `feat/repository-sync` adds direct bounded conditional reads of Omarchy's
