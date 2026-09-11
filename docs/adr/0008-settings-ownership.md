@@ -1,0 +1,15 @@
+# ADR 0008: selective settings belong to narrow Omarchy adapters
+
+Status: accepted for implementation; live adapters remain unverified and disabled.
+
+Inspected Omarchy revision: `5b91db503c904bbfc5f34bdaaa9c708814958f3d`. The source is the actual current shell implementation, including [bar commands](https://github.com/omacom/omarchy/blob/5b91db503c904bbfc5f34bdaaa9c708814958f3d/bin/omarchy-bar), [shell configuration helpers](https://github.com/omacom/omarchy/blob/5b91db503c904bbfc5f34bdaaa9c708814958f3d/bin/omarchy-shell-config), [the default shell configuration](https://github.com/omacom/omarchy/blob/5b91db503c904bbfc5f34bdaaa9c708814958f3d/config/omarchy/shell.json), [PluginRegistry](https://github.com/omacom/omarchy/blob/5b91db503c904bbfc5f34bdaaa9c708814958f3d/shell/services/PluginRegistry.qml), and [theme application](https://github.com/omacom/omarchy/blob/5b91db503c904bbfc5f34bdaaa9c708814958f3d/bin/omarchy-theme-set).
+
+Current Omarchy stores the user's shell configuration in `~/.config/omarchy/shell.json`. The built-in bar uses `bar.layout.left`, `center` and `right`. `omarchy bar move` delegates to the shell's typed widget move method. Widgets keep their option objects when moved. This is distinct from enabling, disabling, installing or hiding plugins. OmaStore's first bar candidate moves one existing `omarchy.clock`; duplicates, missing widgets and custom bars remain unsupported.
+
+Theme application stages generated files, backgrounds and application-specific updates. Writing `theme.name` alone would not apply a theme. That name is a read-only observation, and automatic live theme restoration is not promised. A theme adapter needs actual before/after evidence for those broader effects. Packaged Tokyo Night and Catppuccin are initial public choices; selecting an appearance belongs to the user. Sample Ink and Sample Sand are confined to the fictional desktop fixture.
+
+Public recipes carry `adapter`, `valueId`, and `revision`. A shared Rust registry resolves those references to typed choices. Unknown values, revisions, arbitrary paths and hooks cannot enter a write plan. Catalogue items with unsupported references remain readable manual instructions. Settings consent is separate from application installation consent.
+
+A proposal records selected values, the observed value, scope, restoration limits, environment version and a fingerprint of the file bytes/identity. Reads reject symlinks, malformed/oversized files, unexpected ownership and group/world writable targets. The public projection never serializes a full shell configuration or other local values. Private before/after recovery evidence belongs in OmaStore's local journal.
+
+The verified live-version list is empty. The sample adapter can exercise the complete mechanics against files owned by OmaStore under its isolated sample state directory. It never writes the host's Omarchy files. Actual customised-desktop apply/restore and reload evidence is required before adding a live release to the list.

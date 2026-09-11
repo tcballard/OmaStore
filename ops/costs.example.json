@@ -1,0 +1,14 @@
+{
+  "currency": "GBP",
+  "minorUnitExponent": 2,
+  "monthlyInfrastructureMinor": null,
+  "monthlyStorageAndEgressMinor": null,
+  "monthlyMonitoringBackupMinor": null,
+  "newSubmissionsPerMonth": null,
+  "updatesPerMonth": null,
+  "minutesPerNewReview": null,
+  "minutesPerUpdateReview": null,
+  "operatorHourlyMinor": null,
+  "monthlySupportHours": null,
+  "note": "Fill actual quotes and measured or explicitly labelled assumptions. These are model inputs, not established costs."
+}

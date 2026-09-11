@@ -72,7 +72,7 @@ impl Store {
             "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
         )?;
         let version: u32 = c.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if version > 6 {
+        if version > 13 {
             return Err(Error::new(500, "unsupported_database_version"));
         }
         if version > 0 {
@@ -137,6 +137,42 @@ impl Store {
         if version < 6 {
             let t = c.transaction()?;
             t.execute_batch(include_str!("../migrations/006_monitoring.sql"))?;
+            t.commit()?;
+        }
+        if version < 7 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/007_editorial.sql"))?;
+            t.commit()?;
+        }
+        if version < 8 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/008_operations.sql"))?;
+            t.commit()?;
+        }
+        if version < 9 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/009_commerce_model.sql"))?;
+            t.commit()?;
+        }
+        if version < 10 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/010_checkout.sql"))?;
+            t.commit()?;
+        }
+        if version < 11 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/011_delivery.sql"))?;
+            t.commit()?;
+        }
+        if version < 12 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/012_commerce_lifecycle.sql"))?;
+            crate::commerce_accounting::backfill(&t)?;
+            t.commit()?;
+        }
+        if version < 13 {
+            let t = c.transaction()?;
+            t.execute_batch(include_str!("../migrations/013_commerce_cycles.sql"))?;
             t.commit()?;
         }
         Ok(Self {

@@ -36,6 +36,33 @@ pub fn working_days(start: i64, end: i64) -> u32 {
     }
     count
 }
+pub(crate) fn start(
+    t: &Transaction<'_>,
+    actor: &Actor,
+    id: &str,
+    version: i64,
+    now: i64,
+) -> Result<Value> {
+    recheck(t, actor, "reviewer")?;
+    let row: Option<(String, String, i64, String)> = t
+        .query_row(
+            "SELECT owner,candidate,version,state FROM revisions WHERE id=?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .optional()?;
+    let (owner, body, current, state) = row.ok_or(Error::new(404, "revision_unavailable"))?;
+    if version != current {
+        return Err(Error::new(409, "stale_revision"));
+    }
+    if !["submitted", "checking", "in_review"].contains(&state.as_str()) {
+        return Err(Error::new(409, "transition_unavailable"));
+    }
+    independent(t, actor, &owner, &serde_json::from_str(&body)?, now)?;
+    t.execute("UPDATE revisions SET state='in_review',first_response_at=COALESCE(first_response_at,?2),version=version+1 WHERE id=?1",params![id,now])?;
+    audit(t, &actor.id, "review_started", id, now, &json!({}))?;
+    Ok(json!({"id":id,"version":version+1,"state":"in_review"}))
+}
 pub fn required_reviewers(c: &Catalogue) -> usize {
     if c.apps.iter().any(|app| {
         matches!(app.app_type, AppType::ShellPlugin)
@@ -68,6 +95,27 @@ pub(crate) fn independent(
 ) -> Result<()> {
     if actor.id == owner {
         return Err(Error::new(403, "independent_reviewer_required"));
+    }
+    for (kind, ids) in [
+        (
+            "app",
+            candidate
+                .apps
+                .iter()
+                .map(|a| a.id.as_str())
+                .collect::<Vec<_>>(),
+        ),
+        (
+            "maker",
+            candidate.makers.iter().map(|m| m.id.as_str()).collect(),
+        ),
+    ] {
+        for id in ids {
+            let own:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM entity_owners WHERE kind=?1 AND entity_id=?2 AND owner=?3)",params![kind,id,actor.id],|r|r.get(0))?;
+            if own {
+                return Err(Error::new(403, "independent_reviewer_required"));
+            }
+        }
     }
     let mut targets = Vec::new();
     for app in &candidate.apps {
@@ -160,20 +208,24 @@ impl Store {
             detail["runtimeEvidence"] = json!([]);
         }
         let mut media = Vec::new();
-        for app in &candidate.apps {
-            for asset in &app.media {
-                if let Some(media_id) = c
-                    .query_row(
-                        "SELECT id FROM media WHERE owner=?1 AND digest=?2 LIMIT 1",
-                        params![detail["owner"].as_str().unwrap_or(""), asset.sha256],
-                        |r| r.get::<_, String>(0),
-                    )
-                    .optional()?
-                {
-                    media.push(json!({"id":media_id,"kind":asset.kind,"alt":asset.alt,"rights":asset.rights,"sha256":asset.sha256}));
-                }
+        for asset in candidate
+            .apps
+            .iter()
+            .flat_map(|a| a.media.iter())
+            .chain(candidate.recipes.iter().flat_map(|r| r.media.iter()))
+        {
+            if let Some(media_id) = c
+                .query_row(
+                    "SELECT id FROM media WHERE owner=?1 AND digest=?2 LIMIT 1",
+                    params![detail["owner"].as_str().unwrap_or(""), asset.sha256],
+                    |r| r.get::<_, String>(0),
+                )
+                .optional()?
+            {
+                media.push(json!({"id":media_id,"kind":asset.kind,"alt":asset.alt,"rights":asset.rights,"sha256":asset.sha256}));
             }
         }
+
         detail["media"] = json!(media);
         // Compare against the immediate prior immutable revision of this author's draft.
         let prior:Option<String>=c.query_row("SELECT p.candidate FROM revisions p JOIN revisions r ON p.draft_id=r.draft_id WHERE r.id=?1 AND p.number<r.number ORDER BY p.number DESC LIMIT 1",[id],|r|r.get(0)).optional()?;
@@ -252,6 +304,9 @@ pub(crate) fn decide(
         return Err(Error::new(409, "transition_unavailable"));
     }
     let candidate: Catalogue = serde_json::from_str(&raw)?;
+    if !candidate.stories.is_empty() || !candidate.editorial.is_empty() {
+        recheck(t, actor, "editor")?;
+    }
     independent(t, actor, &owner, &candidate, now)?;
     let payload = if decision == "approve" {
         if !acknowledge {
@@ -338,8 +393,12 @@ pub(crate) fn eligible_payload(
             return Err(Error::new(409, "required_checks_missing"));
         }
     }
+    let context_apps = crate::context::check_frozen(t, id, candidate, now)?;
     let mut result = candidate.clone();
     for app in &mut result.apps {
+        if context_apps.contains(&app.id) {
+            continue;
+        }
         let mut s=t.prepare("SELECT body FROM runtime_evidence WHERE revision_id=?1 AND app_id=?2 AND release_id=?3 ORDER BY created_at DESC,id")?;
         let rows = s
             .query_map(params![id, app.id, app.current_release_id], |r| {

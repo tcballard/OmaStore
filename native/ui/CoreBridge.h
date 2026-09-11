@@ -22,13 +22,16 @@ class CoreBridge final : public QObject {
     Q_PROPERTY(QVariantList saved READ saved NOTIFY savedChanged)
     Q_PROPERTY(int total READ total NOTIFY dataChanged)
     Q_PROPERTY(bool hasMore READ hasMore NOTIFY dataChanged)
+    Q_PROPERTY(QVariantMap community READ community NOTIFY communityChanged)
     Q_PROPERTY(QVariantMap workspace READ workspace NOTIFY workspaceChanged)
     Q_PROPERTY(QVariantMap workspaceReply READ workspaceReply NOTIFY workspaceChanged)
 public:
     explicit CoreBridge(bool demo = false, QObject *parent = nullptr);
     ~CoreBridge() override;
     Q_INVOKABLE void start();
+    void openHandoff(const QString &uri);
     Q_INVOKABLE void refresh();
+    Q_INVOKABLE void copyFeedLink();
     Q_INVOKABLE void setFilter(const QString &key, const QString &value);
     Q_INVOKABLE void clearFilters();
     Q_INVOKABLE void nextPage();
@@ -38,6 +41,10 @@ public:
     Q_INVOKABLE void removeSaved(const QString &id);
     Q_INVOKABLE bool isSaved(const QString &id) const;
     Q_INVOKABLE bool openLink(const QString &kind, int index = 0);
+    Q_INVOKABLE void communityAction(const QString &method, const QVariantMap &params = {});
+    Q_INVOKABLE bool openSetupLink(const QString &kind, int index=0);
+    Q_INVOKABLE void copySetupLink();
+    Q_INVOKABLE bool openMakerLink(const QString &kind);
     Q_INVOKABLE void workspaceAction(const QString &action, const QVariantMap &params = {});
     void prepareCandidate(const QVariantMap &fields) { request("candidate.prepare", fields); }
     bool ready() const { return m_ready; }
@@ -54,6 +61,7 @@ public:
     QVariantList saved() const { return m_saved; }
     int total() const { return m_total; }
     bool hasMore() const { return !m_cursor.isEmpty(); }
+    QVariantMap community() const { return m_community; }
     QVariantMap workspace() const { return m_workspace; }
     QVariantMap workspaceReply() const { return m_workspaceReply; }
 signals:
@@ -65,6 +73,8 @@ signals:
     void savedChanged();
     void candidatePrepared(const QVariantMap &result);
     void workspaceChanged();
+    void communityChanged();
+    void handoffReady(const QVariantMap &identity);
 private:
     struct Pending { QString method; qint64 since; int generation; bool append; };
     void request(const QString &method, const QVariantMap &params = {});
@@ -85,6 +95,9 @@ private:
     QVariantMap m_catalogue, m_detail, m_query, m_distribution;
     qint64 m_distributionUntil=0;
     QTimer m_distributionExpiry;
+    QString m_pendingHandoff, m_detailRequestId;
+    QVariantMap m_community;
+    QMap<QString,QString> m_communityRequests;
     QVariantMap m_workspace, m_workspaceReply;
     QVariantList m_apps, m_saved;
 };

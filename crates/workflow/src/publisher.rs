@@ -188,7 +188,12 @@ async fn publish(
         store.validate_publication_scope(&approval, &base, crate::now())?;
         let catalogue =
             crate::publication::merge_catalogue(&base, &approval, &base_sha, target.development)?;
-        let files = files(&approval, &catalogue, objects)?;
+        let files = files(
+            &approval,
+            &catalogue,
+            objects,
+            &store.context_apps(&approval.revision)?,
+        )?;
         let hashes = files
             .iter()
             .map(|(path, bytes)| (path.clone(), digest(bytes)))
@@ -304,6 +309,7 @@ fn files(
     approval: &Approved,
     catalogue: &Catalogue,
     objects: &LocalObjects,
+    context: &[String],
 ) -> Result<BTreeMap<String, Vec<u8>>> {
     let mut files = BTreeMap::new();
     files.insert("data/registry.json".into(), catalogue.canonical_bytes());
@@ -312,26 +318,32 @@ fn files(
         format!("data/approvals/{}.json", approval.revision),
         serde_json::to_vec_pretty(&receipt)?,
     );
-    for app in &approval.payload.apps {
-        for media in &app.media {
-            let key = url::Url::parse(&media.url)
-                .ok()
-                .and_then(|u| {
-                    u.path_segments()
-                        .and_then(|mut s| s.next_back())
-                        .map(str::to_owned)
-                })
-                .ok_or(Error::new(422, "media_reference_invalid"))?;
-            if !key.starts_with(&media.sha256) {
-                return Err(Error::new(422, "media_reference_invalid"));
-            }
-            let bytes = objects.read_private(&key, VIDEO_LIMIT)?;
-            if digest(&bytes) != media.sha256 {
-                return Err(Error::new(409, "media_digest_mismatch"));
-            }
-            files.insert(format!("media/{key}"), bytes);
+    for media in approval
+        .payload
+        .apps
+        .iter()
+        .filter(|a| !context.contains(&a.id))
+        .flat_map(|a| a.media.iter())
+        .chain(approval.payload.recipes.iter().flat_map(|r| r.media.iter()))
+    {
+        let key = url::Url::parse(&media.url)
+            .ok()
+            .and_then(|u| {
+                u.path_segments()
+                    .and_then(|mut s| s.next_back())
+                    .map(str::to_owned)
+            })
+            .ok_or(Error::new(422, "media_reference_invalid"))?;
+        if !key.starts_with(&media.sha256) {
+            return Err(Error::new(422, "media_reference_invalid"));
         }
+        let bytes = objects.read_private(&key, VIDEO_LIMIT)?;
+        if digest(&bytes) != media.sha256 {
+            return Err(Error::new(409, "media_digest_mismatch"));
+        }
+        files.insert(format!("media/{key}"), bytes);
     }
+
     Ok(files)
 }
 async fn commit_files(
@@ -586,7 +598,12 @@ pub async fn reconcile(
                 )?;
             }
         }
-        let files = files(&approved, &expected, objects)?;
+        let files = files(
+            &approved,
+            &expected,
+            objects,
+            &store.context_apps(&approved.revision)?,
+        )?;
         let commit = commit_files(
             api,
             &root,
@@ -661,6 +678,10 @@ fn preserves_delivered(live: &Catalogue, next: &Catalogue, changed: &Catalogue) 
             .filter(|r| !changed.recipes.iter().any(|c| c.id == r.id))
             .all(|r| next.recipes.contains(r))
         && live.editorial.iter().all(|e| next.editorial.contains(e))
+        && live
+            .stories
+            .iter()
+            .all(|s| changed.stories.iter().any(|n| n.id == s.id) || next.stories.contains(s))
 }
 pub fn atomic_catalogue(path: &Path, catalogue: &Catalogue) -> Result<()> {
     use std::io::Write;
@@ -819,7 +840,7 @@ mod tests {
         let base = Catalogue::parse(include_bytes!("../../../data/registry.json"), false).unwrap();
         let next = publication::merge_catalogue(&base, &approved, &"a".repeat(40), true).unwrap();
         let objects = LocalObjects::new(&dir.path().join("objects")).unwrap();
-        let expected = files(&approved, &next, &objects)
+        let expected = files(&approved, &next, &objects, &[])
             .unwrap()
             .into_iter()
             .map(|(k, v)| (k, digest(v)))

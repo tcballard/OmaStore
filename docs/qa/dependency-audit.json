@@ -1,0 +1,15 @@
+{
+  "date": "2026-09-09",
+  "tool": "cargo-audit 0.22.2",
+  "advisoryDatabaseCommit": "bf25f6575a93a35f30796c65c0ed91bee7fa19fd",
+  "lockfileSha256": "053cd4f6ad1ca194968fa2959568c160b8224cd3d9e440c455d183abd4023327",
+  "dependencies": 249,
+  "vulnerabilities": 0,
+  "warnings": {},
+  "resolvedFinding": {
+    "id": "RUSTSEC-2023-0071",
+    "affectedDependency": "rsa 0.9.10",
+    "change": "Use jsonwebtoken 11 AWS-LC backend; the rsa crate is no longer in Cargo.lock"
+  },
+  "limit": "Advisory database and source-format scan are release inputs; they do not establish real Omarchy, provider or operator readiness."
+}

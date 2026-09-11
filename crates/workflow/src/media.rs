@@ -215,8 +215,55 @@ pub fn normalize(kind: &str, bytes: &[u8], objects: &LocalObjects) -> Result<Ass
         duration_ms: None,
     })
 }
-fn decoder(program: &str, args: &[&str], limit: usize) -> Result<Vec<u8>> {
-    let mut child = Command::new("/usr/bin/prlimit")
+fn sandbox_command(work: &Path) -> Result<Command> {
+    let work = work.canonicalize()?;
+    if fs::symlink_metadata(&work)?.file_type().is_symlink() {
+        return Err(Error::new(500, "unsafe_media_storage"));
+    }
+    let mut command = Command::new("/usr/bin/bwrap");
+    command
+        .env_clear()
+        .env("PATH", "/usr/bin:/bin")
+        .env("LANG", "C")
+        .env("OPENBLAS_NUM_THREADS", "1")
+        .args([
+            "--unshare-all",
+            "--die-with-parent",
+            "--new-session",
+            "--cap-drop",
+            "ALL",
+            "--ro-bind",
+            "/usr",
+            "/usr",
+            "--ro-bind",
+            "/etc/ld.so.cache",
+            "/etc/ld.so.cache",
+            "--ro-bind-try",
+            "/etc/alternatives",
+            "/etc/alternatives",
+            "--symlink",
+            "usr/bin",
+            "/bin",
+            "--symlink",
+            "usr/lib",
+            "/lib",
+            "--symlink",
+            "usr/lib64",
+            "/lib64",
+            "--proc",
+            "/proc",
+            "--dev",
+            "/dev",
+            "--tmpfs",
+            "/tmp",
+            "--bind",
+        ])
+        .arg(work)
+        .args(["/work", "--chdir", "/work", "--", "/usr/bin/prlimit"]);
+    Ok(command)
+}
+fn decoder(program: &str, args: &[&str], limit: usize, work: &Path) -> Result<Vec<u8>> {
+    let mut child = sandbox_command(work)?
         .args([
             "--as=1073741824",
             "--cpu=15",
@@ -281,12 +328,11 @@ fn normalize_video(bytes: &[u8], objects: &LocalObjects) -> Result<Asset> {
     let input = work.path().join(format!("input.{extension}"));
     let output = work.path().join(format!("output.{extension}"));
     fs::write(&input, bytes)?;
-    let input = input
-        .to_str()
-        .ok_or(Error::new(500, "media_storage_failed"))?;
-    let output = output
-        .to_str()
-        .ok_or(Error::new(500, "media_storage_failed"))?;
+    let host_output = output.clone();
+    let input = format!("/work/input.{extension}");
+    let output = format!("/work/output.{extension}");
+    decoder("/usr/bin/true", &[], 1024, work.path())
+        .map_err(|_| Error::new(503, "media_sandbox_unavailable"))?;
     let probe = decoder(
         "/usr/bin/ffprobe",
         &[
@@ -300,9 +346,10 @@ fn normalize_video(bytes: &[u8], objects: &LocalObjects) -> Result<Asset> {
             "format=duration:stream=codec_type,codec_name,width,height",
             "-of",
             "json",
-            input,
+            &input,
         ],
         64 * 1024,
+        work.path(),
     )?;
     let probe: Value = serde_json::from_slice(&probe)?;
     let duration = probe["format"]["duration"]
@@ -337,7 +384,7 @@ fn normalize_video(bytes: &[u8], objects: &LocalObjects) -> Result<Asset> {
             "-f",
             format,
             "-i",
-            input,
+            &input,
             "-map",
             "0:v:0",
             "-map",
@@ -348,11 +395,12 @@ fn normalize_video(bytes: &[u8], objects: &LocalObjects) -> Result<Asset> {
             "-1",
             "-c",
             "copy",
-            output,
+            &output,
         ],
         1024,
+        work.path(),
     )?;
-    let bytes = read(Path::new(output), VIDEO_LIMIT)?;
+    let bytes = read(&host_output, VIDEO_LIMIT)?;
     Ok(Asset {
         bytes,
         extension,
@@ -399,15 +447,18 @@ impl Store {
             let prior=t.query_row("SELECT digest,response FROM request_keys WHERE actor=?1 AND key=?2",params![actor.id,upload.key],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?))).optional()?;
             if let Some((old,response))=prior {if old!=hash {return Err(Error::new(409,"idempotency_key_reused"));}return Ok(serde_json::from_str(&response)?);}
             crate::drafts::owned_version(t,actor,upload.draft_id,upload.version)?;
-            let total:i64=t.query_row("SELECT COALESCE(SUM(bytes),0) FROM media WHERE owner=?1",[&actor.id],|r|r.get(0))?;
+            let total=crate::operations::active_media_bytes(t,&actor.id,&sha)?;
             if total+asset.bytes.len() as i64>200*1024*1024 {return Err(Error::new(422,"media_quota_exceeded"));}
             let raw:String=t.query_row("SELECT candidate FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;
             let draft:Value=serde_json::from_str(&raw)?;
-            let count=draft["apps"][0]["media"].as_array().map(|m|m.iter().filter(|m|m["kind"]==upload.kind).count()).unwrap_or(0);
+            let kind:String=t.query_row("SELECT kind FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;
+            let collection=match kind.as_str(){"app"=>"apps","setup"=>"recipes",_=>return Err(Error::new(422,"media_not_supported_for_draft"))};
+            let count=draft[collection][0]["media"].as_array().map(|m|m.iter().filter(|m|m["kind"]==upload.kind).count()).unwrap_or(0);
             if count>=if upload.kind=="screenshot"{5}else{1} {return Err(Error::new(422,"media_count_exceeded"));}
             objects.put_private(&object_key,&asset.bytes)?;
             let raw:String=t.query_row("SELECT candidate FROM drafts WHERE id=?1",[upload.draft_id],|r|r.get(0))?;let mut candidate:Value=serde_json::from_str(&raw)?;
-            let list=candidate["apps"][0]["media"].as_array_mut().ok_or(Error::new(422,"draft_needs_app_fields"))?;
+            if candidate[collection][0]["media"].is_null(){candidate[collection][0]["media"]=json!([]);}
+            let list=candidate[collection][0]["media"].as_array_mut().ok_or(Error::new(422,"draft_needs_media_fields"))?;
             let id=t.query_row("SELECT id FROM media WHERE draft_id=?1 AND digest=?2 AND kind=?3",params![upload.draft_id,sha,upload.kind],|r|r.get::<_,String>(0)).optional()?.unwrap_or(nonce()?);
             let item=json!({"kind":upload.kind,"url":format!("https://raw.githubusercontent.com/tcballard/OmaStore/catalogue-live/media/{object_key}"),"alt":upload.alt,"rights":upload.rights,"sha256":sha});list.push(item.clone());
             let candidate=serde_json::to_string(&candidate)?;if candidate.len()>crate::drafts::MAX_DRAFT_BYTES {return Err(Error::new(413,"candidate_too_large"));}
@@ -441,7 +492,7 @@ impl Store {
             if recheck(&c, actor, "reviewer").is_err() {
                 return Err(Error::new(404, "media_unavailable"));
             }
-            let submitted:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM revisions r,json_each(r.candidate,'$.apps') a,json_each(a.value,'$.media') m WHERE r.draft_id=?1 AND json_extract(m.value,'$.sha256')=?2)",params![draft,sha],|r|r.get(0))?;
+            let submitted:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM revisions r,json_each(r.candidate,'$.apps') a,json_each(a.value,'$.media') m WHERE r.draft_id=?1 AND json_extract(m.value,'$.sha256')=?2) OR EXISTS(SELECT 1 FROM revisions r,json_each(r.candidate,'$.recipes') a,json_each(a.value,'$.media') m WHERE r.draft_id=?1 AND json_extract(m.value,'$.sha256')=?2)",params![draft,sha],|r|r.get(0))?;
             if !submitted {
                 return Err(Error::new(404, "media_unavailable"));
             }
@@ -478,5 +529,258 @@ mod tests {
         let mut bytes = Cursor::new(Vec::new());
         too_large.write_to(&mut bytes, ImageFormat::Png).unwrap();
         assert!(normalize("icon", bytes.get_ref(), &objects).is_err());
+    }
+}
+
+#[cfg(all(test, feature = "development-workflow"))]
+mod setup_tests {
+    use super::*;
+    use crate::drafts::Command;
+    #[test]
+    fn recipe_media_stays_private_until_submission_and_reuses_published_app_context() {
+        let dir = tempfile::tempdir().unwrap();
+        let s = Store::development(&dir.path().join("workflow.db")).unwrap();
+        let objects = LocalObjects::new(&dir.path().join("objects")).unwrap();
+        let now = crate::now();
+        let login = s.development_login("author", now).unwrap();
+        let author = s.actor(login["token"].as_str().unwrap(), now).unwrap();
+        let login = s.development_login("reviewer", now).unwrap();
+        let reviewer = s.actor(login["token"].as_str().unwrap(), now).unwrap();
+        let base: omastore_catalogue::Catalogue =
+            serde_json::from_str(include_str!("../../../tests/fixtures/catalogue.json")).unwrap();
+        s.seed_sample_context(&base).unwrap();
+        let mut candidate = base.clone();
+        candidate.apps.clear();
+        candidate.stories.clear();
+        candidate.makers[0].id = "setup-author".into();
+        candidate.makers[0].slug = "setup-author".into();
+        candidate.recipes[0].id = "sample-setup".into();
+        candidate.recipes[0].slug = "sample-setup".into();
+        candidate.recipes[0].maker_id = "setup-author".into();
+        candidate.recipes[0].parent = Some(base.recipes[0].id.clone());
+        candidate.recipes[0].parent_revision = Some(base.recipes[0].revision.clone());
+        let draft = s
+            .command(
+                &author,
+                &nonce().unwrap(),
+                Command::CreateDraft {
+                    kind: "setup".into(),
+                    candidate: json!(candidate),
+                    base_revision: None,
+                },
+                now,
+            )
+            .unwrap();
+        let id = draft["id"].as_str().unwrap();
+        let mut forged = json!(candidate);
+        forged["recipes"][0]["parent"] = Value::Null;
+        assert_eq!(
+            s.command(
+                &author,
+                &nonce().unwrap(),
+                Command::SaveDraft {
+                    id: id.into(),
+                    version: 1,
+                    candidate: forged
+                },
+                now
+            )
+            .unwrap_err()
+            .code,
+            "remix_attribution_changed"
+        );
+        let mut png = Cursor::new(Vec::new());
+        image::DynamicImage::new_rgba8(4, 4)
+            .write_to(&mut png, ImageFormat::Png)
+            .unwrap();
+        let asset = normalize("icon", png.get_ref(), &objects).unwrap();
+        let media = s
+            .attach_media(
+                &author,
+                Upload {
+                    draft_id: id,
+                    version: 1,
+                    kind: "icon",
+                    alt: "Fictional setup icon",
+                    rights: "Test fixture",
+                    key: &nonce().unwrap(),
+                },
+                &asset,
+                &objects,
+                now,
+            )
+            .unwrap();
+        let mid = media["id"].as_str().unwrap();
+        assert!(s.private_media_key(&reviewer, mid).is_err());
+        let preview = s
+            .command(
+                &author,
+                &nonce().unwrap(),
+                Command::PrepareDraft {
+                    id: id.into(),
+                    version: 2,
+                },
+                now,
+            )
+            .unwrap();
+        assert_eq!(preview["errors"], json!([]));
+        assert_eq!(
+            preview["candidate"]["recipes"][0]["media"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(preview["candidate"]["apps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|a| a["media"].as_array().unwrap().is_empty()));
+        let revision = s
+            .command(
+                &author,
+                &nonce().unwrap(),
+                Command::SubmitDraft {
+                    id: id.into(),
+                    version: 3,
+                    confirm_public_preview: true,
+                },
+                now,
+            )
+            .unwrap();
+        let rid = revision["id"].as_str().unwrap();
+        assert!(s.private_media_key(&reviewer, mid).is_ok());
+        let job = s.lease_checks(now).unwrap().unwrap();
+        assert!(matches!(
+            s.media_findings(&job).unwrap().result,
+            crate::checks::Outcome::Pass
+        ));
+        let findings = ["schema", "links", "media"].map(|name| crate::checks::Finding {
+            check: name.into(),
+            result: crate::checks::Outcome::Pass,
+            code: "fixture_review".into(),
+            detail: "Explicit local fixture observation.".into(),
+            private: false,
+        });
+        s.finish_checks(&job, &findings, now).unwrap();
+        let version = s.revision(&author, rid).unwrap()["version"]
+            .as_i64()
+            .unwrap();
+        let approved = s
+            .command(
+                &reviewer,
+                &nonce().unwrap(),
+                Command::ReviewDecision {
+                    id: rid.into(),
+                    version,
+                    decision: "approve".into(),
+                    reason: "Reviewed fictional setup rights and selective components".into(),
+                    acknowledge_limits: true,
+                },
+                now,
+            )
+            .unwrap();
+        s.command(
+            &author,
+            &nonce().unwrap(),
+            Command::RequestPublication {
+                id: rid.into(),
+                version: approved["version"].as_i64().unwrap(),
+            },
+            now,
+        )
+        .unwrap();
+        crate::sample_publication::rehearse(
+            &s,
+            &author,
+            rid,
+            &objects,
+            &dir.path().join("catalogue.json"),
+        )
+        .unwrap();
+        assert!(!s.release_feed(None).unwrap().contains("<item>"));
+        assert_eq!(s.delivered_catalogue().unwrap().unwrap().recipes.len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod sandbox_tests {
+    use super::*;
+    #[test]
+    #[ignore = "requires Bubblewrap user namespaces and FFmpeg; mandatory deployment CI gate"]
+    fn video_normalization_is_isolated_and_strips_metadata() {
+        let d = tempfile::tempdir().unwrap();
+        let o = LocalObjects::new(&d.path().join("objects")).unwrap();
+        let work = tempfile::tempdir_in(o.root.join("work")).unwrap();
+        let probe = sandbox_command(work.path())
+            .unwrap()
+            .args(["--", "/usr/bin/true"])
+            .output()
+            .unwrap();
+        assert!(
+            probe.status.success(),
+            "Sandbox startup failed: {}",
+            String::from_utf8_lossy(&probe.stderr[..probe.stderr.len().min(4096)])
+        );
+        let binary = sandbox_command(work.path())
+            .unwrap()
+            .args([
+                "--as=1073741824",
+                "--cpu=15",
+                "--",
+                "/usr/bin/ffprobe",
+                "-version",
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            binary.status.success(),
+            "Isolated decoder startup failed: {}",
+            String::from_utf8_lossy(&binary.stderr[..binary.stderr.len().min(4096)])
+        );
+        let env = decoder("/usr/bin/env", &[], 4096, work.path()).unwrap();
+        let env = String::from_utf8(env).unwrap();
+        assert!(!env.contains("HOME="));
+        assert!(!env.contains("TOKEN="));
+        assert!(!env.contains("SECRET="));
+        let outside = d.path().join("private-secret");
+        fs::write(&outside, "private sentinel").unwrap();
+        assert!(decoder(
+            "/usr/bin/test",
+            &["!", "-e", outside.to_str().unwrap()],
+            1024,
+            work.path()
+        )
+        .is_ok());
+        let input = d.path().join("input.mp4");
+        let status = Command::new("/usr/bin/ffmpeg")
+            .env_clear()
+            .env("PATH", "/usr/bin:/bin")
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=32x32:d=15:r=1",
+                "-an",
+                "-c:v",
+                "libx264",
+                "-threads",
+                "1",
+                "-metadata",
+                "title=PRIVATE_MEDIA_METADATA",
+            ])
+            .arg(&input)
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let normalized = normalize_video(&fs::read(input).unwrap(), &o).unwrap();
+        assert!(normalized.duration_ms.unwrap() >= 15000);
+        assert!(!normalized
+            .bytes
+            .windows(b"PRIVATE_MEDIA_METADATA".len())
+            .any(|w| w == b"PRIVATE_MEDIA_METADATA"));
     }
 }

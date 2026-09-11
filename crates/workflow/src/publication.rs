@@ -176,7 +176,17 @@ pub(crate) fn approved(c: &rusqlite::Connection, id: &str, now: i64) -> Result<A
             login: String::new(),
             roles: vec!["reviewer".into()],
         };
-        if current && independent(c, &actor, &row.0, &candidate, now).is_ok() {
+        let editorial_eligible = if candidate.stories.is_empty() && candidate.editorial.is_empty() {
+            true
+        } else {
+            c.query_row(
+                "SELECT EXISTS(SELECT 1 FROM roles WHERE user_id=?1 AND role='editor')",
+                [user],
+                |r| r.get::<_, bool>(0),
+            )?
+        };
+        if current && editorial_eligible && independent(c, &actor, &row.0, &candidate, now).is_ok()
+        {
             eligible.insert(user);
         }
     }
@@ -289,10 +299,11 @@ impl Store {
             t.execute("UPDATE revisions SET state='published',version=version+1 WHERE id=?1",[id])?;
             let base_raw:String=t.query_row("SELECT base_registry FROM publications WHERE revision_id=?1",[id],|r|r.get(0))?;
             let base:Catalogue=serde_json::from_str(&base_raw)?;
-            for (kind,items) in [("app",approval.payload.apps.iter().map(|a|(a.id.as_str(),base.apps.iter().find(|v|v.id==a.id)!=Some(a))).collect::<Vec<_>>()),("maker",approval.payload.makers.iter().map(|m|(m.id.as_str(),base.makers.iter().find(|v|v.id==m.id)!=Some(m))).collect()),("setup",approval.payload.recipes.iter().map(|r|(r.id.as_str(),base.recipes.iter().find(|v|v.id==r.id)!=Some(r))).collect())] {
+            for (kind,items) in [("app",approval.payload.apps.iter().map(|a|(a.id.as_str(),base.apps.iter().find(|v|v.id==a.id)!=Some(a))).collect::<Vec<_>>()),("maker",approval.payload.makers.iter().map(|m|(m.id.as_str(),base.makers.iter().find(|v|v.id==m.id)!=Some(m))).collect()),("setup",approval.payload.recipes.iter().map(|r|(r.id.as_str(),base.recipes.iter().find(|v|v.id==r.id)!=Some(r))).collect()),("story",approval.payload.stories.iter().map(|s|(s.id.as_str(),base.stories.iter().find(|v|v.id==s.id)!=Some(s))).collect())] {
                 for (entity,changed) in items {if changed {t.execute("INSERT INTO entity_owners VALUES(?1,?2,?3,?4) ON CONFLICT(kind,entity_id) DO UPDATE SET owner=excluded.owner,revision_id=excluded.revision_id",params![kind,entity,approval.owner,id])?;}}
             }
             t.execute("INSERT INTO metadata(key,value) VALUES('delivered_catalogue',?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value",[serde_json::to_string(delivered)?])?;
+            crate::feeds::delivered(t,id,&approval.payload,now)?;
             audit(t,"publication-worker","catalogue_delivery_observed",id,now,&json!({"revision":delivered.revision,"snapshot":delivered.snapshot_id()}))
         })
     }
@@ -303,11 +314,25 @@ impl Store {
         now: i64,
     ) -> Result<()> {
         let c = self.connection()?;
-        let known: bool = c.query_row(
+        let mut known: bool = c.query_row(
             "SELECT EXISTS(SELECT 1 FROM publications WHERE expected_registry=?1) OR EXISTS(SELECT 1 FROM metadata WHERE key='delivered_catalogue' AND value=?1)",
             [serde_json::to_string(base)?],
             |r| r.get(0),
         )?;
+        // Provider reads use canonical array ordering. Equivalent observed content is the same authority.
+        if !known {
+            let delivered: Option<String> = c
+                .query_row(
+                    "SELECT value FROM metadata WHERE key='delivered_catalogue'",
+                    [],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            known = delivered
+                .as_ref()
+                .and_then(|s| serde_json::from_str::<Catalogue>(s).ok())
+                .is_some_and(|c| c.snapshot_id() == base.snapshot_id());
+        }
         let prior: bool = c.query_row(
             "SELECT EXISTS(SELECT 1 FROM metadata WHERE key='delivered_catalogue')",
             [],
@@ -318,7 +343,8 @@ impl Store {
                 || !base.apps.is_empty()
                 || !base.recipes.is_empty()
                 || !base.makers.is_empty()
-                || !base.editorial.is_empty())
+                || !base.editorial.is_empty()
+                || !base.stories.is_empty())
         {
             return Err(Error::new(409, "untrusted_base_catalogue"));
         }
@@ -349,8 +375,32 @@ impl Store {
                 }
             }
         }
+        for story in &approval.payload.stories {
+            if base.stories.iter().any(|s| s.id == story.id && s != story)
+                && !owns_entity(&c, &approval.owner, "story", &story.id)?
+            {
+                return Err(Error::new(403, "existing_story_control_required"));
+            }
+            if let Some(author) = base.makers.iter().find(|m| m.id == story.author_maker_id) {
+                if !owns_entity(&c, &approval.owner, "maker", &author.id)?
+                    && !controls(&c, &approval.owner, &author.homepage, now)?
+                {
+                    return Err(Error::new(403, "editorial_author_control_required"));
+                }
+            }
+        }
         for proposed in &approval.payload.recipes {
+            if let Some(maker) = base.makers.iter().find(|m| m.id == proposed.maker_id) {
+                if !owns_entity(&c, &approval.owner, "maker", &maker.id)?
+                    && !controls(&c, &approval.owner, &maker.homepage, now)?
+                {
+                    return Err(Error::new(403, "setup_author_control_required"));
+                }
+            }
             if let Some(old) = base.recipes.iter().find(|r| r.id == proposed.id) {
+                if old != proposed && old.revision == proposed.revision {
+                    return Err(Error::new(409, "setup_revision_reused"));
+                }
                 if old != proposed && !owns_entity(&c, &approval.owner, "setup", &old.id)? {
                     return Err(Error::new(403, "existing_setup_control_required"));
                 }
@@ -456,9 +506,13 @@ pub fn commit_sha(sha: &str) -> bool {
 }
 pub fn contains_payload(delivered: &Catalogue, payload: &Catalogue) -> bool {
     payload
-        .apps
+        .stories
         .iter()
-        .all(|item| delivered.apps.iter().any(|a| a == item))
+        .all(|s| delivered.stories.contains(s))
+        && payload
+            .apps
+            .iter()
+            .all(|item| delivered.apps.iter().any(|a| a == item))
         && payload
             .makers
             .iter()
@@ -501,6 +555,10 @@ pub fn merge_catalogue(
     for recipe in &approval.payload.recipes {
         c.recipes.retain(|r| r.id != recipe.id);
         c.recipes.push(recipe.clone());
+    }
+    for story in &approval.payload.stories {
+        c.stories.retain(|s| s.id != story.id);
+        c.stories.push(story.clone());
     }
     for editorial in &approval.payload.editorial {
         if !c.editorial.contains(editorial) {

@@ -1,5 +1,6 @@
 """Exercise the actual service and core processes; never publish the test data."""
 import json
+import xml.etree.ElementTree as ET
 import os
 from pathlib import Path
 import select
@@ -14,7 +15,7 @@ demo = len(sys.argv) > 4 and sys.argv[4] == "--demo"
 with tempfile.TemporaryDirectory() as directory:
     source = Path(directory) / "catalogue.json"
     source.write_bytes(Path(catalogue).read_bytes())
-    server = subprocess.Popen([service, str(source), "127.0.0.1:0"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    server = subprocess.Popen([service, str(source), "127.0.0.1:0", "--workspace", str(Path(directory) / "private" / "workflow.db")], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=dict(os.environ, OMASTORE_MONITORING_PAUSED="1", OMASTORE_CHECKS_PAUSED="1", OMASTORE_PUBLICATION_PAUSED="1"))
     try:
         if not select.select([server.stdout], [], [], 8)[0]:
             raise AssertionError("service startup timeout")
@@ -41,6 +42,12 @@ with tempfile.TemporaryDirectory() as directory:
         assert get("/api/v1/catalogue", {"If-None-Match": headers["ETag"]})[0] == 304
         assert get("/api/v1/apps?price=cheap")[0] == 400
         assert get("/api/v1/catalogue", method="POST")[0] == 405
+        rss_status, rss_headers, rss_body = get("/feed.xml")
+        assert rss_status == 200 and rss_headers["Content-Type"].startswith("application/rss+xml")
+        root = ET.fromstring(rss_body)
+        assert root.tag == "rss" and root.find("channel") is not None
+        assert root.findall("channel/item") == []
+        assert get("/feed.xml", {"If-None-Match": rss_headers["ETag"]})[0] == 304
         remote = json.loads(get("/api/v1/apps")[2])
         env = dict(os.environ, XDG_CACHE_HOME=directory)
         request = json.dumps(dict(protocol_version=1, id="query", method="apps.list")) + "\n"

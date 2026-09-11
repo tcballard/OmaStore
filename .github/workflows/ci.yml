@@ -18,7 +18,7 @@ jobs:
       - name: Install native build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build qt6-base-dev qt6-declarative-dev qt6-tools-dev-tools qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-dialogs qml6-module-qtquick-layouts qml6-module-qtquick-window qml6-module-qtquick-templates qml6-module-qtqml-workerscript python3
+          sudo apt-get install -y cmake ninja-build qt6-base-dev qt6-declarative-dev qt6-tools-dev-tools qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-dialogs qml6-module-qtquick-layouts qml6-module-qtquick-window qml6-module-qtquick-templates qml6-module-qtqml-workerscript python3 bubblewrap ffmpeg
       - name: Use the pinned Rust toolchain
         run: rustup show
       - name: Check formatting
@@ -58,3 +58,18 @@ jobs:
             build-demo/Testing/Temporary/
             build-demo/discovery.png
           if-no-files-found: ignore
+
+  isolated-media:
+    # The worker requires permitted unprivileged user/network namespaces.
+    # Keep native compatibility coverage on 24.04; exercise the worker on a
+    # supported host without relaxing any runner-wide AppArmor/sysctl policy.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the isolated worker dependencies
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap ffmpeg
+      - name: Use the pinned Rust toolchain
+        run: rustup show
+      - name: Verify isolated video processing
+        run: cargo test -p omastore-workflow --locked video_normalization_is_isolated_and_strips_metadata -- --ignored

@@ -27,12 +27,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 state.sandbox = true;
                 index += 1;
             }
+            #[cfg(feature = "development-workflow")]
+            "--commerce-test" => {
+                state.commerce_test = true;
+                index += 1;
+            }
             _ => return Err("unsupported service argument".into()),
         }
     }
     if let Some(path) = database {
         #[cfg(feature = "development-workflow")]
-        let store = if state.sandbox {
+        let store = if state.sandbox || state.commerce_test {
             Store::development(&path)?
         } else {
             Store::open(&path)?
@@ -74,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
         }
     }
-    if !state.sandbox && state.store.is_some() && !state.origin.is_empty() {
+    if !state.sandbox && !state.commerce_test && state.store.is_some() && !state.origin.is_empty() {
         match omastore_workflow::github::Config::from_env() {
             Ok(Some(config)) => {
                 state.github = Some(omastore_workflow::github::Github::new(config));
@@ -95,6 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     state.read_catalogue()?;
     let monitoring_worker = if state.store.is_some()
         && !state.sandbox
+        && !state.commerce_test
         && std::env::var("OMASTORE_MONITORING_PAUSED").ok().as_deref() != Some("1")
     {
         Some(omastore_service::monitoring::start_worker(state.clone()))
@@ -103,9 +109,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
     let worker = if state.store.is_some()
         && !state.sandbox
+        && !state.commerce_test
         && std::env::var("OMASTORE_CHECKS_PAUSED").ok().as_deref() != Some("1")
     {
         Some(omastore_service::start_checks_worker(state.clone()))
+    } else {
+        None
+    };
+    let maintenance_worker = if state.store.is_some()
+        && !state.sandbox
+        && !state.commerce_test
+        && std::env::var("OMASTORE_MAINTENANCE_PAUSED").ok().as_deref() != Some("1")
+    {
+        Some(omastore_service::start_maintenance_worker(state.clone()))
+    } else {
+        None
+    };
+    omastore_service::commerce::configure(&mut state)?;
+    let commerce_worker = if state.commerce.mode() != "disabled" {
+        Some(omastore_service::commerce::start_worker(state.clone()))
     } else {
         None
     };
@@ -116,10 +138,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let _ = tokio::signal::ctrl_c().await;
         })
         .await?;
+    if let Some(worker) = commerce_worker {
+        worker.abort();
+    }
     if let Some(worker) = worker {
         worker.abort();
     }
     if let Some(worker) = publication_worker {
+        worker.abort();
+    }
+    if let Some(worker) = maintenance_worker {
         worker.abort();
     }
     if let Some(worker) = monitoring_worker {

@@ -456,6 +456,7 @@ mod tests {
         c.apps = vec![app];
         c.recipes.clear();
         c.editorial.clear();
+        c.stories.clear();
         let now = crate::now();
         let a = s.development_login("author", now).unwrap();
         let a = s.actor(a["token"].as_str().unwrap(), now).unwrap();

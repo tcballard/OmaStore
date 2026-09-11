@@ -45,7 +45,7 @@ ColumnLayout {
             } else if ((r.action === "command" || r.action === "drafts.new" || r.action === "drafts.sample") && r.command === "create_draft") panel.open(r.id);
             else if (r.action === "command" && r.command === "save_draft") {panel.draft.version=r.version;panel.dirty=false;panel.notice="Saved to your private workspace.";}
             else if (r.action === "drafts.cache") panel.localSaved=true;
-            else if (r.action === "drafts.preview") {panel.errors=r.errors || [];panel.previewReady=true;preview.open();}
+            else if (r.action === "command" && r.command === "prepare_draft") {panel.candidate=r.candidate;panel.draft.version=r.version;panel.errors=r.errors || [];panel.previewReady=true;confirm.checked=false;preview.open();}
             else if (r.action === "media.upload") panel.open(r.draftId);
             else if (r.action === "revisions.get") panel.revision=r;
             else if (r.action === "publication.sample") {panel.notice=r.notice || "Local publication rehearsal completed.";core.workspaceAction("revisions.get",{id:r.id});}
@@ -65,6 +65,8 @@ ColumnLayout {
         Button { objectName:"newDraft"; text:"New listing"; enabled:!core.loading; onClicked:core.workspaceAction("drafts.new",{}) }
         Button { text:"From worksheet"; enabled:!core.loading && !!worksheet.result.candidate; onClicked:panel.command({command:"create_draft",kind:"app",candidate:worksheet.result.candidate,base_revision:null}) }
     }
+        Button {text:"New story / pick";enabled:!core.loading;onClicked:core.workspaceAction("drafts.new",{kind:"editorial"})}
+    Button {text:"New setup";objectName:"newSetupDraft";enabled:!core.loading;onClicked:core.workspaceAction("drafts.new",{kind:"setup"})}
     Button { visible:!!core.workspace.sandbox;text:"Use a filled fictional listing to try submission";enabled:!core.loading;onClicked:core.workspaceAction("drafts.sample",{}) }
     Label { visible:!(core.workspace.drafts || []).length; text:"Start with a few facts. Drafts stay private until you confirm the exact submission preview."; Layout.fillWidth:true; wrapMode:Text.Wrap }
     Repeater {
@@ -90,9 +92,31 @@ ColumnLayout {
                 Layout.fillWidth:true
                 Button {text:"Save workspace";enabled:panel.dirty && !core.loading;onClicked:panel.save()}
                 Button {text:"Compare server copy";enabled:!!panel.draft.localRecovery;onClicked:serverCopy.open()}
-                Button {text:"Preview submission";enabled:!panel.dirty && !core.loading;onClicked:core.workspaceAction("drafts.preview",{candidate:panel.candidate})}
+                Button {text:"Preview submission";enabled:!panel.dirty && !core.loading;onClicked:panel.command({command:"prepare_draft",id:panel.draft.id,version:panel.draft.version})}
             }
             Label {text:"Purpose, release identity, acquisition route and price are separate facts. Expand each section to edit. Public test results and verified control are assigned during review.";Layout.fillWidth:true;wrapMode:Text.Wrap}
+            Loader {
+                active:panel.draft.kind==="editorial" || panel.draft.kind==="setup";Layout.fillWidth:true
+                sourceComponent:ColumnLayout {
+                    Label {text:panel.draft.kind==="setup"?"Link components here, then set required/optional choices, dependencies, conflicts, attribution and sharing rights below.":"Link published apps, then choose a UTC publish date and optional end date. Editorial selection is reviewed independently.";Layout.fillWidth:true;wrapMode:Text.Wrap}
+                    CataloguePicker {
+                        core:panel.core
+                        selectedIds:panel.draft.kind==="setup" ? (((panel.candidate.recipes || [])[0] || {}).components || []).map(p=>p.appId) : (((panel.candidate.stories || [])[0] || {}).appIds || [])
+                        onToggled:(appId,releaseId,on)=>{
+                            if(panel.draft.kind==="setup") {
+                                let items=panel.candidate.recipes[0].components.filter(p=>p.appId!==appId);
+                                if(on)items.push({appId:appId,releaseId:releaseId,optional:true,dependsOn:[],conflicts:[]});
+                                panel.change(["recipes","0","components"],items);
+                            } else {
+                                let ids=panel.candidate.stories[0].appIds.filter(id=>id!==appId);if(on)ids.push(appId);panel.change(["stories","0","appIds"],ids);
+                            }
+                            const makerId=panel.draft.kind==="setup"?panel.candidate.recipes[0].makerId:panel.candidate.stories[0].authorMakerId;
+                            panel.change(["makers"],panel.candidate.makers.filter(m=>m.id===makerId));
+                            panel.change(["apps"],[]);
+                        }
+                    }
+                }
+            }
             ValueEditor { value:panel.candidate;field:"Listing fields";theme:panel.theme;onEdited:(path,value)=>panel.change(path,value) }
             Label {text:"Upload media";font.bold:true}
             Label {text:"PNG or WebP icon ≤1 MiB; up to five screenshots ≤5 MiB; one 15–45 second MP4/WebM demo ≤30 MiB. Supply alt text and rights for each item.";Layout.fillWidth:true;wrapMode:Text.Wrap}

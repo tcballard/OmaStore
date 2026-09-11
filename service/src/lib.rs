@@ -1,3 +1,5 @@
+pub mod commerce;
+mod feeds;
 pub mod monitoring;
 pub mod publication;
 mod workspace;
@@ -19,6 +21,11 @@ use tokio::sync::Semaphore;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub commerce: Arc<dyn omastore_workflow::commerce_finance_provider::Finance>,
+    pub fulfilment: Arc<dyn omastore_workflow::commerce_delivery::Fulfilment>,
+    pub commerce_issuer: Option<Arc<omastore_workflow::commerce_license::Issuer>>,
+    pub commerce_webhook_secret: Option<String>,
+    pub commerce_test: bool,
     pub catalogue: PathBuf,
     pub store: Option<Store>,
     pub objects: Option<omastore_workflow::media::LocalObjects>,
@@ -33,6 +40,11 @@ pub struct AppState {
 impl AppState {
     pub fn public(catalogue: PathBuf) -> Self {
         Self {
+            commerce: Arc::new(omastore_workflow::commerce_provider::Disabled),
+            fulfilment: Arc::new(omastore_workflow::commerce_delivery::Unconfigured),
+            commerce_issuer: None,
+            commerce_webhook_secret: None,
+            commerce_test: false,
             catalogue,
             store: None,
             objects: None,
@@ -73,6 +85,8 @@ pub type ApiResult<T> = std::result::Result<T, ApiError>;
 
 pub fn router(state: AppState) -> Router {
     Router::new()
+        .route("/feed.xml", get(feeds::all))
+        .route("/makers/{id}/feed.xml", get(feeds::maker))
         .route("/api/v1/status", get(monitoring::status))
         .route("/api/v1/monitoring", get(monitoring::queue))
         .route("/api/v1/auth/info", get(auth_info))
@@ -89,6 +103,35 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/api/v1/submissions/{id}", get(publication::submitted))
         .route("/api/v1/github/webhook", post(publication::webhook))
+        .route("/api/v1/operations", get(workspace::operations))
+        .route("/api/v1/commerce/status", get(workspace::commerce_status))
+        .route("/api/v1/commerce/prices", get(commerce::prices))
+        .route("/api/v1/commerce/lifecycle", post(commerce::lifecycle))
+        .route("/api/v1/commerce/author", get(commerce::author))
+        .route(
+            "/api/v1/commerce/orders/{id}/sample-capture",
+            post(commerce::sample_capture),
+        )
+        .route(
+            "/api/v1/commerce/orders",
+            get(commerce::orders).post(commerce::purchase),
+        )
+        .route("/api/v1/commerce/orders/{id}", get(commerce::order))
+        .route(
+            "/api/v1/commerce/orders/{id}/reconcile",
+            post(commerce::reconcile),
+        )
+        .route("/api/v1/commerce/orders/{id}/retry", post(commerce::retry))
+        .route(
+            "/api/v1/commerce/orders/{id}/recover",
+            post(commerce::recover),
+        )
+        .route(
+            "/api/v1/commerce/orders/{id}/support",
+            get(commerce::support),
+        )
+        .route("/api/v1/commerce/webhook", post(commerce::webhook))
+        .route("/api/v1/commerce/return", get(commerce::returned))
         .route("/api/v1/review", get(workspace::review_queue))
         .route("/api/v1/review/{id}", get(workspace::review_detail))
         .route("/api/v1/commands", post(workspace::command))
@@ -400,6 +443,25 @@ async fn public_read(
 }
 
 /// One bounded worker per service process; SQLite leases coordinate replicas/restarts.
+pub fn start_maintenance_worker(state: AppState) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(3600));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            let Some(objects) = state.objects.clone() else {
+                break;
+            };
+            if db(&state, move |store| store.maintenance(&objects, now()))
+                .await
+                .is_err()
+            {
+                eprintln!("maintenance_failed: inspect the operator queue and private storage");
+            }
+        }
+    })
+}
+
 pub fn start_checks_worker(state: AppState) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(5));

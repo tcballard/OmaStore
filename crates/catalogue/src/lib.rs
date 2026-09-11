@@ -5,9 +5,13 @@ use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use url::Url;
 
+pub mod editorial;
 pub mod http;
 pub mod preparation;
 pub mod query;
+pub mod remix;
+pub mod settings;
+pub mod setups;
 
 pub const MAX_CATALOGUE_BYTES: usize = 8 * 1024 * 1024;
 
@@ -97,6 +101,8 @@ pub struct Catalogue {
     pub makers: Vec<Maker>,
     pub recipes: Vec<Recipe>,
     pub editorial: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stories: Vec<editorial::Story>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -142,6 +148,12 @@ pub struct Maker {
     pub homepage: String,
     pub claim: Claim,
     pub claim_evidence: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claim_verified_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claim_expires_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub support: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -284,6 +296,14 @@ pub struct Recipe {
     pub parent: Option<String>,
     pub rights: String,
     pub components: Vec<Component>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub media: Vec<Media>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub settings: Vec<setups::SettingReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_revision: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -293,6 +313,8 @@ pub struct Component {
     pub release_id: String,
     pub optional: bool,
     pub depends_on: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conflicts: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -352,6 +374,7 @@ impl Catalogue {
         copy.apps.sort_by(|a, b| a.id.cmp(&b.id));
         copy.makers.sort_by(|a, b| a.id.cmp(&b.id));
         copy.recipes.sort_by(|a, b| a.id.cmp(&b.id));
+        copy.stories.sort_by(|a, b| a.id.cmp(&b.id));
         serde_json::to_vec(&copy).expect("public types serialize")
     }
 
@@ -423,6 +446,30 @@ impl Catalogue {
                     || maker.claim_evidence.as_deref().is_some_and(public_url),
                 format!("makers.{maker_index}.claim"),
                 "missing_claim_evidence",
+            );
+        }
+        for (index, maker) in self.makers.iter().enumerate() {
+            let dates = match (&maker.claim_verified_at, &maker.claim_expires_at) {
+                (None, None) => true,
+                (Some(start), Some(end)) => {
+                    timestamp(start)
+                        && timestamp(end)
+                        && DateTime::parse_from_rfc3339(start)
+                            .ok()
+                            .zip(DateTime::parse_from_rfc3339(end).ok())
+                            .is_some_and(|(a, b)| b > a && (b - a).num_days() <= 31)
+                }
+                _ => false,
+            };
+            check(
+                dates,
+                format!("makers.{index}.claimExpiresAt"),
+                "invalid_claim_window",
+            );
+            check(
+                maker.support.as_deref().is_none_or(public_url),
+                format!("makers.{index}.support"),
+                "invalid_https_url",
             );
         }
         slugs.clear();
@@ -648,6 +695,13 @@ impl Catalogue {
         }
         slugs.clear();
         for (recipe_index, recipe) in self.recipes.iter().enumerate() {
+            for error in setups::validate(recipe) {
+                check(
+                    false,
+                    format!("recipes.{recipe_index}.{}", error.path),
+                    &error.code,
+                );
+            }
             let p = format!("recipes.{recipe_index}");
             check(
                 token(&recipe.id) && ids.insert(recipe.id.clone()) && token(&recipe.revision),
@@ -703,6 +757,56 @@ impl Catalogue {
             "editorial".into(),
             "missing_editorial_app",
         );
+        check(
+            self.stories.len() <= 1000,
+            "stories".into(),
+            "too_many_stories",
+        );
+        for (index, story) in self.stories.iter().enumerate() {
+            let p = format!("stories.{index}");
+            check(
+                token(&story.id) && ids.insert(story.id.clone()) && token(&story.revision),
+                p.clone(),
+                "invalid_or_duplicate_id",
+            );
+            check(
+                !story.title.is_empty()
+                    && story.title.len() <= 120
+                    && story.summary.len() <= 280
+                    && story.body.len() <= 6000
+                    && !story.rights.is_empty()
+                    && story.rights.len() <= 1000,
+                p.clone(),
+                "invalid_story_text",
+            );
+            check(
+                maker_ids.contains(story.author_maker_id.as_str()),
+                format!("{p}.authorMakerId"),
+                "unknown_maker",
+            );
+            check(
+                !story.app_ids.is_empty()
+                    && story.app_ids.len() <= 12
+                    && story
+                        .app_ids
+                        .iter()
+                        .all(|id| self.apps.iter().any(|a| &a.id == id)),
+                format!("{p}.appIds"),
+                "missing_editorial_app",
+            );
+            check(
+                timestamp(&story.publish_at)
+                    && story.end_at.as_ref().is_none_or(|end| {
+                        timestamp(end)
+                            && DateTime::parse_from_rfc3339(end)
+                                .ok()
+                                .zip(DateTime::parse_from_rfc3339(&story.publish_at).ok())
+                                .is_some_and(|(end, start)| end > start)
+                    }),
+                format!("{p}.publishAt"),
+                "invalid_editorial_schedule",
+            );
+        }
         errors
     }
 }

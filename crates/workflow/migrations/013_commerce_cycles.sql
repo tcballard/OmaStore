@@ -1,0 +1,11 @@
+ALTER TABLE commerce_cancellations ADD COLUMN lease_until INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE commerce_cancellations ADD COLUMN error TEXT;
+CREATE TABLE commerce_subscription_checks (order_id TEXT PRIMARY KEY REFERENCES commerce_orders(id),checked_at INTEGER NOT NULL,cursor TEXT,error TEXT);
+CREATE TABLE commerce_invoice_issues (account TEXT NOT NULL,invoice_id TEXT NOT NULL,root_order TEXT REFERENCES commerce_orders(id),error TEXT NOT NULL,observed_at INTEGER NOT NULL,resolved_at INTEGER,PRIMARY KEY(account,invoice_id));
+CREATE TABLE commerce_lifecycle_ticks (kind TEXT NOT NULL,id TEXT NOT NULL,at INTEGER NOT NULL,PRIMARY KEY(kind,id));
+CREATE TRIGGER cycle_frozen_update BEFORE UPDATE ON commerce_cycles BEGIN SELECT RAISE(ABORT,'immutable invoice cycle'); END;
+CREATE TRIGGER cycle_frozen_delete BEFORE DELETE ON commerce_cycles BEGIN SELECT RAISE(ABORT,'retain invoice cycle'); END;
+CREATE TRIGGER cancellation_intent_frozen BEFORE UPDATE ON commerce_cancellations WHEN NEW.order_id!=OLD.order_id OR NEW.actor!=OLD.actor OR NEW.at!=OLD.at BEGIN SELECT RAISE(ABORT,'immutable cancellation intent'); END;
+CREATE TRIGGER cancellation_retained BEFORE DELETE ON commerce_cancellations BEGIN SELECT RAISE(ABORT,'retain cancellation intent'); END;
+CREATE TABLE commerce_subscription_observations (order_id TEXT PRIMARY KEY REFERENCES commerce_orders(id),body TEXT NOT NULL,observed_at INTEGER NOT NULL);
+PRAGMA user_version=13;

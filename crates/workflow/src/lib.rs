@@ -1,12 +1,35 @@
 //! Private workflow authority. Published catalogue content remains Git-owned.
 pub mod auth;
 pub mod checks;
+pub mod commerce;
+pub mod commerce_accounting;
+pub mod commerce_actions;
+pub mod commerce_checkout;
+pub mod commerce_delivery;
+pub mod commerce_finance_provider;
+pub mod commerce_finance_webhook;
+pub mod commerce_license;
+pub mod commerce_lifecycle;
+pub mod commerce_model;
+pub mod commerce_provider;
+pub mod commerce_refunds;
+#[cfg(feature = "development-workflow")]
+pub mod commerce_sample;
+#[cfg(feature = "development-workflow")]
+pub mod commerce_sample_finance;
+pub mod commerce_stripe;
+pub mod commerce_stripe_finance;
+pub mod commerce_subscriptions;
+pub mod commerce_webhook;
+mod context;
 pub mod drafts;
+pub mod feeds;
 pub mod github;
 pub mod media;
 pub mod monitor;
 pub mod monitor_probe;
 pub mod net;
+pub mod operations;
 pub mod publication;
 pub mod publisher;
 pub mod review;

@@ -1,0 +1,13 @@
+# Makers, editorial and release feeds
+
+The public catalogue carries maker attribution and optional scheduled stories or picks. Records have stable IDs and revisions, attributed makers, linked app IDs, UTC visibility windows and an explicit rights statement. A maker profile reports scoped project-control verification only while its recorded verification interval is current. This is not personal identity, seller verification or compatibility evidence. Unclaimed community listings remain explicit.
+
+`GET /api/v1/makers`, `/api/v1/makers/{id}` and `/api/v1/editorial` expose bounded native read models. Editorial candidates use the same immutable revision, review and exact-publication authority as app submissions. Editorial decisions additionally require a current editor role; project conflict checks still apply. Scheduling controls visibility after approved delivery; it cannot publish a draft by itself.
+
+`GET /feed.xml` and `/makers/{id}/feed.xml` return RSS 2.0 with ETags. Entries are generated in the transaction that records publicly observed delivery. Each app/release pair has a stable non-permalink GUID and first delivery timestamp. Correcting a name or summary updates that entry without announcing a new release. Entries link to native `omastore://app/{id}` identities. Feeds describe releases; current distribution and compatibility must still be checked separately.
+
+The native Makers section supports search, bounded pages, app relationships, project/support links and RSS export through the file dialog. Discover renders only visible reviewed stories and picks; the ordinary catalogue remains empty. The separate sample catalogue contains an explicitly fictional story.
+
+Authors create a story/pick in the existing private draft workspace, link published app IDs, set UTC publication/end times and supply attribution and rights. Preparing the preview resolves missing context from the delivered catalogue and saves the exact expanded candidate under a new private version. Submitting rejects missing or changed context. Review/publication recheck that referenced app facts still match; context apps preserve their evidence and media and do not create new release announcements. No context reference transfers ownership.
+
+Verified maker fields are projected only from current scoped project-control records. Authors cannot set them themselves. Displayed dates describe the catalogue's recorded verification; renewed or revoked control can change independently of a cached profile. Independent review includes existing listing ownership as a conflict. No real publisher or editorial selection has been added to the public catalogue.

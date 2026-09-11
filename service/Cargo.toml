@@ -10,6 +10,7 @@ development-catalogue = []
 development-workflow = ["omastore-workflow/development-workflow"]
 
 [dependencies]
+libc = "0.2"
 omastore-catalogue.workspace = true
 chrono.workspace = true
 serde.workspace = true

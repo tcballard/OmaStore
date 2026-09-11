@@ -490,5 +490,22 @@
       ]
     }
   ],
-  "editorial": []
+  "editorial": [],
+  "stories": [
+    {
+      "id": "demo-story-small-tools",
+      "revision": "r1",
+      "kind": "story",
+      "title": "Small tools, a considered workspace.",
+      "summary": "A fictional editorial example for exploring OmaStore.",
+      "body": "This sample pairs a focused writing tool with a keyboard-first terminal utility. Open each listing to inspect its source, acquisition route and test evidence. These tools and this story are fictional; no publisher has participated in this preview.",
+      "authorMakerId": "demo-maker",
+      "appIds": [
+        "demo-fieldnotes",
+        "demo-pixelbench"
+      ],
+      "publishAt": "2025-01-01T00:00:00Z",
+      "rights": "OmaStore fictional development fixture; no third-party media."
+    }
+  ]
 }

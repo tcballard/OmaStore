@@ -8,6 +8,8 @@ ScrollView {
     required property var theme
     required property var core
     required property var mediaPreview
+    signal makerChosen(string id)
+    signal purchasesRequested(string id)
     property int savedRevision: 0
     readonly property var app: details.app || ({})
     readonly property var release: details.release || ({})
@@ -34,17 +36,20 @@ ScrollView {
                     Label { required property string modelData; text: modelData; padding: 8; color: theme.ink; textFormat: Text.PlainText; background: Rectangle { color: theme.wash; radius: 4 } }
                 }
             }
-            Label { text: (page.details.makers || []).map(function(m) { return m.name + " · " + m.claim; }).join("\n"); color: theme.muted; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
+            Flow {Layout.fillWidth:true;spacing:8;Repeater {model:page.details.makers || [];Button {required property var modelData;text:"Meet "+modelData.name;onClicked:page.makerChosen(modelData.id)}}}
+            Label { text: (page.details.makers || []).map(function(m) { return m.name + " · " + (m.claimLabel || m.claim); }).join("\n"); color: theme.muted; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
             Label { text: page.summary.priceLabel || "Price not supplied"; font.pixelSize: 22 * theme.scale; font.bold: true; textFormat: Text.PlainText; Layout.fillWidth: true }
             Flow {
                 Layout.fillWidth: true; spacing: 10
                 Button { objectName: "acquireButton"; enabled:core.distributionCurrent && core.distribution.distribution!=="suspended"; text: (page.details.acquisition || {}).label + " ↗"; onClicked: core.openLink("acquisition") }
                 Button { objectName: "saveButton"; text: { page.savedRevision; return core.isSaved(page.app.id || "") ? "Remove from saved" : "Save for later"; } onClicked: core.toggleSaved() }
                 Button { text: "Source ↗"; visible: !!page.app.source; onClicked: core.openLink("source") }
+                Button { text:"Purchases and licences";onClicked:page.purchasesRequested(page.app.id)}
                 Button { text: "Support ↗"; onClicked: core.openLink("support") }
             }
             Label { text: (page.summary.routeLabel || "") + ". Opens in your browser. Final availability, price and terms belong to the seller."; color: theme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; textFormat: Text.PlainText }
             Label {text:!core.distributionCurrent ? "Current distribution status is unavailable. Source and support remain available." : core.distribution.distribution==="suspended" ? "Distribution is suspended: " + (core.distribution.reasonCodes || []).join(", ").replace(/_/g," ") : !core.distribution.sourceCurrent ? "Upstream monitoring is unavailable or overdue. This is not current installation evidence." : "Upstream metadata was observed at " + new Date(core.distribution.lastSuccessfulObservationAt*1000).toLocaleString();Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+            Button {objectName:"previewAppPlan";text:"Review installation plan";enabled:core.ready&&!core.loading;onClicked:core.communityAction("system.plan",{kind:"app",id:page.app.id})}
             Button {text:"Refresh distribution status";enabled:!core.loading;onClicked:core.workspaceAction("status.get",{ids:[page.app.id]})}
             ComboBox {id:reportKind;model:["integrity","security","compatibility","availability","ownership"];Accessible.name:"Report category"}
             TextArea {id:reportMessage;placeholderText:"Describe a security, integrity or compatibility concern privately";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText;Accessible.name:"Private distribution report"}

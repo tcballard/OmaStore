@@ -44,8 +44,30 @@ pub fn handle(
                 serde_json::from_value(Value::Object(params)).map_err(|_| "invalid_filter")?;
             return query::list(catalogue, &q, now);
         }
+        if path == "/api/v1/makers" || path == "/api/v1/setups" {
+            let mut params = serde_json::Map::new();
+            for (key, value) in url::form_urlencoded::parse(raw.as_bytes()) {
+                let val = if key == "offset" {
+                    json!(value.parse::<usize>().map_err(|_| "invalid_filter")?)
+                } else {
+                    json!(value)
+                };
+                if params.insert(key.into_owned(), val).is_some() {
+                    return Err("invalid_filter");
+                }
+            }
+            let q = serde_json::from_value(Value::Object(params)).map_err(|_| "invalid_filter")?;
+            return if path.ends_with("makers") {
+                crate::editorial::makers(catalogue, &q, now)
+            } else {
+                crate::setups::list(catalogue, &q)
+            };
+        }
         if !raw.is_empty() {
             return Err("invalid_filter");
+        }
+        if path == "/api/v1/editorial" {
+            return Ok(crate::editorial::stories(catalogue, now));
         }
         if path == "/api/v1/catalogue" {
             return Ok(serde_json::to_value(catalogue).unwrap());
@@ -56,12 +78,8 @@ pub fn handle(
         }
         match parts[3] {
             "apps" => query::app_detail(catalogue, parts[4], now),
-            "makers" => catalogue
-                .makers
-                .iter()
-                .find(|m| m.id == parts[4] || m.slug == parts[4])
-                .map(|m| json!(m))
-                .ok_or("not_found"),
+            "editorial" => crate::editorial::story(catalogue, parts[4], now),
+            "makers" => crate::editorial::maker_detail(catalogue, parts[4], now),
             "setups" => catalogue
                 .recipes
                 .iter()

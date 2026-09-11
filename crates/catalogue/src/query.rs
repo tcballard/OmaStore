@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 pub struct Query {
     pub q: String,
     pub category: Option<String>,
+    pub maker_id: Option<String>,
     pub app_type: Option<AppType>,
     pub licence: Option<LicenceClass>,
     pub price: Option<OfferModel>,
@@ -21,6 +22,7 @@ impl Default for Query {
         Self {
             q: String::new(),
             category: None,
+            maker_id: None,
             app_type: None,
             licence: None,
             price: None,
@@ -38,6 +40,7 @@ impl Query {
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.q.len() > 200
             || !(1..=50).contains(&self.limit)
+            || self.maker_id.as_deref().is_some_and(|m| !token(m))
             || self.category.as_deref().is_some_and(|c| !token(c))
             || self
                 .architecture
@@ -65,7 +68,7 @@ pub fn summary(app: &App, now: DateTime<Utc>) -> Value {
     let (evidence, evidence_label) = app.evidence(now);
     json!({"id": app.id, "slug": app.slug, "name": app.name, "summary": app.summary,
         "category": app.category, "appType": app.app_type, "maturity": app.maturity,
-        "licence": app.licence, "makerIds": app.maker_ids, "priceLabel": price_label(app),
+        "licence": app.licence, "makerIds": app.maker_ids, "currentReleaseId":app.current_release_id, "priceLabel": price_label(app),
         "evidence": evidence, "evidenceLabel": evidence_label, "offline": release.offline,
         "routeLabel": release.route.label(), "architectures": release.architectures})
 }
@@ -153,7 +156,7 @@ pub fn app_detail(
     };
     Ok(json!({"snapshot": catalogue.snapshot_id(), "app": app,
         "release": app.current_release(), "summary": summary(app, now),
-        "makers": catalogue.makers.iter().filter(|m| app.maker_ids.contains(&m.id)).collect::<Vec<_>>(),
+        "makers": catalogue.makers.iter().filter(|m| app.maker_ids.contains(&m.id)).map(|m|crate::editorial::maker_summary(m,now)).collect::<Vec<_>>(),
         "acquisition": {"kind": "external", "label": label, "url": if paid { app.offers[0].url.as_str() } else { app.current_release().route.url() },
             "reason": "Managed installation is not available in this preview."}}))
 }
@@ -191,7 +194,11 @@ pub fn list(
     let mut scored = Vec::new();
     for app in &catalogue.apps {
         let r = app.current_release();
-        if query.category.as_ref().is_some_and(|v| v != &app.category)
+        if query
+            .maker_id
+            .as_ref()
+            .is_some_and(|m| !app.maker_ids.contains(m))
+            || query.category.as_ref().is_some_and(|v| v != &app.category)
             || query.app_type.as_ref().is_some_and(|v| v != &app.app_type)
             || query
                 .licence

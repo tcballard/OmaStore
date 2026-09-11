@@ -9,6 +9,9 @@ use std::{
 };
 use url::Url;
 
+#[path = "commerce_client.rs"]
+mod commerce_client;
+
 pub struct Client {
     origin: Option<String>,
     token: Option<String>,
@@ -46,6 +49,10 @@ impl Client {
         } else {
             None
         };
+        #[cfg(feature = "development-catalogue")]
+        if let Some(store) = &sandbox {
+            let _ = store.seed_sample_context(&crate::catalogue::Client::new(true).catalogue);
+        }
         let _ = demo;
         Self {
             origin,
@@ -113,6 +120,10 @@ impl Client {
                 "stale_revision" => "stale_revision",
                 "candidate_invalid" => "candidate_invalid",
                 "candidate_scope_invalid" => "candidate_scope_invalid",
+                "published_context_required" => "published_context_required",
+                "published_context_changed" => "published_context_changed",
+                "public_preview_refresh_required" => "public_preview_refresh_required",
+                "verified_project_control_required" => "verified_project_control_required",
                 "candidate_cannot_self_verify" => "candidate_cannot_self_verify",
                 "media_count_exceeded" => "media_count_exceeded",
                 "media_too_large" | "normalized_media_too_large" => "media_too_large",
@@ -136,6 +147,65 @@ impl Client {
                 "delivery_in_progress" => "delivery_in_progress",
                 "publication_busy" => "publication_busy",
                 "invalid_fields" => "invalid_fields",
+                "managed_checkout_disabled" => "managed_checkout_disabled",
+                "new_purchases_paused" => "new_purchases_paused",
+                "approved_seller_required" => "approved_seller_required",
+                "price_preview_changed" => "price_preview_changed",
+                "purchase_consent_required" => "purchase_consent_required",
+                "checkout_requires_provider_reconciliation" => {
+                    "checkout_requires_provider_reconciliation"
+                }
+                "checkout_in_progress" => "checkout_in_progress",
+                "payment_provider_ambiguous" => "payment_provider_ambiguous",
+                "payment_order_mismatch" => "payment_order_mismatch",
+                "payment_fee_or_identity_mismatch" => "payment_fee_or_identity_mismatch",
+                "commerce_offer_unavailable" => "commerce_offer_unavailable",
+                "order_unavailable" => "order_unavailable",
+                "fulfilment_needs_reconciliation" => "fulfilment_needs_reconciliation",
+                "service_fulfilment_unconfigured" => "service_fulfilment_unconfigured",
+                "service_period_mismatch" => "service_period_mismatch",
+                "untrusted_licence_issuer" => "untrusted_licence_issuer",
+                "licence_expired_or_future" => "licence_expired_or_future",
+                "no_hosted_delivery" => "no_hosted_delivery",
+                "subscription_fee_contract_unsupported" => "subscription_fee_contract_unsupported",
+                "immutable_price_identity" => "immutable_price_identity",
+                "commerce_database_provider_mismatch" => "commerce_database_provider_mismatch",
+
+                "app_distribution_held" => "app_distribution_held",
+                "seller_identity_frozen" => "seller_identity_frozen",
+                "refund_unavailable" => "refund_unavailable",
+                "invalid_refund_request" => "invalid_refund_request",
+                "refund_preview_changed" => "refund_preview_changed",
+                "refund_already_in_progress" => "refund_already_in_progress",
+                "refund_in_progress" => "refund_in_progress",
+                "refund_requires_provider_reconciliation" => {
+                    "refund_requires_provider_reconciliation"
+                }
+                "fee_refund_requires_reconciliation" => "fee_refund_requires_reconciliation",
+                "refund_provider_mismatch" => "refund_provider_mismatch",
+                "refunded_order_requires_support" => "refunded_order_requires_support",
+                "subscription_period_elapsed" => "subscription_period_elapsed",
+                "subscription_period_not_started" => "subscription_period_not_started",
+                "cancellation_consent_required" => "cancellation_consent_required",
+                "subscription_cancel_unconfirmed" => "subscription_cancel_unconfirmed",
+                "cancellation_in_progress" => "cancellation_in_progress",
+                "renewal_invoice_mismatch" => "renewal_invoice_mismatch",
+                "renewal_invoice_changed" => "renewal_invoice_changed",
+                "renewal_period_overlap" => "renewal_period_overlap",
+                "financial_reconciliation_incomplete" => "financial_reconciliation_incomplete",
+                "sample_subscription_canceled" => "sample_subscription_canceled",
+                "provider_refund_exceeds_payment" => "provider_refund_exceeds_payment",
+                "evidence_preview_changed" => "evidence_preview_changed",
+                "invalid_reserve_record" => "invalid_reserve_record",
+                "reserve_preview_changed" => "reserve_preview_changed",
+                "seller_unavailable" => "seller_unavailable",
+                "dispute_unavailable" => "dispute_unavailable",
+                "provider_costs_mismatch" => "provider_costs_mismatch",
+                "settlement_currency_requires_review" => "settlement_currency_requires_review",
+                "fee_refund_in_progress" => "fee_refund_in_progress",
+                "idempotency_key_conflict" => "idempotency_key_conflict",
+                "invalid_release_evidence" => "invalid_release_evidence",
+                "new_publisher_intake_paused" => "new_publisher_intake_paused",
                 _ => "workspace_request_failed",
             };
             return Err(Error::new(status, code));
@@ -199,6 +269,9 @@ impl Client {
         Ok(value)
     }
     pub fn dispatch(&mut self, method: &str, params: Value) -> Result<Value> {
+        if method == "feed.export" {
+            return Ok(json!({"value":self.export_feed(&params)?,"workspace":self.cached}));
+        }
         if method == "status.get" {
             let ids: Vec<String> = serde_json::from_value(params["ids"].clone())?;
             if ids.len() > 100 || ids.iter().any(|id| !omastore_catalogue::token(id)) {
@@ -233,18 +306,53 @@ impl Client {
                 if self.sandbox.is_none() {
                     return Err(Error::new(403, "sample_mode_required"));
                 }
-                let candidate: Value =
-                    serde_json::from_str(include_str!("../../../docs/examples/submission.json"))?;
+                let mut candidate: Value = serde_json::from_str(
+                    &include_str!("../../../docs/examples/submission.json")
+                        .replace("demo-fieldnotes", "sample-fieldnotes")
+                        .replace("demo-maker", "sample-maker"),
+                )?;
+                candidate["apps"][0]["slug"] = json!("sample-fieldnotes");
+                candidate["apps"][0]["name"] = json!("Fieldnotes · sample submission");
                 self.command(json!({"command":"create_draft","kind":"app","candidate":candidate,"base_revision":null}))?
             }
-            "drafts.new" => {
+            "drafts.new" | "drafts.remix" => {
                 let raw = include_str!("../../../crates/workflow/templates/app.json")
                     .replace("APP_ID", &format!("app-{}", &nonce()?[..12]))
                     .replace("MAKER_ID", &format!("maker-{}", &nonce()?[..12]));
                 let mut candidate: Value = serde_json::from_str(&raw)?;
                 candidate["generatedAt"] =
                     json!(chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
-                self.command(json!({"command":"create_draft","kind":"app","candidate":candidate,"base_revision":null}))?
+                let kind = if method == "drafts.remix" {
+                    "setup"
+                } else {
+                    params["kind"].as_str().unwrap_or("app")
+                };
+                if kind == "editorial" {
+                    candidate["apps"] = json!([]);
+                    candidate["stories"] = json!([{"id":format!("story-{}",&nonce()?[..12]),"revision":"r1","kind":"story","title":"","summary":"","body":"","authorMakerId":candidate["makers"][0]["id"],"appIds":[],"publishAt":candidate["generatedAt"],"endAt":null,"rights":""}]);
+                } else if kind == "setup" {
+                    candidate["apps"] = json!([]);
+                    candidate["recipes"] = json!([{"id":format!("setup-{}",&nonce()?[..12]),"slug":"","name":"","summary":"","description":"","revision":"1","makerId":candidate["makers"][0]["id"],"parent":null,"parentRevision":null,"rights":"","components":[],"media":[],"settings":[]}]);
+                } else if kind != "app" {
+                    return Err(Error::new(422, "invalid_draft_kind"));
+                }
+                if method == "drafts.remix" {
+                    #[derive(serde::Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Import {
+                        remix: omastore_catalogue::remix::Remix,
+                    }
+                    let imported: Import = serde_json::from_value(params.clone())?;
+                    omastore_catalogue::remix::validate(&imported.remix, self.demo)
+                        .map_err(|_| Error::new(422, "invalid_recipe_remix"))?;
+                    candidate["recipes"] = json!([omastore_catalogue::remix::as_recipe(
+                        &imported.remix,
+                        candidate["recipes"][0]["id"].as_str().unwrap(),
+                        candidate["makers"][0]["id"].as_str().unwrap()
+                    )
+                    .map_err(|_| Error::new(422, "invalid_recipe_remix"))?]);
+                }
+                self.command(json!({"command":"create_draft","kind":kind,"candidate":candidate,"base_revision":null}))?
             }
             "drafts.preview" => {
                 let candidate = params["candidate"].clone();
@@ -270,6 +378,64 @@ impl Client {
                 )?;
                 store.sample_runtime(&actor, record_id(&params)?, omastore_workflow::now())?
             }
+            "commerce.lifecycle"
+            | "commerce.packet.export"
+            | "commerce.author"
+            | "commerce.prices"
+            | "commerce.prepare"
+            | "commerce.purchase"
+            | "commerce.orders"
+            | "commerce.order"
+            | "commerce.reconcile"
+            | "commerce.retry"
+            | "commerce.recover"
+            | "commerce.support"
+            | "commerce.sample.capture"
+            | "commerce.pending"
+            | "commerce.resume"
+            | "commerce.licence.export"
+            | "commerce.licence.verify" => self.commerce_action(method, &params)?,
+            "commerce.status" => {
+                #[cfg(feature = "development-catalogue")]
+                let local = if let Some(store) = &self.sandbox {
+                    let actor = self
+                        .token
+                        .as_ref()
+                        .map(|t| store.actor(t, omastore_workflow::now()))
+                        .transpose()?;
+                    Some(store.commerce_status(actor.as_ref())?)
+                } else {
+                    None
+                };
+                #[cfg(not(feature = "development-catalogue"))]
+                let local: Option<Value> = None;
+                match local {
+                    Some(v) => v,
+                    None if self.origin.is_none() => {
+                        omastore_workflow::commerce_model::OperatingModel::default().readiness()
+                    }
+                    None => self.http("GET", "/api/v1/commerce/status", &json!({}))?,
+                }
+            }
+            "operations.dashboard" => {
+                #[cfg(feature = "development-catalogue")]
+                let local = if let Some(store) = &self.sandbox {
+                    let actor = store.actor(
+                        self.token.as_deref().unwrap_or(""),
+                        omastore_workflow::now(),
+                    )?;
+                    Some(store.operations_dashboard(&actor, omastore_workflow::now())?)
+                } else {
+                    None
+                };
+                #[cfg(not(feature = "development-catalogue"))]
+                let local: Option<Value> = None;
+                match local {
+                    Some(value) => value,
+                    None => self.http("GET", "/api/v1/operations", &json!({}))?,
+                }
+            }
+            "feed.info" => self.feed_info(&params)?,
             "review.queue" | "review.get" => {
                 let id = if method == "review.get" {
                     record_id(&params)?
@@ -613,6 +779,91 @@ impl Client {
         }
         Ok(value)
     }
+    fn feed_info(&self, params: &Value) -> Result<Value> {
+        let maker = params["makerId"]
+            .as_str()
+            .filter(|s| omastore_catalogue::token(s));
+        if !params["makerId"].is_null() && maker.is_none() {
+            return Err(Error::new(422, "invalid_fields"));
+        }
+        #[cfg(feature = "development-catalogue")]
+        if self.sandbox.is_some() {
+            return Ok(
+                json!({"feedUrl":null,"notice":"Sample feeds are local exports; they have no live subscription address."}),
+            );
+        }
+        let url = self.origin.as_ref().map(|o| {
+            format!(
+                "{o}{}",
+                maker
+                    .map(|m| format!("/makers/{m}/feed.xml"))
+                    .unwrap_or("/feed.xml".into())
+            )
+        });
+        Ok(
+            json!({"feedUrl":url,"notice":if url.is_some(){"Copy this address into your feed reader for future releases."}else{"A deployed catalogue service is required for a subscription address."}}),
+        )
+    }
+    fn export_feed(&self, params: &Value) -> Result<Value> {
+        let maker = params["makerId"]
+            .as_str()
+            .filter(|s| omastore_catalogue::token(s));
+        if !params["makerId"].is_null() && maker.is_none() {
+            return Err(Error::new(422, "invalid_fields"));
+        }
+        let path = params["file"]
+            .as_str()
+            .and_then(|s| Url::parse(s).ok())
+            .and_then(|u| u.to_file_path().ok())
+            .filter(|p| p.is_absolute())
+            .ok_or(Error::new(422, "local_file_required"))?;
+        #[cfg(feature = "development-catalogue")]
+        let sample = self
+            .sandbox
+            .as_ref()
+            .map(|s| s.release_feed(maker))
+            .transpose()?;
+        #[cfg(not(feature = "development-catalogue"))]
+        let sample: Option<String> = None;
+        let xml = if let Some(xml) = sample {
+            xml
+        } else {
+            let origin = self
+                .origin
+                .as_ref()
+                .ok_or(Error::new(503, "workspace_unconfigured"))?;
+            let suffix = maker
+                .map(|m| format!("/makers/{m}/feed.xml"))
+                .unwrap_or("/feed.xml".into());
+            let mut response = self
+                .agent
+                .get(format!("{origin}{suffix}"))
+                .call()
+                .map_err(|_| Error::new(503, "feed_unavailable"))?;
+            if response.status().as_u16() != 200 {
+                return Err(Error::new(503, "feed_unavailable"));
+            }
+            response
+                .body_mut()
+                .with_config()
+                .limit(512 * 1024)
+                .read_to_string()
+                .map_err(|_| Error::new(503, "feed_unavailable"))?
+        };
+        if std::fs::symlink_metadata(&path).is_ok_and(|m| !m.is_file()) {
+            return Err(Error::new(422, "regular_file_required"));
+        }
+        let mut file = tempfile::NamedTempFile::new_in(
+            path.parent()
+                .ok_or(Error::new(422, "local_file_required"))?,
+        )?;
+        file.write_all(xml.as_bytes())?;
+        file.as_file().sync_all()?;
+        file.persist(path)
+            .map_err(|_| Error::new(500, "local_export_failed"))?;
+        let feed_url = self.feed_info(params)?["feedUrl"].clone();
+        Ok(json!({"exported":true,"makerId":maker,"feedUrl":feed_url}))
+    }
     fn export_publication(&self, params: &Value) -> Result<Value> {
         let id = record_id(params)?;
         let path = params["file"]
@@ -729,7 +980,9 @@ impl Client {
             None => self.http_key("POST", "/api/v1/commands", &params, &key)?,
         };
         let _ = std::fs::remove_file(path);
-        if params["command"] == "save_draft" {
+        if params["command"] == "save_draft"
+            || (params["command"] == "prepare_draft" && value["errors"] == json!([]))
+        {
             if let Some(id) = params["id"].as_str() {
                 let _ = std::fs::remove_file(self.local_file("draft", id)?);
             }

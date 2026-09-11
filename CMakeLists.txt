@@ -43,6 +43,7 @@ qt_add_executable(omastore
     native/ui/main.cpp
     native/ui/CoreBridge.cpp
     native/ui/CoreBridge.h
+    native/ui/Instance.cpp native/ui/Instance.h
     native/ui/DesktopSettings.cpp
     native/ui/DesktopSettings.h
     native/ui/MediaPreview.cpp
@@ -50,6 +51,12 @@ qt_add_executable(omastore
     native/ui/Preparation.cpp
     native/ui/Preparation.h
 )
+set_source_files_properties(native/ui/qml/LibraryPage.qml PROPERTIES QT_RESOURCE_ALIAS LibraryPage.qml)
+set_source_files_properties(native/ui/qml/PlanDialog.qml PROPERTIES QT_RESOURCE_ALIAS PlanDialog.qml)
+set_source_files_properties(native/ui/qml/SetupsPage.qml PROPERTIES QT_RESOURCE_ALIAS SetupsPage.qml)
+set_source_files_properties(native/ui/qml/CataloguePicker.qml PROPERTIES QT_RESOURCE_ALIAS CataloguePicker.qml)
+set_source_files_properties(native/ui/qml/MakersPage.qml PROPERTIES QT_RESOURCE_ALIAS MakersPage.qml)
+set_source_files_properties(native/ui/qml/EditorialPanel.qml PROPERTIES QT_RESOURCE_ALIAS EditorialPanel.qml)
 set_source_files_properties(native/ui/qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(native/ui/qml/AppCard.qml PROPERTIES QT_RESOURCE_ALIAS AppCard.qml)
 set_source_files_properties(native/ui/qml/DetailPage.qml PROPERTIES QT_RESOURCE_ALIAS DetailPage.qml)
@@ -58,11 +65,20 @@ set_source_files_properties(native/ui/qml/WorkspacePage.qml PROPERTIES QT_RESOUR
 set_source_files_properties(native/ui/qml/ReviewPanel.qml PROPERTIES QT_RESOURCE_ALIAS ReviewPanel.qml)
 set_source_files_properties(native/ui/qml/DraftPanel.qml PROPERTIES QT_RESOURCE_ALIAS DraftPanel.qml)
 set_source_files_properties(native/ui/qml/ValueEditor.qml PROPERTIES QT_RESOURCE_ALIAS ValueEditor.qml)
+set_source_files_properties(native/ui/qml/RefundsPanel.qml PROPERTIES QT_RESOURCE_ALIAS RefundsPanel.qml)
+set_source_files_properties(native/ui/qml/FinancesPanel.qml PROPERTIES QT_RESOURCE_ALIAS FinancesPanel.qml)
+set_source_files_properties(native/ui/qml/CommerceOffersPanel.qml PROPERTIES QT_RESOURCE_ALIAS CommerceOffersPanel.qml)
+set_source_files_properties(native/ui/qml/PurchasesDialog.qml PROPERTIES QT_RESOURCE_ALIAS PurchasesDialog.qml)
+set_source_files_properties(native/ui/qml/CommercePanel.qml PROPERTIES QT_RESOURCE_ALIAS CommercePanel.qml)
+set_source_files_properties(native/ui/qml/RemixDialog.qml PROPERTIES QT_RESOURCE_ALIAS RemixDialog.qml)
+set_source_files_properties(native/ui/qml/SettingsDialog.qml PROPERTIES QT_RESOURCE_ALIAS SettingsDialog.qml)
+set_source_files_properties(native/ui/qml/ReadinessPanel.qml PROPERTIES QT_RESOURCE_ALIAS ReadinessPanel.qml)
+set_source_files_properties(native/ui/qml/MonitoringPanel.qml PROPERTIES QT_RESOURCE_ALIAS MonitoringPanel.qml)
 qt_add_qml_module(omastore
     URI OmaStore
     VERSION 1.0
     RESOURCE_PREFIX /qt/qml
-    QML_FILES native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
+    QML_FILES native/ui/qml/RefundsPanel.qml native/ui/qml/FinancesPanel.qml native/ui/qml/CommerceOffersPanel.qml native/ui/qml/PurchasesDialog.qml native/ui/qml/CommercePanel.qml native/ui/qml/RemixDialog.qml native/ui/qml/SettingsDialog.qml native/ui/qml/ReadinessPanel.qml native/ui/qml/LibraryPage.qml native/ui/qml/PlanDialog.qml native/ui/qml/SetupsPage.qml native/ui/qml/CataloguePicker.qml native/ui/qml/MakersPage.qml native/ui/qml/EditorialPanel.qml native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
 )
 target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network
@@ -92,8 +108,12 @@ if(BUILD_TESTING)
     find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
     add_test(NAME core-process-contract
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/core_process.py" "${CORE_BINARY}")
+    add_test(NAME native-instance COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/native_instance.py" "$<TARGET_FILE:omastore>")
+    set_tests_properties(native-instance PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
     add_test(NAME native-startup COMMAND omastore --smoke-test)
     if(OMASTORE_DEVELOPMENT_DATA)
+        add_test(NAME native-lifecycle COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/lifecycle_process.py" "${CORE_BINARY}")
+        set_tests_properties(native-lifecycle PROPERTIES TIMEOUT 20)
         foreach(SIZE IN ITEMS 800x600 1280x800 1920x1080)
             add_test(NAME native-interaction-${SIZE} COMMAND omastore --demo --ui-test --window-size ${SIZE})
             set_tests_properties(native-interaction-${SIZE} PROPERTIES TIMEOUT 20

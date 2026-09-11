@@ -34,7 +34,7 @@ ColumnLayout {
             else if(r.action === "review.get") {panel.selected=r;ack.checked=false;panel.notice="";}
             else if(r.action === "review.sample_evidence" || r.action === "evidence.import") {if(panel.selected.id)panel.open(panel.selected.id);}
             else if(r.action === "command" && r.command === "review_decision") {panel.notice="Decision recorded · " + r.state.replace(/_/g," ");panel.open(r.id);}
-            else if(r.action === "command" && r.command === "retry_checks") panel.open(r.id);
+            else if(r.action === "command" && (r.command === "retry_checks" || r.command === "start_review")) panel.open(r.id);
         }
     }
     RowLayout {
@@ -73,6 +73,7 @@ ColumnLayout {
             Label {text:"Candidate digest: "+(panel.selected.digest || "");Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}
             Label {text:"Findings";font.bold:true}
             Repeater {model:panel.selected.findings || [];Label {required property var modelData;text:modelData.check+" · "+modelData.result+"\n"+modelData.detail;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}}
+            Button {text:"Start independent review";enabled:!!panel.selected.independent && !core.loading && ["submitted","checking","in_review"].indexOf(panel.selected.state)>=0;onClicked:core.workspaceAction("command",{command:"start_review",id:panel.selected.id,version:panel.selected.version})}
             Button {text:"Retry bounded checks";enabled:!core.loading && ["in_review","needs_changes"].indexOf(panel.selected.state)>=0;onClicked:core.workspaceAction("command",{command:"retry_checks",id:panel.selected.id,version:panel.selected.version})}
             Label {text:"Changes from the previous submitted revision";font.bold:true;Layout.fillWidth:true;wrapMode:Text.Wrap}
             Repeater {model:panel.selected.diff || [];Label {required property var modelData;text:(modelData.path || "Whole candidate")+" · "+modelData.change+(modelData.beforePreview ? "\nBefore: "+modelData.beforePreview : "")+(modelData.afterPreview ? "\nAfter: "+modelData.afterPreview : "");Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}}

@@ -9,6 +9,12 @@ ApplicationWindow {
     required property var mediaPreview
     required property var worksheet
     property bool discardClose: false
+    property string setupSelection:""
+    property string setupRevision:""
+    readonly property bool showingSubpage:showingDetail || (section===2 && !!setupSelection) || (section===4 && !!makerSelection)
+    function back(){if(showingDetail)core.closeDetail();else if(section===2){setupSelection="";setupRevision="";}else if(section===4)makerSelection="";}
+    property string makerSelection: ""
+    function showMaker(id) { makerSelection=id; navigate(4); core.communityAction("makers.get",{id:id}); }
     property int section: 0
     property bool showFilters: false
     readonly property bool showingDetail: !!core.detail.app
@@ -51,10 +57,20 @@ ApplicationWindow {
     function focusSearch() { navigate(1); searchField.forceActiveFocus(); searchField.selectAll(); }
     Shortcut { sequence: "Ctrl+K"; onActivated: window.focusSearch() }
     Shortcut { sequence: "Ctrl+F"; onActivated: window.focusSearch() }
-    Shortcut { sequence: "Alt+Left"; enabled: window.showingDetail; onActivated: core.closeDetail() }
-    Shortcut { sequence: "Escape"; enabled: window.showingDetail; onActivated: core.closeDetail() }
+    Shortcut { sequence: "Alt+Left"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible && !purchasesDialog.visible; onActivated: window.back() }
+    Shortcut { sequence: "Escape"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible && !purchasesDialog.visible; onActivated: window.back() }
     Shortcut { sequence: "Ctrl+R"; onActivated: core.refresh() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
+
+    Connections {
+        target:window.core
+        function onHandoffReady(identity){if(identity.kind==="setup"){window.setupSelection=identity.id;window.setupRevision=identity.revision;window.navigate(2);}}
+    }
+    Component {id:libraryPage;LibraryPage {core:window.core;theme:storeTheme;onPurchasesRequested:purchasesDialog.openFor("");onRemixesRequested:remixDialog.openFor(null);onSettingsRequested:settingsDialog.openFor([])}}
+    RemixDialog {id:remixDialog;core:window.core;theme:storeTheme;onSettingsRequested:(refs)=>settingsDialog.openFor(refs);onAuthorCreated:window.navigate(5)}
+    PurchasesDialog {id:purchasesDialog;core:window.core;theme:storeTheme}
+    SettingsDialog {id:settingsDialog;core:window.core;theme:storeTheme}
+    PlanDialog {id:planDialog;core:window.core;theme:storeTheme}
 
     RowLayout {
         anchors.fill: parent
@@ -105,7 +121,7 @@ ApplicationWindow {
                 background: Rectangle { color: storeTheme.page }
                 RowLayout {
                     anchors.fill: parent
-                    ToolButton { objectName: "backButton"; text: "← Back"; visible: window.showingDetail; onClicked: core.closeDetail() }
+                    ToolButton { objectName: "backButton"; text: "← Back"; visible: window.showingSubpage; onClicked: window.back() }
                     TextField {
                         id: searchField
                         objectName: "searchField"
@@ -147,7 +163,7 @@ ApplicationWindow {
                 id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : (window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
+                sourceComponent: window.showingDetail ? detailPage : (window.section === 3 ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             RowLayout {
@@ -179,6 +195,7 @@ ApplicationWindow {
                     Label { text: window.section === 3 ? "Saved for later." : (window.section === 0 ? "Find your next\nfavourite tool." : "Apps, on your terms."); color: storeTheme.ink; font.pixelSize: (window.width < 950 ? 32 : 42) * storeTheme.scale; font.bold: true; wrapMode: Text.Wrap; Layout.fillWidth: true }
                     Label { text: window.section === 3 ? "A local shortlist on this device. Installed-app management is still to come." : "See what it does. Know what it needs. Support the people who make it."; color: storeTheme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; Layout.maximumWidth: 630 }
                 }
+                EditorialPanel {visible:window.section===0;Layout.leftMargin:28;Layout.rightMargin:28;core:window.core;theme:storeTheme;onMakerChosen:(id)=>window.showMaker(id)}
                 RowLayout {
                     Layout.fillWidth: true; Layout.leftMargin: 28; Layout.rightMargin: 28
                     Label { text: window.section === 3 ? core.saved.length + " saved" : core.total + (core.total === 1 ? " application" : " applications"); font.bold: true; color: storeTheme.ink }
@@ -245,8 +262,10 @@ ApplicationWindow {
 
     Component {
         id: detailPage
-        DetailPage { details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
+        DetailPage { onPurchasesRequested:(id)=>purchasesDialog.openFor(id);onMakerChosen:(id)=>window.showMaker(id); details: window.d; theme: storeTheme; core: window.core; mediaPreview: window.mediaPreview }
     }
+    Component {id:setupsPage;SetupsPage {core:window.core;theme:storeTheme;mediaPreview:window.mediaPreview;selectedId:window.setupSelection;selectedRevision:window.setupRevision;onChosen:(id,revision)=>{window.setupSelection=id;window.setupRevision=revision;};onMakerChosen:(id)=>window.showMaker(id);onRemixRequested:(selection)=>remixDialog.openFor(selection);onSettingsRequested:(references)=>settingsDialog.openFor(references)}}
+    Component {id:makersPage;MakersPage {core:window.core;theme:storeTheme;selectedId:window.makerSelection;onChosen:(id)=>window.makerSelection=id;onBrowseApps:(id)=>{window.navigate(1);core.clearFilters();core.setFilter("makerId",id);}}}
     Component { id: submitPage; WorkspacePage { worksheet: window.worksheet; core: window.core; theme: storeTheme } }
     Dialog {
         id: unsaved
@@ -304,7 +323,7 @@ ApplicationWindow {
             spacing: 16
             Label { text: "An independent community storefront for Omarchy.\nQt Quick interface · Rust catalogue core " + core.version; Layout.fillWidth: true; wrapMode: Text.Wrap }
             Label { text: "Ctrl+K / Ctrl+F   Search\nAlt+Left / Escape   Back from an app\nCtrl+R   Refresh catalogue\nCtrl+Q   Quit"; font.family: storeTheme.mono; Layout.fillWidth: true; wrapMode: Text.Wrap }
-            Label { text: "This preview browses listings and saves a local shortlist. Package installation, author accounts and managed checkout are still to come."; Layout.fillWidth: true; wrapMode: Text.Wrap }
+            Label { text: "Development build. App and setup discovery, private submissions and review workflows are available. Sample sessions and publication rehearsals are explicitly fictional. See the repository handoff for current verification."; Layout.fillWidth: true; wrapMode: Text.Wrap }
         }
     }
 }

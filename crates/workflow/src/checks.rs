@@ -113,20 +113,26 @@ impl Store {
         })
     }
     pub fn media_findings(&self, job: &Job) -> Result<Finding> {
+        let context = self.context_apps(&job.revision)?;
         let c = self.connection()?;
-        for app in &job.candidate.apps {
-            for media in &app.media {
-                let owned: bool = c.query_row(
-                    "SELECT EXISTS(SELECT 1 FROM media WHERE owner=?1 AND digest=?2)",
-                    params![job.owner, media.sha256],
-                    |r| r.get(0),
-                )?;
-                if !owned {
-                    return Ok(Finding::new("media",Outcome::Unavailable,"external_media_needs_review","Some media was not normalised by this workspace. A reviewer must establish byte identity and rights before approval."));
-                }
+        let assets = job
+            .candidate
+            .apps
+            .iter()
+            .filter(|a| !context.contains(&a.id))
+            .flat_map(|a| a.media.iter())
+            .chain(job.candidate.recipes.iter().flat_map(|r| r.media.iter()));
+        for media in assets {
+            let owned: bool = c.query_row(
+                "SELECT EXISTS(SELECT 1 FROM media WHERE owner=?1 AND digest=?2)",
+                params![job.owner, media.sha256],
+                |r| r.get(0),
+            )?;
+            if !owned {
+                return Ok(Finding::new("media",Outcome::Unavailable,"external_media_needs_review","Some media was not normalised by this workspace. Establish byte identity and rights before approval."));
             }
         }
-        Ok(Finding::new("media",Outcome::Pass,"normalised_or_absent","All declared app media is absent or refers to this author's normalised upload. Rights assertions still need human review."))
+        Ok(Finding::new("media",Outcome::Pass,"normalised_or_absent","All declared app media is unchanged published context, absent, or refers to this author's normalised upload. Rights assertions still need human review."))
     }
     #[cfg(feature = "development-workflow")]
     pub fn sample_checks(&self, now: i64) -> Result<Value> {

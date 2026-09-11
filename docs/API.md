@@ -1,12 +1,12 @@
 # Public read and native process contracts
 
-Build `omastore-service` through Cargo or CMake. Run `omastore-service data/registry.json 127.0.0.1:8080`; put an operator-managed HTTPS proxy in front of it before offering remote access. It does not provide author authentication or installation eligibility.
+Build `omastore-service` through Cargo or CMake. Run `omastore-service data/registry.json 127.0.0.1:8080`; put an operator-managed HTTPS proxy in front of it before offering remote access. With the optional private database and configured provider, the same service provides authenticated author/reviewer workflows and fresh distribution status. Public catalogue reads alone never grant installation authority.
 
 GET `/api/v1/catalogue` returns the validated public snapshot. GET `/api/v1/apps` accepts `q`, `category`, `appType`, `licence`, `price`, `architecture`, `offline`, `evidence`, `profile`, `limit` (1–50, default 20) and `cursor`. Enum values come from the catalogue contract. Unknown/duplicate parameters fail with 400. Exact ID/name and name prefix lead search, followed by text match and known compatibility with an explicitly selected environment profile, then stable lowercase name/ID. Editorial entries do not affect search.
 
 App pages return `snapshot`, `asOf`, `total`, `items`, `nextCursor`. Repeat identical filters and limit with the returned cursor. A changed snapshot returns 409 `snapshot_changed`; expired evaluation time returns 409 `cursor_expired`; restart from page one. Cursors last at most 24 hours. GET `/api/v1/apps/:id`, `/makers/:id`, `/setups/:id` accepts stable ID or slug. Missing objects return 404. Only GET is supported (405 otherwise). Successful representations have ETags and honour `If-None-Match`; invalid on-disk content returns 503, never a partial snapshot.
 
-The native core accepts one JSON object per line with `protocol_version: 1`, a bounded `id`, `method` and optional `params` object. `core.info`, `catalogue.info` and `catalogue.refresh` accept no parameters. `apps.list` accepts the same query object as HTTP. `apps.get` accepts `{ "id": "stable-id-or-slug" }`. Replies preserve request IDs and carry `ok` plus `result` or a bounded `error.code`. Requests/replies are capped at 256 KiB. There are no executable command or install messages.
+The native core accepts one JSON object per line with `protocol_version: 1`, a bounded `id`, `method` and optional `params` object. `core.info`, `catalogue.info` and `catalogue.refresh` accept no parameters. `apps.list` accepts the same query object as HTTP. `apps.get` accepts `{ "id": "stable-id-or-slug" }`. Replies preserve request IDs and carry `ok` plus `result` or a bounded `error.code`. Requests/replies are capped at 256 KiB. There is no arbitrary command message; package changes use the gated, typed operation lifecycle below.
 
 Catalogue info identifies `bundled`, `cached`, `live`, `stale` or `development` source, last successful fetch, content revision and a bounded warning code. Browser links are explicit user actions. Opening a listing or refreshing data does not start installations, obtain seller rights or upload local inventory.
 
@@ -15,3 +15,44 @@ Run `cargo test --workspace --locked` for contract/cache cases. CTest's `catalog
 B03b adds native-only `candidate.prepare`, accepting the strict string-field worksheet defined in `preparation::Fields`. It returns `valid` plus bounded field errors, or a typed development candidate/digest and readiness warnings. It never writes, uploads, claims or publishes. The native worksheet layer handles explicit private local saves and file-dialog exports.
 
 Publication and current distribution are separate contracts. Authenticated publication status, exact-file export, direct-PR attachment and signed webhook intake are documented in [PUBLICATION.md](PUBLICATION.md). The public, bounded `/api/v1/status?ids=` overlay and private operator/report transitions are documented in [MONITORING.md](MONITORING.md). An overlay response never grants managed installation permission by itself.
+
+B11 adds GET `/api/v1/setups` with bounded `q`, `offset` and `snapshot` browsing. Native `setups.list` uses the same model; `setups.select` accepts `{id, revision, chosen?}` and returns the exact selection, dependency reasons, conflicts, costs and public export. `apps.pick` shares the app query including current release IDs. `setups.export` accepts a selection, current snapshot and explicit local file URL; `setups.import` accepts a file URL and recomputes a bounded strict public selection. These methods never authorise package or settings writes.
+
+B12 adds native `system.probe` (empty parameters) and `system.plan` (`{kind:"app",id}` or `{kind:"setup",id,revision,chosen}`). Probes return a summary and fingerprint, never the machine inventory. Plans resolve catalogue identities internally, expire after ten minutes, bind status/host/repository/dependency state, and contain at most 100 app operations and 256 resolved package effects within 160 KiB. Replies remain under the existing 256 KiB transport bound. These are read-only methods.
+
+B13 adds native `library.list` and `library.refresh` with `{offset?}`, `library.launchers` with `{id}`, `library.launch` with `{id,desktop}`, `operations.get` with `{id}`, `operations.events` with `{id,after?}`, and `handoff.open` with `{uri}`. Package observations and journal data remain local. Launch accepts only a currently observed package-owned system desktop file. Handoffs contain exact public identities and never authorise a write. See [LOCAL_LIBRARY.md](LOCAL_LIBRARY.md).
+
+B14 adds `operations.status` and `operations.cancel` with `{id}`, `operations.confirm` with `{id,digest,accepted:true}`, and `system.handoff` with `{kind:"update"|"install",confirmed:true}`. Confirmation recomputes material and binds the saved proposal; a separate worker claims the durable operation. Status exposes typed outcomes and event sequences. The live adapter has an empty verified-release allowlist until actual Omarchy acceptance evidence exists. Sample confirmation exercises the same ledger and independent process boundary without accessing host packages. See [EXECUTION.md](EXECUTION.md).
+
+B15 adds removal selections (`system.plan` with `{kind:"remove",id}`), `operations.reconcile`, `operations.replan`, `operations.diagnostics`, exact-digest `operations.diagnostics.export`, `library.setups`, `library.detach_setup` and `library.remember_setup`. See EXECUTION.md for explicit consent, references and recovery limits.
+
+B16 adds authenticated GET `/api/v1/operations`, native `workspace.operations.dashboard`, the `start_review` and `release_evidence` commands, and `workspace.feed.info` for a subscription address. Sample feeds deliberately return no live subscription URL. Operator and reviewer actions recheck current roles. See OPERATIONS.md for maintenance, backup/restore and release evidence.
+
+
+Local remix RPCs: `remixes.create` (published selection, explicit supported settings, local name), `remixes.list`, `remixes.get`, `remixes.rename` (expected local version), `remixes.export` (ID, reviewed digest, portal file URL), and `remixes.import` (portal file URL). Only typed portable intent is serialized. Preview returns current differences and a separate local settings projection. The application planner accepts `kind: apps` with at most 100 unique exact `appId`/`releaseId` references; obsolete/missing releases are rejected, never substituted. `workspace.drafts.remix` creates an ordinary private setup draft from the strict portable schema; it does not submit or publish.
+
+B20 adds `workspace.commerce.status` and `GET /api/v1/commerce/status`, plus operator commands `commerce_model {version,model,report_digest}` and `commerce_pause {paused,reason}`. Operating evidence is bounded, versioned and private to current operators. Public readiness never projects author-demand identities or legal-entity evidence contents.
+
+B21 commerce routes: `GET /api/v1/commerce/prices?appId=…`, authenticated `GET /api/v1/commerce/author`, `GET /api/v1/commerce/orders?before=…`, `GET /api/v1/commerce/orders/{id}`, and `POST /api/v1/commerce/orders` with retained `Idempotency-Key` plus strict `{priceId,version,digest,accepted}`. Clients cannot supply payable amounts, account or currency. Order suffixes `reconcile`, `retry`, `recover` accept authenticated POST; `support` is operator-only GET. `POST /api/v1/commerce/webhook` verifies untouched raw bytes, signature time, test mode and API version before provider reconciliation. `/api/v1/commerce/return` is informational only. The isolated sandbox additionally offers `sample-capture` with `{failDelivery}`.
+
+Native methods: `workspace.commerce.author`, `commerce.prices`, `commerce.prepare {priceId}`, `commerce.purchase {id,accepted}`, `commerce.pending`, `commerce.resume {id}`, `commerce.orders {before}`, `commerce.order {id}`, `commerce.reconcile`, `commerce.retry`, `commerce.recover`, and `commerce.support`. `commerce.licence.export {id,digest,file}` exports only the previewed grant; `commerce.licence.verify {file}` works locally against pinned issuer keys. The local attempt ID retains a private request key scoped to account and configured service origin. Operator command `commerce_seller {seller}` records a reviewed seller agreement; author commands `commerce_price {price}` and `commerce_withdraw {id}` require current commercial/listing authority.
+
+B22 adds authenticated `POST /api/v1/commerce/lifecycle`, also available through the native `workspace.commerce.lifecycle` method. Its strict tagged `action` has these shapes:
+
+| Action | Fields | Authority/effect |
+| --- | --- | --- |
+| `sellers` | None | Current actor's sellers; operators see all |
+| `finances` | `seller_id, refresh, cursor` | Seller/operator report; optional provider reconciliation |
+| `refunds` | `id` (order) | Buyer/operator refund history |
+| `request_refund` | `request: {orderId, amount, expectedRefunded, reason, accepted}` | Retained `Idempotency-Key`; request only |
+| `execute_refund` / `reject_refund` | `id` (refund); rejection also `reason` | Current operator approval/rejection |
+| `poll_refund` | `id` (refund) | Buyer/operator observes an attempted effect and its fee reversal |
+| `subscription` | `id` (root/cycle order), `refresh` | Buyer/operator paid periods and provider observations |
+| `cancel_subscription` | `id, accepted` | Buyer/operator explicit future-billing cancellation |
+| `dispute` | `seller_id, id` | Retrieve provider dispute; author/operator |
+| `dispute_packet` | `id` | Private operator preview with SHA-256 |
+| `invoice_issues` / `retry_invoice` | `seller_id`; retry also `id` | Operator unresolved paid-invoice records/reconciliation |
+| `support` | `id` (order), `note` (nullable) | Operator history or append-only support note |
+| `sample_scenario` | `id` (order), `scenario` | Current operator, bound fictional provider only |
+
+All money is integer minor units and currency-specific. No route initiates a bank payout, changes discovery ranking or grants publication authority. Native refund intents derive a stable private owner/origin/request key; retrying an identical request recovers it. To submit a materially different request after rejection, change the stated reason/intent. `workspace.commerce.packet.export {id,digest,file}` rechecks current operator access and the exact reviewed packet before a private local export. Existing operator commands also accept `commerce_reserve {reserve}` and `commerce_evidence {evidence}`; each is bounded, audited and role-rechecked.
