@@ -1,0 +1,494 @@
+{
+  "schemaVersion": 1,
+  "channel": "development",
+  "revision": "demo-v1",
+  "buildRevision": "catalogue-v1",
+  "generatedAt": "2026-09-08T00:00:00Z",
+  "apps": [
+    {
+      "id": "demo-fieldnotes",
+      "slug": "fieldnotes",
+      "name": "Fieldnotes",
+      "summary": "A quiet place to write, think and keep your own files.",
+      "description": "This is a fictional listing for reviewing OmaStore.\n\nA quiet place to write, think and keep your own files.\n\nThe listing shows how purpose, source, cost and compatibility stay separate. No app, screenshot or test evidence is being represented as real.",
+      "tags": [
+        "writing",
+        "demo"
+      ],
+      "category": "writing",
+      "appType": "desktop",
+      "maturity": "preview",
+      "licence": {
+        "class": "open_source",
+        "identifier": "MIT",
+        "url": "https://example.com/licence"
+      },
+      "makerIds": [
+        "demo-maker"
+      ],
+      "homepage": "https://example.com/apps/fieldnotes",
+      "source": "https://example.com/source/fieldnotes",
+      "support": "https://example.com/support",
+      "media": [],
+      "capabilities": [
+        "local-files"
+      ],
+      "currentReleaseId": "r1",
+      "releases": [
+        {
+          "id": "r1",
+          "version": "0.1 preview",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "extra",
+            "package": "demo-fieldnotes",
+            "version": "0.1.0-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "extra",
+            "package": "demo-fieldnotes",
+            "url": "https://example.com/packages/fieldnotes"
+          },
+          "notes": "Synthetic release for testing the storefront. No installable application is provided.",
+          "offline": "yes",
+          "account": "no",
+          "activation": "no",
+          "serviceCosts": "No service costs declared in this synthetic example.",
+          "privileges": [],
+          "services": [],
+          "removal": "Use the originating package manager or developer instructions. Personal files should be preserved."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "demo-maker",
+          "model": "free",
+          "url": "https://example.com/packages/fieldnotes",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": null,
+          "entitlement": "Example only. Check the seller for final price, rights and terms.",
+          "terms": "https://example.com/terms",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "demo-pixelbench",
+      "slug": "pixelbench",
+      "name": "Pixelbench",
+      "summary": "Small tools for making something worth looking at.",
+      "description": "This is a fictional listing for reviewing OmaStore.\n\nSmall tools for making something worth looking at.\n\nThe listing shows how purpose, source, cost and compatibility stay separate. No app, screenshot or test evidence is being represented as real.",
+      "tags": [
+        "design",
+        "demo"
+      ],
+      "category": "design",
+      "appType": "desktop",
+      "maturity": "preview",
+      "licence": {
+        "class": "proprietary",
+        "identifier": null,
+        "url": "https://example.com/licence"
+      },
+      "makerIds": [
+        "demo-maker"
+      ],
+      "homepage": "https://example.com/apps/pixelbench",
+      "source": null,
+      "support": "https://example.com/support",
+      "media": [],
+      "capabilities": [
+        "local-files"
+      ],
+      "currentReleaseId": "r1",
+      "releases": [
+        {
+          "id": "r1",
+          "version": "0.1 preview",
+          "identity": {
+            "kind": "binary_artifact",
+            "publisher": "demo-maker",
+            "version": "0.1 preview",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000002"
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "upstream_external",
+            "url": "https://example.com/apps/pixelbench"
+          },
+          "notes": "Synthetic release for testing the storefront. No installable application is provided.",
+          "offline": "yes",
+          "account": "no",
+          "activation": "yes",
+          "serviceCosts": "No service costs declared in this synthetic example.",
+          "privileges": [],
+          "services": [],
+          "removal": "Use the originating package manager or developer instructions. Personal files should be preserved."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "demo-maker",
+          "model": "paid",
+          "url": "https://example.com/apps/pixelbench",
+          "price": {
+            "currency": "USD",
+            "minorUnits": 2400,
+            "exponent": 2
+          },
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": null,
+          "entitlement": "Example only. Check the seller for final price, rights and terms.",
+          "terms": "https://example.com/terms",
+          "refund": "https://example.com/refunds",
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "demo-branchline",
+      "slug": "branchline",
+      "name": "Branchline",
+      "summary": "Find your way through a busy Git history.",
+      "description": "This is a fictional listing for reviewing OmaStore.\n\nFind your way through a busy Git history.\n\nThe listing shows how purpose, source, cost and compatibility stay separate. No app, screenshot or test evidence is being represented as real.",
+      "tags": [
+        "development",
+        "demo"
+      ],
+      "category": "development",
+      "appType": "terminal",
+      "maturity": "preview",
+      "licence": {
+        "class": "open_source",
+        "identifier": "MIT",
+        "url": "https://example.com/licence"
+      },
+      "makerIds": [
+        "demo-maker"
+      ],
+      "homepage": "https://example.com/apps/branchline",
+      "source": "https://example.com/source/branchline",
+      "support": "https://example.com/support",
+      "media": [],
+      "capabilities": [
+        "local-files"
+      ],
+      "currentReleaseId": "r1",
+      "releases": [
+        {
+          "id": "r1",
+          "version": "0.1 preview",
+          "identity": {
+            "kind": "source_commit",
+            "repository": "https://example.com/source/branchline",
+            "commit": "0000000000000000000000000000000000000003"
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "aur_external",
+            "package": "demo-branchline",
+            "url": "https://example.com/aur/branchline"
+          },
+          "notes": "Synthetic release for testing the storefront. No installable application is provided.",
+          "offline": "yes",
+          "account": "no",
+          "activation": "no",
+          "serviceCosts": "No service costs declared in this synthetic example.",
+          "privileges": [],
+          "services": [],
+          "removal": "Use the originating package manager or developer instructions. Personal files should be preserved."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "demo-maker",
+          "model": "donation",
+          "url": "https://example.com/aur/branchline",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": null,
+          "entitlement": "Example only. Check the seller for final price, rights and terms.",
+          "terms": "https://example.com/terms",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "demo-signaldesk",
+      "slug": "signaldesk",
+      "name": "Signaldesk",
+      "summary": "Bring the services you use into one focused workspace.",
+      "description": "This is a fictional listing for reviewing OmaStore.\n\nBring the services you use into one focused workspace.\n\nThe listing shows how purpose, source, cost and compatibility stay separate. No app, screenshot or test evidence is being represented as real.",
+      "tags": [
+        "productivity",
+        "demo"
+      ],
+      "category": "productivity",
+      "appType": "service",
+      "maturity": "preview",
+      "licence": {
+        "class": "proprietary",
+        "identifier": null,
+        "url": "https://example.com/licence"
+      },
+      "makerIds": [
+        "demo-maker"
+      ],
+      "homepage": "https://example.com/apps/signaldesk",
+      "source": null,
+      "support": "https://example.com/support",
+      "media": [],
+      "capabilities": [
+        "network"
+      ],
+      "currentReleaseId": "r1",
+      "releases": [
+        {
+          "id": "r1",
+          "version": "0.1 preview",
+          "identity": {
+            "kind": "binary_artifact",
+            "publisher": "demo-maker",
+            "version": "0.1 preview",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000004"
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "upstream_external",
+            "url": "https://example.com/apps/signaldesk"
+          },
+          "notes": "Synthetic release for testing the storefront. No installable application is provided.",
+          "offline": "no",
+          "account": "yes",
+          "activation": "no",
+          "serviceCosts": "USD 8 per month; example price only.",
+          "privileges": [],
+          "services": [],
+          "removal": "Use the originating package manager or developer instructions. Personal files should be preserved."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "demo-maker",
+          "model": "subscription",
+          "url": "https://example.com/apps/signaldesk",
+          "price": {
+            "currency": "USD",
+            "minorUnits": 800,
+            "exponent": 2
+          },
+          "billingInterval": "month",
+          "tax": "unknown",
+          "checkedAt": null,
+          "entitlement": "Example only. Check the seller for final price, rights and terms.",
+          "terms": "https://example.com/terms",
+          "refund": "https://example.com/refunds",
+          "cancellation": "https://example.com/cancel"
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "demo-papertrail",
+      "slug": "papertrail",
+      "name": "Papertrail",
+      "summary": "Turn a directory of documents into a useful reference shelf.",
+      "description": "This is a fictional listing for reviewing OmaStore.\n\nTurn a directory of documents into a useful reference shelf.\n\nThe listing shows how purpose, source, cost and compatibility stay separate. No app, screenshot or test evidence is being represented as real.",
+      "tags": [
+        "productivity",
+        "demo"
+      ],
+      "category": "productivity",
+      "appType": "desktop",
+      "maturity": "preview",
+      "licence": {
+        "class": "source_available",
+        "identifier": null,
+        "url": "https://example.com/licence"
+      },
+      "makerIds": [
+        "demo-maker"
+      ],
+      "homepage": "https://example.com/apps/papertrail",
+      "source": "https://example.com/source/papertrail",
+      "support": "https://example.com/support",
+      "media": [],
+      "capabilities": [
+        "local-files"
+      ],
+      "currentReleaseId": "r1",
+      "releases": [
+        {
+          "id": "r1",
+          "version": "0.1 preview",
+          "identity": {
+            "kind": "source_commit",
+            "repository": "https://example.com/source/papertrail",
+            "commit": "0000000000000000000000000000000000000005"
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "upstream_external",
+            "url": "https://example.com/apps/papertrail"
+          },
+          "notes": "Synthetic release for testing the storefront. No installable application is provided.",
+          "offline": "yes",
+          "account": "no",
+          "activation": "no",
+          "serviceCosts": "No service costs declared in this synthetic example.",
+          "privileges": [],
+          "services": [],
+          "removal": "Use the originating package manager or developer instructions. Personal files should be preserved."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "demo-maker",
+          "model": "pay_what_you_want",
+          "url": "https://example.com/apps/papertrail",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": null,
+          "entitlement": "Example only. Check the seller for final price, rights and terms.",
+          "terms": "https://example.com/terms",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "demo-keygarden",
+      "slug": "keygarden",
+      "name": "Keygarden",
+      "summary": "A handful of considered shortcuts for your shell.",
+      "description": "This is a fictional listing for reviewing OmaStore.\n\nA handful of considered shortcuts for your shell.\n\nThe listing shows how purpose, source, cost and compatibility stay separate. No app, screenshot or test evidence is being represented as real.",
+      "tags": [
+        "development",
+        "demo"
+      ],
+      "category": "development",
+      "appType": "shell_plugin",
+      "maturity": "preview",
+      "licence": {
+        "class": "open_source",
+        "identifier": "MIT",
+        "url": "https://example.com/licence"
+      },
+      "makerIds": [
+        "demo-maker"
+      ],
+      "homepage": "https://example.com/apps/keygarden",
+      "source": "https://example.com/source/keygarden",
+      "support": "https://example.com/support",
+      "media": [],
+      "capabilities": [
+        "local-files"
+      ],
+      "currentReleaseId": "r1",
+      "releases": [
+        {
+          "id": "r1",
+          "version": "0.1 preview",
+          "identity": {
+            "kind": "source_commit",
+            "repository": "https://example.com/source/keygarden",
+            "commit": "0000000000000000000000000000000000000006"
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "plugin_external",
+            "url": "https://example.com/plugins/keygarden"
+          },
+          "notes": "Synthetic release for testing the storefront. No installable application is provided.",
+          "offline": "yes",
+          "account": "no",
+          "activation": "no",
+          "serviceCosts": "No service costs declared in this synthetic example.",
+          "privileges": [],
+          "services": [],
+          "removal": "Use the originating package manager or developer instructions. Personal files should be preserved."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "demo-maker",
+          "model": "free",
+          "url": "https://example.com/plugins/keygarden",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": null,
+          "entitlement": "Example only. Check the seller for final price, rights and terms.",
+          "terms": "https://example.com/terms",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    }
+  ],
+  "makers": [
+    {
+      "id": "demo-maker",
+      "slug": "demo-maker",
+      "name": "Example Workshop",
+      "bio": "A fictional maker used to exercise OmaStore. No publisher participation is implied.",
+      "homepage": "https://example.com",
+      "claim": "unclaimed",
+      "claimEvidence": null
+    }
+  ],
+  "recipes": [
+    {
+      "id": "demo-writing-desk",
+      "slug": "writing-desk",
+      "name": "The writing desk",
+      "summary": "A sample selection for a quieter working day.",
+      "revision": "1",
+      "makerId": "demo-maker",
+      "parent": null,
+      "rights": "Synthetic fixture, MIT",
+      "components": [
+        {
+          "appId": "demo-fieldnotes",
+          "releaseId": "r1",
+          "optional": false,
+          "dependsOn": []
+        },
+        {
+          "appId": "demo-papertrail",
+          "releaseId": "r1",
+          "optional": true,
+          "dependsOn": []
+        }
+      ]
+    }
+  ],
+  "editorial": []
+}

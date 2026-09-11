@@ -1,0 +1,23 @@
+# Local source-checkout recipe. This does not claim AUR/Omarchy repository inclusion.
+pkgname=omastore-preview
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Native community application storefront for Omarchy (development preview)'
+arch=('x86_64')
+url='https://github.com/tcballard/OmaStore'
+license=('MIT')
+depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'xdg-desktop-portal')
+makedepends=('cmake' 'ninja' 'gcc' 'rustup')
+source=()
+sha256sums=()
+
+build() {
+  cmake -S "$startdir/.." -B "$srcdir/build" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF -DOMASTORE_DEVELOPMENT_DATA=OFF
+  cmake --build "$srcdir/build" --parallel 2
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install "$srcdir/build"
+}
