@@ -40,3 +40,9 @@ Author services, app scans, installation, setup writes and commerce remain unimp
 ## Recovery
 
 Revert the scaffold change set to remove the source changes. Installation can be rehearsed entirely under `build/stage`; remove only that owned staging directory when cleaning up. A real install/removal workflow is not implemented. No user applications or desktop configuration were changed during scaffold verification.
+
+## B01 — 11 September 2026
+
+Starting revision: 53b8957335e0842289abc2966d762fe09f7bcded. Ending revision: the B01 commit containing this entry (resolve with git log). Implements B01-A1–A5: typed public schema, three release identities, routes, offers, media rights, maker/recipe references, validator CLI and development-only fixtures. Public registry remains empty. See CATALOGUE.md and ADR 0002.
+
+Validation: Rust workspace tests, formatting and Clippy; fixture isolation, malformed/private fields, release-bound evidence, money, references and injection tokens. No native GUI change or package execution. Next: B02 read contract/client/cache. Rollback: revert this additive schema change before published content depends on it.

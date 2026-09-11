@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "channel": "development",
+  "revision": "fixture-v1",
+  "buildRevision": "b01",
+  "generatedAt": "2026-09-11T00:00:00Z",
+  "apps": [
+    {
+      "id": "fixture-notes",
+      "slug": "fixture-notes",
+      "name": "Fixture Notes",
+      "summary": "Synthetic note-taking application for development tests.",
+      "description": "This is development data, not a real application or compatibility claim.",
+      "tags": [
+        "writing",
+        "notes"
+      ],
+      "category": "Productivity",
+      "appType": "desktop",
+      "maturity": "preview",
+      "license": {
+        "class": "open_source",
+        "identifier": "MIT"
+      },
+      "makerIds": [
+        "fixture-maker"
+      ],
+      "source": "https://example.com/source",
+      "support": "https://example.com/support",
+      "media": [
+        {
+          "kind": "icon",
+          "url": "https://example.com/icon.png",
+          "alt": "Synthetic icon",
+          "rights": "Development-only fixture"
+        }
+      ],
+      "currentRelease": "release-1",
+      "releases": [
+        {
+          "id": "release-1",
+          "version": "2026.9",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "fixture-notes",
+            "version": "2026.9",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "fixture-notes",
+            "url": "https://example.com/package",
+            "privileges": [
+              "administrator"
+            ],
+            "services": []
+          },
+          "notes": "Synthetic release",
+          "offline": "unknown",
+          "accountRequired": "unknown",
+          "serviceRequired": "unknown",
+          "activationRequired": "unknown"
+        },
+        {
+          "id": "release-2",
+          "version": "nightly",
+          "identity": {
+            "kind": "source_commit",
+            "repository": "https://example.com/source",
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": null,
+          "notes": "Synthetic release",
+          "offline": "unknown",
+          "accountRequired": "unknown",
+          "serviceRequired": "unknown",
+          "activationRequired": "unknown"
+        },
+        {
+          "id": "release-3",
+          "version": "2026 autumn",
+          "identity": {
+            "kind": "binary_artifact",
+            "publisher": "fixture-maker",
+            "source": "https://example.com/app.tar.gz",
+            "version": "2026 autumn",
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": null,
+          "notes": "Synthetic release",
+          "offline": "unknown",
+          "accountRequired": "unknown",
+          "serviceRequired": "unknown",
+          "activationRequired": "unknown"
+        }
+      ],
+      "evidence": [],
+      "offers": [
+        {
+          "sellerId": "fixture-maker",
+          "model": "free",
+          "url": "https://example.com",
+          "currency": null,
+          "amountMinor": null,
+          "interval": null,
+          "taxIncluded": "unknown",
+          "checkedAt": null,
+          "entitlement": "No store account",
+          "support": "https://example.com/support",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "limitations": [
+        "Synthetic fixture only."
+      ],
+      "provenance": "https://example.com",
+      "informational": true
+    }
+  ],
+  "makers": [
+    {
+      "id": "fixture-maker",
+      "name": "Synthetic developer",
+      "projectUrl": "https://example.com",
+      "claimed": false
+    }
+  ],
+  "recipes": [
+    {
+      "id": "fixture-setup",
+      "slug": "fixture-setup",
+      "revision": "one",
+      "name": "Synthetic setup",
+      "makerId": "fixture-maker",
+      "components": [
+        "fixture-notes"
+      ],
+      "rights": "Development-only",
+      "parent": null
+    }
+  ],
+  "editorial": []
+}

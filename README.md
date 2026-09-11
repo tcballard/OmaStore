@@ -49,6 +49,6 @@ The desktop entry uses the standard `system-software-install` theme icon while p
 - [Native architecture](docs/adr/0001-native-first.md): Qt/QML, Rust and process boundary.
 - [Contributing](CONTRIBUTING.md) and [submissions](SUBMISSION.md).
 
-The next bundle is B01, the catalogue schema and validation contract. Keep the storefront native. Shared catalogue and author services support it; a web storefront is outside the initial build.
+Catalogue v1 and its [validator](docs/CATALOGUE.md) are implemented. The next bundle is B02, read service and native catalogue cache. Keep the storefront native. Shared catalogue and author services support it; a web storefront is outside the initial build.
 
 Independent community project. No official Omarchy endorsement is implied. Project code is MIT licensed; upstream applications, Qt and future catalogue media retain their own licences.
