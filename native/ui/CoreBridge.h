@@ -84,7 +84,8 @@ private:
     void search();
     void persistQuery();
     QProcess m_process;
-    QTimer m_timeout, m_searchDebounce;
+    QTimer m_timeout, m_searchDebounce, m_repositorySync;
+    qint64 m_nextRepositorySync = 0;
     QElapsedTimer m_clock;
     QMap<QString, Pending> m_pending;
     QByteArray m_output;

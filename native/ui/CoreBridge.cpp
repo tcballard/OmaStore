@@ -15,6 +15,14 @@
 namespace { constexpr qsizetype MaxLineBytes = 256 * 1024; }
 CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(demo) {
     m_clock.start();
+    m_repositorySync.setInterval(60 * 1000);
+    connect(&m_repositorySync, &QTimer::timeout, this, [this] { if (m_clock.elapsed() >= m_nextRepositorySync) refresh(); });
+    const auto arguments = QCoreApplication::arguments();
+    const bool qa = arguments.contains("--smoke-test") || arguments.contains("--ui-test") || arguments.contains("--storefront-test") || arguments.contains("--screenshot");
+    if (!demo && !qa) {
+        m_repositorySync.start();
+        QTimer::singleShot(2000, this, &CoreBridge::refresh);
+    }
     QSettings settings;
     m_query = QJsonDocument::fromJson(settings.value("browse/query").toByteArray()).object().toVariantMap();
     m_saved = QJsonDocument::fromJson(settings.value("browse/saved").toByteArray()).toVariant().toList();
@@ -25,7 +33,7 @@ CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(dem
     m_timeout.setInterval(1000);
     connect(&m_timeout, &QTimer::timeout, this, [this] {
         for (const auto &pending : m_pending) {
-            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("remixes.") || pending.method.startsWith("settings.") || pending.method.startsWith("system.") || pending.method.startsWith("library.") || pending.method.startsWith("operations.") ? 55000 : 15000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
+            if (m_clock.elapsed() - pending.since > (pending.method == "workspace.media.upload" || pending.method.startsWith("remixes.") || pending.method.startsWith("settings.") || pending.method.startsWith("system.") || pending.method.startsWith("library.") || pending.method.startsWith("operations.") ? 55000 : 35000)) { fail("The local service stopped responding. Reconnect to try again."); break; }
         }
     });
     connect(&m_process, &QProcess::started, this, [this] { request("core.info"); });
@@ -176,7 +184,7 @@ void CoreBridge::fail(const QString &message) {
     if (m_process.state() != QProcess::NotRunning) m_process.terminate();
     emit stateChanged();
 }
-void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); request("catalogue.refresh"); } }
+void CoreBridge::refresh() { if (m_ready && !loading()) { m_error.clear(); m_nextRepositorySync = m_clock.elapsed() + 60 * 60 * 1000; request("catalogue.refresh"); } }
 void CoreBridge::workspaceAction(const QString &action,const QVariantMap &params) {
     static const QStringList actions{"state","auth.start","auth.poll","auth.logout","auth.sandbox","claims.start","claims.verify","claims.revoke","command","drafts.get","drafts.cache","drafts.new","drafts.remix","drafts.sample","drafts.preview","revisions.get","media.upload","media.preview","checks.run_sample","evidence.import","review.queue","review.get","review.sample_evidence","publication.sample","publication.export","status.get","monitor.queue","monitor.sample","feed.export","feed.info","operations.dashboard","commerce.status","commerce.author","commerce.prices","commerce.prepare","commerce.purchase","commerce.orders","commerce.order","commerce.reconcile","commerce.retry","commerce.recover","commerce.support","commerce.lifecycle","commerce.packet.export","commerce.sample.capture","commerce.pending","commerce.resume","commerce.licence.export","commerce.licence.verify"};
     if (!m_ready || !actions.contains(action)) return;

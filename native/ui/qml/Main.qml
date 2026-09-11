@@ -106,7 +106,7 @@ ApplicationWindow {
                     width: parent.width
                     text: core.catalogue.demo ? "Sample catalogue · All listings are fictional. No app or test claims are real." :
                           (core.catalogue.warning === "cache_write_failed" ? "Catalogue loaded, but it could not be saved for offline use." :
-                          (core.catalogue.source === "stale" ? "Could not refresh. You can keep browsing the last available catalogue." : "Browsing a saved catalogue. Refresh to check for changes."))
+                          (core.catalogue.source === "stale" ? "Could not refresh. You can keep browsing the last available catalogue." : "Browsing a saved catalogue. Package updates are checked automatically."))
                     color: storeTheme.ink; wrapMode: Text.Wrap; textFormat: Text.PlainText
                 }
             }
@@ -137,7 +137,7 @@ ApplicationWindow {
             RowLayout {
                 Layout.fillWidth: true
                 Layout.margins: 12
-                Label { text: core.loading ? "Loading…" : (core.ready ? (core.catalogue.demo ? "SAMPLE MODE" : "Catalogue available offline") : "CONNECTING"); color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale; textFormat: Text.PlainText }
+                Label { text: core.loading ? "Loading…" : (core.ready ? (core.catalogue.demo ? "SAMPLE MODE" : (core.catalogue.repositoryCheckedAt ? "Packages checked " + new Date(core.catalogue.repositoryCheckedAt).toLocaleString(Qt.locale(), Locale.ShortFormat) : "Catalogue available offline")) : "CONNECTING"); color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale; textFormat: Text.PlainText }
                 Item { Layout.fillWidth: true }
                 Label { text: "Independent community project · Not affiliated with Omacom"; color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale }
             }
