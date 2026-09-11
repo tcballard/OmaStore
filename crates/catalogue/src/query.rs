@@ -135,9 +135,15 @@ pub fn query(snapshot: &Snapshot, q: &Query) -> Result<Page, &'static str> {
                 1
             } else if n.contains(&text) {
                 2
-            } else if format!("{} {} {}", app.summary, app.description, app.tags.join(" "))
-                .to_lowercase()
-                .contains(&text)
+            } else if format!(
+                "{} {} {} {}",
+                app.summary,
+                app.description,
+                app.tags.join(" "),
+                app.category
+            )
+            .to_lowercase()
+            .contains(&text)
             {
                 3
             } else {

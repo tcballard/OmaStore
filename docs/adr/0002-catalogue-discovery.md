@@ -18,3 +18,9 @@ B02 will share query and pagination logic between native and HTTP consumers.
 B03 extends the existing Fusion/palette interface with standard native controls;
 it is a functional discovery preview, with final art direction left for visual review.
 Managed installation is outside these bundles. Catalogue data never becomes a command.
+
+B03 supplies four genuine informational nominations with immutable package-definition
+provenance. This uses R1's explicit informational-candidate route, not approval.
+Maturity gains `unknown`; no upstream maturity is inferred from semantic-looking versions.
+The native client opens opted-in media externally until approved media delivery exists.
+No unbounded third-party media downloader is attached to the native Image element.

@@ -7,7 +7,7 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B00 | Repository checkout, runnable shell and handoff | None | verified |
 | B01 | Catalogue v1 schema, validation and fixtures | B00 | verified |
 | B02 | Native catalogue client, cache and read API | B01 | implemented_unverified |
-| B03 | Native discovery and truthful app details | B02 | not_started |
+| B03 | Native discovery and truthful app details | B02 | implemented_unverified |
 | B04 | Publisher identity and persistent workspaces | B01 | not_started |
 | B05 | Submission drafts, media and preview | B04 | not_started |
 | B06 | Bounded checks and evidence intake | B05 | not_started |
@@ -28,6 +28,6 @@ Product spec: version 0.2, native-first edition. Earlier web-first bundle descri
 | B21 | Checkout, delivery and entitlements | B20 | not_started |
 | B22 | Refunds, disputes, payouts and commerce readiness | B21 | not_started |
 
-B00 is verified for the scoped native foundation on Linux; this is not a real-Omarchy release approval. Catalogue, installation, author tools and payments are future bundles.
+B00 is verified for the scoped native foundation on Linux; this is not a real-Omarchy release approval. Catalogue contracts and native discovery are implemented; installation, author tools and payments are future bundles.
 
-Next implementation: B03. B02 Linux contracts pass; deployed HTTPS service round-trip remains outstanding. Real Omarchy desktop observations are tracked separately from offscreen Linux checks in BUILD_HANDOFF.md.
+B01–B03 code is implemented. Before R1: exercise the deployed HTTPS catalogue and actual Omarchy desktop; approved inline media remains deferred. Next dependency-ready product bundle: B04. Package planning still follows B09/B12. Real Omarchy desktop observations are tracked separately from offscreen Linux checks in BUILD_HANDOFF.md.

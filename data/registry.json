@@ -1,11 +1,302 @@
 {
   "schemaVersion": 1,
   "channel": "public",
-  "revision": "empty-v1",
-  "buildRevision": "b01",
+  "revision": "informational-2026-09-11",
+  "buildRevision": "b03",
   "generatedAt": "2026-09-11T00:00:00Z",
-  "apps": [],
-  "makers": [],
+  "apps": [
+    {
+      "id": "localsend",
+      "slug": "localsend",
+      "name": "LocalSend",
+      "summary": "A cross-platform application for sharing files.",
+      "description": "A cross-platform application for sharing files. This informational entry identifies an existing Omarchy package definition and links to its project. It has not completed OmaStore submission or independent review.",
+      "tags": [
+        "files",
+        "sharing",
+        "network"
+      ],
+      "category": "Utilities",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "license": {
+        "class": "open_source",
+        "identifier": "Apache-2.0"
+      },
+      "makerIds": [
+        "localsend-project"
+      ],
+      "source": "https://github.com/localsend/localsend",
+      "support": "https://github.com/localsend/localsend/issues",
+      "media": [],
+      "currentRelease": "observed-package",
+      "releases": [
+        {
+          "id": "observed-package",
+          "version": "1.18.2-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "localsend",
+            "version": "1.18.2-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "localsend",
+            "url": "https://github.com/omacom/omarchy-pkgs/blob/c31ef469c5f0dde2654770f5ce578e8b2e559193/pkgbuilds/localsend/PKGBUILD",
+            "privileges": [
+              "administrator"
+            ],
+            "services": []
+          },
+          "notes": "Version observed in the linked package definition, not a verified installed artifact.",
+          "offline": "unknown",
+          "accountRequired": "unknown",
+          "serviceRequired": "unknown",
+          "activationRequired": "unknown"
+        }
+      ],
+      "evidence": [],
+      "offers": [],
+      "limitations": [
+        "Package architecture declarations are not runtime test results.",
+        "Availability in your configured repositories has not been checked.",
+        "Account, activation, offline behaviour and any service costs remain unverified."
+      ],
+      "provenance": "https://github.com/omacom/omarchy-pkgs/blob/c31ef469c5f0dde2654770f5ce578e8b2e559193/pkgbuilds/localsend/PKGBUILD",
+      "informational": true
+    },
+    {
+      "id": "omacalc",
+      "slug": "omacalc",
+      "name": "OmaCalc",
+      "summary": "A focused calculator built with Qt Quick.",
+      "description": "A focused calculator built with Qt Quick. This informational entry identifies an existing Omarchy package definition and links to its project. It has not completed OmaStore submission or independent review.",
+      "tags": [
+        "calculator",
+        "arithmetic"
+      ],
+      "category": "Utilities",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "license": {
+        "class": "open_source",
+        "identifier": "MIT AND OFL-1.1"
+      },
+      "makerIds": [
+        "omacalc-project"
+      ],
+      "source": "https://github.com/omacom-io/omacalc",
+      "support": "https://github.com/omacom-io/omacalc/issues",
+      "media": [],
+      "currentRelease": "observed-package",
+      "releases": [
+        {
+          "id": "observed-package",
+          "version": "0.2.2-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "omacalc",
+            "version": "0.2.2-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "omacalc",
+            "url": "https://github.com/omacom/omarchy-pkgs/blob/c31ef469c5f0dde2654770f5ce578e8b2e559193/pkgbuilds/omacalc/PKGBUILD",
+            "privileges": [
+              "administrator"
+            ],
+            "services": []
+          },
+          "notes": "Version observed in the linked package definition, not a verified installed artifact.",
+          "offline": "unknown",
+          "accountRequired": "unknown",
+          "serviceRequired": "unknown",
+          "activationRequired": "unknown"
+        }
+      ],
+      "evidence": [],
+      "offers": [],
+      "limitations": [
+        "Package architecture declarations are not runtime test results.",
+        "Availability in your configured repositories has not been checked.",
+        "Account, activation, offline behaviour and any service costs remain unverified."
+      ],
+      "provenance": "https://github.com/omacom/omarchy-pkgs/blob/c31ef469c5f0dde2654770f5ce578e8b2e559193/pkgbuilds/omacalc/PKGBUILD",
+      "informational": true
+    },
+    {
+      "id": "omawrite",
+      "slug": "omawrite",
+      "name": "OmaWrite",
+      "summary": "A Markdown writing application built with Qt Quick.",
+      "description": "A Markdown writing application built with Qt Quick. This informational entry identifies an existing Omarchy package definition and links to its project. It has not completed OmaStore submission or independent review.",
+      "tags": [
+        "writing",
+        "markdown",
+        "notes"
+      ],
+      "category": "Productivity",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "license": {
+        "class": "open_source",
+        "identifier": "MIT AND OFL-1.1"
+      },
+      "makerIds": [
+        "omawrite-project"
+      ],
+      "source": "https://github.com/omacom-io/omawrite",
+      "support": "https://github.com/omacom-io/omawrite/issues",
+      "media": [],
+      "currentRelease": "observed-package",
+      "releases": [
+        {
+          "id": "observed-package",
+          "version": "0.5.0-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "omawrite",
+            "version": "0.5.0-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "omawrite",
+            "url": "https://github.com/omacom/omarchy-pkgs/blob/c31ef469c5f0dde2654770f5ce578e8b2e559193/pkgbuilds/omawrite/PKGBUILD",
+            "privileges": [
+              "administrator"
+            ],
+            "services": []
+          },
+          "notes": "Version observed in the linked package definition, not a verified installed artifact.",
+          "offline": "unknown",
+          "accountRequired": "unknown",
+          "serviceRequired": "unknown",
+          "activationRequired": "unknown"
+        }
+      ],
+      "evidence": [],
+      "offers": [],
+      "limitations": [
+        "Package architecture declarations are not runtime test results.",
+        "Availability in your configured repositories has not been checked.",
+        "Account, activation, offline behaviour and any service costs remain unverified."
+      ],
+      "provenance": "https://github.com/omacom/omarchy-pkgs/blob/c31ef469c5f0dde2654770f5ce578e8b2e559193/pkgbuilds/omawrite/PKGBUILD",
+      "informational": true
+    },
+    {
+      "id": "heroic-games-launcher-bin",
+      "slug": "heroic-games-launcher-bin",
+      "name": "Heroic Games Launcher",
+      "summary": "A launcher for Epic, Amazon and GOG games.",
+      "description": "A launcher for Epic, Amazon and GOG games. This informational entry identifies an existing Omarchy package definition and links to its project. It has not completed OmaStore submission or independent review.",
+      "tags": [
+        "games",
+        "launcher"
+      ],
+      "category": "Games",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "license": {
+        "class": "open_source",
+        "identifier": "GPL-3.0-only"
+      },
+      "makerIds": [
+        "heroic-games-launcher-bin-project"
+      ],
+      "source": "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher",
+      "support": "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/issues",
+      "media": [],
+      "currentRelease": "observed-package",
+      "releases": [
+        {
+          "id": "observed-package",
+          "version": "2.22.1-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "heroic-games-launcher-bin",
+            "version": "2.22.1-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "heroic-games-launcher-bin",
+            "url": "https://github.com/omacom/omarchy-pkgs/blob/c31ef469c5f0dde2654770f5ce578e8b2e559193/pkgbuilds/heroic-games-launcher-bin/PKGBUILD",
+            "privileges": [
+              "administrator"
+            ],
+            "services": []
+          },
+          "notes": "Version observed in the linked package definition, not a verified installed artifact.",
+          "offline": "unknown",
+          "accountRequired": "unknown",
+          "serviceRequired": "unknown",
+          "activationRequired": "unknown"
+        }
+      ],
+      "evidence": [],
+      "offers": [],
+      "limitations": [
+        "Package architecture declarations are not runtime test results.",
+        "Availability in your configured repositories has not been checked.",
+        "Account, activation, offline behaviour and any service costs remain unverified."
+      ],
+      "provenance": "https://github.com/omacom/omarchy-pkgs/blob/c31ef469c5f0dde2654770f5ce578e8b2e559193/pkgbuilds/heroic-games-launcher-bin/PKGBUILD",
+      "informational": true
+    }
+  ],
+  "makers": [
+    {
+      "id": "localsend-project",
+      "name": "LocalSend project",
+      "projectUrl": "https://github.com/localsend/localsend",
+      "claimed": false
+    },
+    {
+      "id": "omacalc-project",
+      "name": "OmaCalc project",
+      "projectUrl": "https://github.com/omacom-io/omacalc",
+      "claimed": false
+    },
+    {
+      "id": "omawrite-project",
+      "name": "OmaWrite project",
+      "projectUrl": "https://github.com/omacom-io/omawrite",
+      "claimed": false
+    },
+    {
+      "id": "heroic-games-launcher-bin-project",
+      "name": "Heroic Games Launcher project",
+      "projectUrl": "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher",
+      "claimed": false
+    }
+  ],
   "recipes": [],
   "editorial": []
 }

@@ -4,7 +4,16 @@ A native application storefront for Omarchy.
 
 The aim is to discover useful software, understand what it does, support its makers and adopt selected parts of a shared setup. OmaStore opens in its own Qt/QML desktop window, backed by a Rust core.
 
-**Current state: development scaffold.** The window, six navigation destinations and versioned local core handshake are implemented. Catalogue discovery, installed-app scanning, author submissions, package operations and payments are not implemented yet. Empty views deliberately contain no invented app listings or compatibility claims.
+**Current state: native discovery preview.** Search and filter four real informational
+package listings, inspect app details and exact package provenance, and follow external
+project/package links. The Rust core supplies a shared read contract and last-valid
+catalogue cache. Search filters survive navigation and restart.
+
+Listings are not approved submissions or compatibility claims. Package availability
+on the current machine has not been scanned. Managed installation, installed-app
+library, author submissions and payments remain unimplemented.
+
+![Native discovery preview](docs/evidence/discover.png)
 
 ## Build and run
 
@@ -20,9 +29,9 @@ cmake --build --preset dev
 ./build/bin/omastore
 ```
 
-The program locates `omastore-core` alongside the desktop executable. CMake builds and places both in `build/bin`. It uses Qt's normal platform selection on a Wayland desktop; no browser, webview or running catalogue service is needed for this scaffold.
+The program locates `omastore-core` alongside the desktop executable. CMake builds and places both in `build/bin`. It uses Qt's normal platform selection on a Wayland desktop; no browser, webview or running catalogue service is needed for bundled or cached browsing.
 
-## Check the scaffold
+## Check discovery
 
 ```sh
 cargo fmt --all -- --check
@@ -31,7 +40,7 @@ cargo test --workspace --locked
 ctest --preset dev
 ```
 
-CTest covers the actual Rust child process and an offscreen Qt startup/core handshake. Offscreen Linux checks do not establish appearance, accessibility, launcher behaviour or compatibility on a real Omarchy desktop. Those observations remain recorded separately in [the handoff](docs/BUILD_HANDOFF.md).
+CTest covers the actual Rust child process and an offscreen Qt startup/core handshake. Offscreen Linux checks do not establish accessibility, launcher behaviour or compatibility on a real Omarchy desktop. Those observations remain recorded separately in [the handoff](docs/BUILD_HANDOFF.md).
 
 To rehearse packaging without changing the machine:
 
@@ -49,6 +58,6 @@ The desktop entry uses the standard `system-software-install` theme icon while p
 - [Native architecture](docs/adr/0001-native-first.md): Qt/QML, Rust and process boundary.
 - [Contributing](CONTRIBUTING.md) and [submissions](SUBMISSION.md).
 
-Catalogue v1 and its [validator](docs/CATALOGUE.md) are implemented. The read service and native catalogue cache are implemented; native discovery views are next. Keep the storefront native. Shared catalogue and author services support it; a web storefront is outside the initial build.
+Catalogue v1 and its [validator](docs/CATALOGUE.md) are implemented. The read service, native cache and discovery views are implemented. See [verification and provenance](docs/evidence/README.md) for the remaining real-desktop and HTTPS integration checks. Keep the storefront native. Shared catalogue and author services support it; a web storefront is outside the initial build.
 
 Independent community project. No official Omarchy endorsement is implied. Project code is MIT licensed; upstream applications, Qt and future catalogue media retain their own licences.

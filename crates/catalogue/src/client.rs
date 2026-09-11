@@ -154,15 +154,15 @@ impl CatalogueClient {
         let parent = path.parent().ok_or("cache_unavailable")?;
         fs::create_dir_all(parent).map_err(|_| "cache_unavailable")?;
         let temporary = path.with_extension(format!("{}.tmp", std::process::id()));
+        let mut options = fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut f = options.open(&temporary).map_err(|_| "cache_unavailable")?;
         let result = (|| {
-            let mut options = fs::OpenOptions::new();
-            options.write(true).create_new(true);
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::OpenOptionsExt;
-                options.mode(0o600);
-            }
-            let mut f = options.open(&temporary).map_err(|_| "cache_unavailable")?;
             f.write_all(&serde_json::to_vec(snapshot).unwrap())
                 .and_then(|_| f.sync_all())
                 .map_err(|_| "cache_unavailable")?;
@@ -190,6 +190,11 @@ mod tests {
         fs::write(&path, b"broken JSON").unwrap();
         let recovered = CatalogueClient::new(Some(path.clone()), DEFAULT_ORIGIN.into());
         assert_eq!(recovered.state.source, "bundled");
+        let temporary = path.with_extension(format!("{}.tmp", std::process::id()));
+        fs::write(&temporary, b"existing file").unwrap();
+        assert!(client.save(&client.snapshot).is_err());
+        assert_eq!(fs::read(&temporary).unwrap(), b"existing file");
+        fs::remove_file(temporary).unwrap();
         fs::remove_file(path).unwrap();
         fs::remove_dir(dir).unwrap();
     }

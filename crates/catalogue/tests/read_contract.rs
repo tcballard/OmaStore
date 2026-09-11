@@ -50,6 +50,10 @@ fn api_and_native_share_order_and_cursor_identity() {
 #[test]
 fn public_read_fields_and_unknowns() {
     let s = fixture();
+    assert_eq!(
+        api::read(&s, "/api/v1/apps", "text=productivity").unwrap()["total"],
+        1
+    );
     let v = api::read(&s, "/api/v1/apps/fixture-notes", "").unwrap();
     assert_eq!(v["evidence"], json!([]));
     assert!(v.get("token").is_none());

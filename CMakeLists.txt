@@ -50,9 +50,15 @@ install(FILES packaging/io.github.tcballard.OmaStore.desktop
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 
 if(BUILD_TESTING)
+    find_package(Qt6 6.4 REQUIRED COMPONENTS Test)
+    target_compile_definitions(omastore PRIVATE OMASTORE_TESTING)
+    target_link_libraries(omastore PRIVATE Qt6::Test)
     find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
     add_test(NAME core-process-contract
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/core_process.py" "${CORE_BINARY}")
+    add_test(NAME native-discovery
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/native_discovery.py" "$<TARGET_FILE:omastore>")
+    set_tests_properties(native-discovery PROPERTIES TIMEOUT 30)
     add_test(NAME native-startup COMMAND omastore --smoke-test)
     set_tests_properties(core-process-contract native-startup PROPERTIES TIMEOUT 20)
     set_tests_properties(native-startup PROPERTIES

@@ -34,7 +34,8 @@ choices!(AppType {
 choices!(Maturity {
     Development,
     Preview,
-    Stable
+    Stable,
+    Unknown
 });
 choices!(LicenseClass {
     OpenSource,

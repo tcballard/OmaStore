@@ -54,3 +54,13 @@ Starting revision: be44631. Ending revision: the B02 commit containing this entr
 Evidence: 12 Rust tests passed before the additional cache round-trip test; formatting and Clippy passed. Actual HTTP entrypoint checks passed (snapshot, conditional ETag, query errors, not-found, reload). Four actual core-process cases and Qt 6.4.2 offscreen startup passed via CTest. A 1,000-entry release-build query benchmark on this Linux x86_64 container (9 exposed logical CPUs, 100 samples) measured p95 14.902 ms; this is not a Dell/UI latency result. Debug-build queries are slower.
 
 Remaining: deployed HTTPS service round-trip; no production service was provisioned. No real Omarchy desktop or package operations were exercised. B02 is implemented_unverified for that external integration gate; B03 can use its tested local read contract and bundled data. Rollback: revert reader bundle, retain schema and B00 shell.
+
+## B03 — 11 September 2026
+
+Starting revision: 98c751f. Ending revision: the B03 commit containing this entry. Implements native Discover/Apps, shared search and eight filters, detail pages, unknown/old evidence states, explicit external acquisition, local preferences, refresh/empty/error recovery and QA capture commands. Four genuine informational nominations are sourced to immutable omarchy-pkgs records; see evidence/README.md. Schema adds explicit unknown maturity rather than infer it from version strings. No maker participation or compatibility is invented.
+
+Evidence: 13 Rust tests passed, Clippy passed, actual HTTP contract passed, public catalogue validator passed, all three CTest suites passed (four core process checks, native keyboard/compact/offline checks plus separate-process preference restoration, Qt startup). Desktop entry and both executables staged successfully. Native renders inspected at 1040×760, 800×600 and 200% scaling. No external acquisition link was activated during automated tests.
+
+Remaining R1 gates: actual Omarchy/Wayland desktop, theme and accessibility observations; deployed HTTPS client/service round-trip; approved media with bounded inline loading (current media actions are external/opt-in). No install, inventory scan, update/remove or author service exists. B03 is implemented_unverified at real-desktop level. Next: complete those R1 observations, then dependency-ready B04; package planning requires B09/B12, not an unreviewed Install button.
+
+Recovery: revert B03 to the tested B02 shell; catalogue/cache data stays versioned. Clear only OmaStore's own preferences/cache if intentionally resetting the preview. No installed apps or personal files were changed.
