@@ -46,3 +46,11 @@ Revert the scaffold change set to remove the source changes. Installation can be
 Starting revision: 53b8957335e0842289abc2966d762fe09f7bcded. Ending revision: the B01 commit containing this entry (resolve with git log). Implements B01-A1–A5: typed public schema, three release identities, routes, offers, media rights, maker/recipe references, validator CLI and development-only fixtures. Public registry remains empty. See CATALOGUE.md and ADR 0002.
 
 Validation: Rust workspace tests, formatting and Clippy; fixture isolation, malformed/private fields, release-bound evidence, money, references and injection tokens. No native GUI change or package execution. Next: B02 read contract/client/cache. Rollback: revert this additive schema change before published content depends on it.
+
+## B02 — 11 September 2026
+
+Starting revision: be44631. Ending revision: the B02 commit containing this entry. Implements read-only snapshot/app/maker/setup routes, shared query filters, content-bound cursors, ETags, bounded HTTPS client, atomic local cache and core catalogue methods. CMake tracks new Rust/schema dependencies.
+
+Evidence: 12 Rust tests passed before the additional cache round-trip test; formatting and Clippy passed. Actual HTTP entrypoint checks passed (snapshot, conditional ETag, query errors, not-found, reload). Four actual core-process cases and Qt 6.4.2 offscreen startup passed via CTest. A 1,000-entry release-build query benchmark on this Linux x86_64 container (9 exposed logical CPUs, 100 samples) measured p95 14.902 ms; this is not a Dell/UI latency result. Debug-build queries are slower.
+
+Remaining: deployed HTTPS service round-trip; no production service was provisioned. No real Omarchy desktop or package operations were exercised. B02 is implemented_unverified for that external integration gate; B03 can use its tested local read contract and bundled data. Rollback: revert reader bundle, retain schema and B00 shell.

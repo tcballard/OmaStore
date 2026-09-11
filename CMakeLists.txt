@@ -11,6 +11,7 @@ find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
 find_program(CARGO_EXECUTABLE cargo REQUIRED)
 qt_standard_project_setup()
 
+file(GLOB_RECURSE RUST_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/native/core/src/*.rs" "${CMAKE_SOURCE_DIR}/crates/catalogue/src/*.rs")
 set(CORE_BINARY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-core")
 add_custom_command(
     OUTPUT "${CORE_BINARY}"
@@ -20,7 +21,7 @@ add_custom_command(
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
         "${CMAKE_BINARY_DIR}/cargo/release/omastore-core" "${CORE_BINARY}"
-    DEPENDS Cargo.toml Cargo.lock native/core/Cargo.toml native/core/src/main.rs
+    DEPENDS Cargo.toml Cargo.lock native/core/Cargo.toml crates/catalogue/Cargo.toml data/registry.json ${RUST_SOURCES}
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     VERBATIM
 )

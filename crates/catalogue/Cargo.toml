@@ -13,3 +13,5 @@ serde_json.workspace = true
 url = "2.5"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 sha2 = "0.10"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+tiny_http = "0.12"

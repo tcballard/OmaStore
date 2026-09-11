@@ -8,3 +8,7 @@ repository.workspace = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+omastore-catalogue = { path = "../../crates/catalogue" }
+
+[features]
+dev-fixtures = ["omastore-catalogue/dev-fixtures"]

@@ -524,3 +524,7 @@ pub fn development_fixture() -> Snapshot {
     )
     .expect("valid development fixture")
 }
+
+pub mod api;
+pub mod client;
+pub mod query;

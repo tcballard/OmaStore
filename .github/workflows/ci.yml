@@ -1,4 +1,4 @@
-name: Native scaffold
+name: Native catalogue
 
 on:
   push:
@@ -27,6 +27,11 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test Rust protocol boundaries
         run: cargo test --workspace --locked
+      - name: Validate public catalogue and HTTP read contract
+        run: |
+          cargo build --workspace --locked
+          target/debug/catalogue-validate data/registry.json
+          python3 tests/catalogue_http.py target/debug/catalogue-serve
       - name: Configure native app
         run: cmake --preset dev
       - name: Build native app
