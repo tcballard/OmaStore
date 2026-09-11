@@ -14,7 +14,7 @@ serde.workspace = true
 serde_json.workspace = true
 omastore-catalogue.workspace = true
 chrono.workspace = true
-ureq = { version = "3.4", default-features = false, features = ["rustls", "gzip", "json"] }
+ureq = { version = "3.4", default-features = false, features = ["rustls", "platform-verifier", "gzip", "json"] }
 tempfile = "3.23"
 omastore-workflow.workspace = true
 url.workspace = true
@@ -22,3 +22,6 @@ base64.workspace = true
 sha2.workspace = true
 rusqlite.workspace = true
 libc = "0.2"
+
+tar = "0.4"
+zstd = "0.13"

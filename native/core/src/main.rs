@@ -7,6 +7,7 @@ mod planner;
 mod platform;
 mod recovery;
 mod remixes;
+mod repository;
 mod settings;
 mod settings_apply;
 mod setups;

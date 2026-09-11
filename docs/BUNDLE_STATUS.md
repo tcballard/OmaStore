@@ -1,5 +1,11 @@
 # Bundle status
 
+11 September 2026: B02 repository synchronisation continuation implemented.
+Startup/hourly/manual checks update the reviewed stable x86_64 app selection
+from the published index. Live HTTPS and restart-cache checks pass; approved
+publication caches and the approved B03 interface are preserved. See ADR 0014
+and BUILD_HANDOFF.md. This does not enable managed installation.
+
 11 September 2026: restored `design/storefront-polish` / PR #5 as the active
 continuation. Duplicate scaffold-based PRs #6–#8 are closed. Existing B00–B22
 implementation and approved appearance are retained. Native and Arch CI at

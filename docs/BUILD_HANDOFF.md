@@ -1,5 +1,38 @@
 # Build handoff
 
+11 September 2026, PR #9 CI correction: native run 34648363716 failed only
+`desktop-settings/atomicReplacementAndLateCreation`. The default five-second
+QTRY deadline raced the five-second recovery poll; Qt reported that the
+expected empty palette arrived at 5.1 seconds. Reload assertions now allow
+eight seconds for polling and event dispatch, retaining the same predicates
+and the enclosing 30-second suite limit. Application timing is unchanged.
+Arch package run 34648363622 passed at af5f795. Fresh native CI must verify
+the corrected test and the remaining sample-build steps.
+The focused Qt 6.4 desktop-settings suite passed three consecutive runs in
+31.12 seconds after this correction. No tests were disabled.
+
+11 September 2026, repository synchronisation, continuation from PR #5's
+1035c5c / matching local tree 346afd7:
+`feat/repository-sync` adds direct bounded conditional reads of Omarchy's
+published stable x86_64 database, separate atomic observation caching,
+startup/hourly/manual refresh and last-successful-check display. The approved
+square-edged interface is retained. Six reviewed app selections update or
+disappear with the index; new package names still require selection. Approved
+publications take precedence and retain their separate cache. ADR 0014 records
+the limits and boundaries. Installation remains independently gated.
+
+Validation: Rust workspace suite passed; final core suite has 17 passes and
+one explicitly separate live test. Clippy with warnings denied and formatting
+passed. Live HTTPS conditional round-trip passed. Actual core refresh returned
+six apps, source live, no warning, checked 2026-09-11T21:11:48Z; a fresh process
+loaded the same observation from cache. The workspace's ALL_PROXY pointed at
+an unavailable SOCKS proxy, so live checks selected the existing HTTPS proxy;
+TLS validation used platform trust without disabling certificate checks.
+Native desktop-settings passed in 10.32 s against Qt 6.4; the complete Qt
+runtime passed the remaining ten checks in 9.89 s, with local D-Bus skipped.
+These include light/dark, small/HiDPI, keyboard and HTTP checks. Real Omarchy
+desktop and live package lifecycle acceptance remain separate.
+
 11 September 2026, continuation recovery:
 The active implementation is `design/storefront-polish`, PR #5, starting at
 `641ab7a3c1ae1e27517fd7f1147eba1999b409d3`. Tom asked to restore the approved
