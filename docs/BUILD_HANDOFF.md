@@ -1,5 +1,28 @@
 # Build handoff
 
+11 September 2026, continuation recovery:
+The active implementation is `design/storefront-polish`, PR #5, starting at
+`641ab7a3c1ae1e27517fd7f1147eba1999b409d3`. Tom asked to restore the approved
+design after a continuation incorrectly started from the B00 main branch.
+Duplicate PRs #6–#8 are closed as superseded; their branches retain the work.
+Continue from this branch and its existing PR #1–#4 dependencies. It already
+contains catalogue search, bounded offline caching, six real repository
+listings, the approved square-edged shelf and live Omarchy appearance.
+Do not restart B01–B03 from main or replace this interface with the scaffold.
+Native CI run 34522637713 and Arch package run 34522637670 both passed at the
+starting revision. Real Omarchy desktop acceptance remains separate.
+The restored source rebuilt locally with Qt 6.4.2 and the locked release Rust
+workspace. Desktop-settings passed against Qt 6.4.2 (10.53 s). The remaining
+native suite passed with the complete PySide6 Qt runtime (10 passes, one
+D-Bus skip, 8.74 s), including search/shelf/save/blocked-plan, small/HiDPI and
+light/dark theme journeys. The minimal local 6.4 runtime lacks QtQuick.Dialogs;
+the complete runtime was used for UI checks and the fresh capture. Its QtTest
+private ABI differs, so desktop-settings used its matching build runtime.
+`screenshots/restored-storefront.png` is the fresh 1488×1056 native capture,
+visually compared with the approved authored shelf. No app code was rewritten:
+this recovery restores the existing implementation as the continuation base.
+
+
 10 September 2026, B03 appearance integration, starting at `c94208131c1a9681063ac29203b150061bdb0d56`:
 Tom authorised Follow Omarchy as the default, with the approved OmaStore
 editorial style available through More → Appearance. The native settings reader

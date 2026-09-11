@@ -1,5 +1,10 @@
 # Bundle status
 
+11 September 2026: restored `design/storefront-polish` / PR #5 as the active
+continuation. Duplicate scaffold-based PRs #6–#8 are closed. Existing B00–B22
+implementation and approved appearance are retained. Native and Arch CI at
+641ab7a passed; fresh local restoration checks and capture are in BUILD_HANDOFF.md.
+
 10 September 2026: B03 appearance continuation is verified on offscreen Linux:
 11 ordinary and 10 sample checks passed, with one local D-Bus skip per suite.
 Real Omarchy acceptance remains pending. Follow Omarchy defaults on; the approved
