@@ -1,0 +1,28 @@
+name: Application proposal
+description: Link the immutable native candidate; this issue is not approval.
+title: "Application proposal: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use the native Author workspace for the exact candidate, rights confirmation and independent review. The production intake service must be configured by its operator. Public issues are discussion and intake records, not compatibility or publisher endorsements. Never post secrets or private diagnostics.
+  - type: input
+    id: project
+    attributes:
+      label: Public project homepage or source
+      description: A public HTTPS project page; do not attach an executable.
+    validations:
+      required: true
+  - type: textarea
+    id: revision
+    attributes:
+      label: Native immutable revision marker
+      description: If submitted natively, copy the following marker as a standalone line using your revision ID, then attach this issue number in the Author workspace.
+      placeholder: "OmaStore immutable submission: REVISION_ID"
+  - type: textarea
+    id: purpose
+    attributes:
+      label: What does the application help someone do?
+      description: Briefly describe the purpose, licence and acquisition route. Do not claim testing or publisher participation without evidence.
+    validations:
+      required: true

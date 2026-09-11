@@ -1,67 +1,129 @@
-use omastore_catalogue::{http, Catalogue, MAX_CATALOGUE_BYTES};
-use std::{fs::File, io::Read, net::SocketAddr};
-use tiny_http::{Header, Response, Server, StatusCode};
+use omastore_service::{router, AppState};
+use omastore_workflow::{auth::GithubOAuth, net, Store};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
-fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    if args.len() != 2 {
-        eprintln!("Usage: omastore-service CATALOGUE.json 127.0.0.1:PORT\nServe public read routes behind an operator-managed HTTPS proxy.");
+    if args.len() < 2 {
+        eprintln!("Usage: omastore-service CATALOGUE.json 127.0.0.1:PORT [--workspace PRIVATE.db] [--sandbox]");
         std::process::exit(2);
     }
     let addr: SocketAddr = args[1].parse()?;
     if !addr.ip().is_loopback() {
-        return Err("bind must be loopback; terminate HTTPS at the proxy".into());
+        return Err("bind must be loopback; terminate HTTPS at the operator proxy".into());
     }
-    let read = || -> Result<Catalogue, Box<dyn std::error::Error + Send + Sync>> {
-        let mut bytes = Vec::new();
-        File::open(&args[0])?
-            .take((MAX_CATALOGUE_BYTES + 1) as u64)
-            .read_to_end(&mut bytes)?;
-        Catalogue::parse(&bytes, cfg!(feature = "development-catalogue"))
-            .map_err(|_| "catalogue validation failed".into())
-    };
-    // Refuse to start with invalid data. Each request gets one complete snapshot.
-    read()?;
-    let server = Server::http(addr)?;
-    println!("LISTENING {}", server.server_addr());
-    for request in server.incoming_requests() {
-        let response = match read() {
-            Ok(catalogue) => {
-                let etag = request
-                    .headers()
-                    .iter()
-                    .find(|h| h.field.equiv("If-None-Match"))
-                    .map(|h| h.value.as_str());
-                http::handle(
-                    &catalogue,
-                    request.method().as_str(),
-                    request.url(),
-                    etag,
-                    chrono::Utc::now(),
-                )
+    let mut state = AppState::public(PathBuf::from(&args[0]));
+    let mut database = None;
+    let mut index = 2;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--workspace" if index + 1 < args.len() => {
+                database = Some(PathBuf::from(&args[index + 1]));
+                index += 2;
             }
-            Err(_) => http::Response {
-                status: 503,
-                etag: String::new(),
-                body: br#"{"error":{"code":"catalogue_unavailable"}}"#.to_vec(),
-            },
+            #[cfg(feature = "development-workflow")]
+            "--sandbox" => {
+                state.sandbox = true;
+                index += 1;
+            }
+            _ => return Err("unsupported service argument".into()),
+        }
+    }
+    if let Some(path) = database {
+        #[cfg(feature = "development-workflow")]
+        let store = if state.sandbox {
+            Store::development(&path)?
+        } else {
+            Store::open(&path)?
         };
-        let mut out =
-            Response::from_data(response.body).with_status_code(StatusCode(response.status));
-        for (name, value) in [
-            ("Content-Type", "application/json; charset=utf-8"),
-            ("X-Content-Type-Options", "nosniff"),
-            ("Cache-Control", "public, max-age=0, must-revalidate"),
-        ] {
-            out.add_header(Header::from_bytes(name, value).unwrap());
+        #[cfg(not(feature = "development-workflow"))]
+        let store = Store::open(&path)?;
+        state.store = Some(store);
+        state.objects = Some(omastore_workflow::media::LocalObjects::new(
+            &path
+                .parent()
+                .unwrap_or(std::path::Path::new("."))
+                .join("objects"),
+        )?);
+    }
+    state.origin = std::env::var("OMASTORE_SERVICE_ORIGIN")
+        .unwrap_or_default()
+        .trim_end_matches('/')
+        .to_string();
+    if state.sandbox {
+        state.origin = "https://sandbox.omastore.invalid".into();
+        if state.store.is_none() {
+            return Err("sandbox requires its own --workspace database".into());
         }
-        if !response.etag.is_empty() {
-            out.add_header(Header::from_bytes("ETag", response.etag).unwrap());
+    } else if !state.origin.is_empty() {
+        let origin = net::public_url(&state.origin)?;
+        if origin.path() != "/" || origin.query().is_some() {
+            return Err("service origin must be an HTTPS origin without a path".into());
         }
-        if response.status == 405 {
-            out.add_header(Header::from_bytes("Allow", "GET").unwrap());
+        if let (Ok(client_id), Ok(client_secret)) = (
+            std::env::var("OMASTORE_GITHUB_CLIENT_ID"),
+            std::env::var("OMASTORE_GITHUB_CLIENT_SECRET"),
+        ) {
+            if !client_id.is_empty() && !client_secret.is_empty() {
+                state.oauth = Some(Arc::new(GithubOAuth {
+                    client_id,
+                    client_secret,
+                    callback: format!("{}/api/v1/auth/callback", state.origin),
+                }));
+            }
         }
-        let _ = request.respond(out);
+    }
+    if !state.sandbox && state.store.is_some() && !state.origin.is_empty() {
+        match omastore_workflow::github::Config::from_env() {
+            Ok(Some(config)) => {
+                state.github = Some(omastore_workflow::github::Github::new(config));
+                state.publication_state = "configured".into();
+            }
+            Ok(None) => {}
+            Err(error) => state.publication_state = error.code.into(),
+        }
+    }
+    if std::env::var("OMASTORE_PUBLICATION_PAUSED").ok().as_deref() == Some("1") {
+        state.publication_state = "paused".into();
+    }
+    let publication_worker = if state.github.is_some() && state.publication_state == "configured" {
+        Some(omastore_service::publication::start_worker(state.clone()))
+    } else {
+        None
+    };
+    state.read_catalogue()?;
+    let monitoring_worker = if state.store.is_some()
+        && !state.sandbox
+        && std::env::var("OMASTORE_MONITORING_PAUSED").ok().as_deref() != Some("1")
+    {
+        Some(omastore_service::monitoring::start_worker(state.clone()))
+    } else {
+        None
+    };
+    let worker = if state.store.is_some()
+        && !state.sandbox
+        && std::env::var("OMASTORE_CHECKS_PAUSED").ok().as_deref() != Some("1")
+    {
+        Some(omastore_service::start_checks_worker(state.clone()))
+    } else {
+        None
+    };
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    println!("LISTENING {}", listener.local_addr()?);
+    axum::serve(listener, router(state))
+        .with_graceful_shutdown(async {
+            let _ = tokio::signal::ctrl_c().await;
+        })
+        .await?;
+    if let Some(worker) = worker {
+        worker.abort();
+    }
+    if let Some(worker) = publication_worker {
+        worker.abort();
+    }
+    if let Some(worker) = monitoring_worker {
+        worker.abort();
     }
     Ok(())
 }

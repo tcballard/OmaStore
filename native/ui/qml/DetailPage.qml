@@ -15,7 +15,7 @@ ScrollView {
     contentWidth: availableWidth
     clip: true
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-    Connections { target: core; function onSavedChanged() { page.savedRevision++; } }
+    Connections { target: core; function onSavedChanged() { page.savedRevision++; } function onWorkspaceChanged() {const r=core.workspaceReply;if(r.command==="distribution" && r.appId===page.app.id && r.private && !r.error) reportMessage.text="";} }
     function readable(value) { return String(value || "unknown").replace(/_/g, " "); }
     Component.onDestruction: mediaPreview.load({})
     ColumnLayout {
@@ -38,12 +38,22 @@ ScrollView {
             Label { text: page.summary.priceLabel || "Price not supplied"; font.pixelSize: 22 * theme.scale; font.bold: true; textFormat: Text.PlainText; Layout.fillWidth: true }
             Flow {
                 Layout.fillWidth: true; spacing: 10
-                Button { objectName: "acquireButton"; text: (page.details.acquisition || {}).label + " ↗"; onClicked: core.openLink("acquisition") }
+                Button { objectName: "acquireButton"; enabled:core.distributionCurrent && core.distribution.distribution!=="suspended"; text: (page.details.acquisition || {}).label + " ↗"; onClicked: core.openLink("acquisition") }
                 Button { objectName: "saveButton"; text: { page.savedRevision; return core.isSaved(page.app.id || "") ? "Remove from saved" : "Save for later"; } onClicked: core.toggleSaved() }
                 Button { text: "Source ↗"; visible: !!page.app.source; onClicked: core.openLink("source") }
                 Button { text: "Support ↗"; onClicked: core.openLink("support") }
             }
             Label { text: (page.summary.routeLabel || "") + ". Opens in your browser. Final availability, price and terms belong to the seller."; color: theme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; textFormat: Text.PlainText }
+            Label {text:!core.distributionCurrent ? "Current distribution status is unavailable. Source and support remain available." : core.distribution.distribution==="suspended" ? "Distribution is suspended: " + (core.distribution.reasonCodes || []).join(", ").replace(/_/g," ") : !core.distribution.sourceCurrent ? "Upstream monitoring is unavailable or overdue. This is not current installation evidence." : "Upstream metadata was observed at " + new Date(core.distribution.lastSuccessfulObservationAt*1000).toLocaleString();Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+            Button {text:"Refresh distribution status";enabled:!core.loading;onClicked:core.workspaceAction("status.get",{ids:[page.app.id]})}
+            ComboBox {id:reportKind;model:["integrity","security","compatibility","availability","ownership"];Accessible.name:"Report category"}
+            TextArea {id:reportMessage;placeholderText:"Describe a security, integrity or compatibility concern privately";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText;Accessible.name:"Private distribution report"}
+            Flow {
+                Layout.fillWidth:true;spacing:8
+                Button {text:core.workspace.actor ? "Send private report" : "Sign in from Submit to report";enabled:!!core.workspace.actor && reportMessage.text.length>0 && reportMessage.text.length<=2000 && !core.loading;onClicked:core.workspaceAction("command",{command:"distribution",operation:{action:"report",app_id:page.app.id,kind:reportKind.currentText,message:reportMessage.text}})}
+                Button {text:"Appeal as listing steward";visible:!!core.workspace.actor && core.distribution.distribution==="suspended";enabled:reportMessage.text.length>0 && reportMessage.text.length<=2000 && !core.loading;onClicked:core.workspaceAction("command",{command:"distribution",operation:{action:"appeal",app_id:page.app.id,message:reportMessage.text}})}
+            }
+            Label {visible:core.workspaceReply.command==="distribution" && core.workspaceReply.appId===page.app.id && !!core.workspaceReply.id;text:"Your private request was recorded. Reference: " + (core.workspaceReply.id || "");Layout.fillWidth:true;wrapMode:Text.WrapAnywhere;textFormat:Text.PlainText}
             Rectangle { Layout.fillWidth: true; height: 1; color: theme.line }
             Label { text: "Before you get it"; font.pixelSize: 22 * theme.scale; font.bold: true }
             GridLayout {

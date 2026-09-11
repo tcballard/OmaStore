@@ -1,5 +1,53 @@
 # Build handoff
 
+## Full-scope continuation
+
+Tom authorised implementing all scoped bundles on 8 September 2026, making engineering decisions autonomously and committing regularly. The restored starting revision is `1bc14e0edd512c21af364a42e5c180193f40ad9d`; work continues on `build/author-workflows`. The earlier preview receipt below remains historical evidence, not a description of the full implementation's completion.
+
+B04a adds the private SQLite identity/role/session/claim authority, GitHub authorization-code/PKCE adapter, desktop proof binding, single-use callbacks, expiring scoped control challenges, DNS-pinned bounded public reads and a production/development database boundary. Four focused tests pass, including populated-database restart, cross-account/replay rejection and session/role revocation. Formatting and Clippy with all features and warnings denied pass. Native/service wiring follows in B04b. A registered provider and real callback remain live integration evidence; they do not block subsequent implementation.
+
+B04a implementation commit: local `c33c6f4e025d5d336d278ab4b730863aa8fd05cc`, published as `c5d8dab4dde416bd63ffee087544eead616d0ea3`; both have tree `eafd7fa4d2c755f9063461df4092f886c35ef601`.
+
+B04b starts from B04a and adds the Axum HTTP boundary, bounded request handling, authenticated claim actions, operator role CLI and the native author workspace. The Qt bridge never receives tokens; Secret Service storage has an explicit session-only fallback. The separate sample build supports fictional local role sessions in a development-marked SQLite database. QA isolates that database as well as preferences. A reusable Cargo cache path and a single Ring TLS provider keep native/core/service builds consistent.
+
+B04b validation: all 19 Rust tests pass (plus the previously separate performance sample), full-workspace Clippy with all features and warnings denied passes, and all 8 demo CTest checks pass. These include actual HTTP/core parity, the native sample-author sign-in, worksheet keyboard flow, three logical sizes and 200% scaling. A dialog sizing loop introduced by the nested author tabs was found and fixed. The local SDK is Qt 6.8.3; CMake/Cargo build resources were bounded after recovering a damaged generated dependency artifact. Real GitHub callback/keyring/Omarchy evidence is still outstanding. Next implementation: B05.
+
+Rollback: revert the B04a implementation and retain private database files for recovery. No external provider registration, author account, machine package or desktop setting has been changed.
+
+## Author continuation receipts
+
+B09 adds six-hour leased observations, immutable update candidates with unknown compatibility, once-only evidence ageing, integrity/ownership holds, private reports and appeals, fresh operator role/version checks and audited restoration. The public status overlay separates its five-minute response validity from upstream freshness, binds the catalogue snapshot and excludes private incident details. Native detail acquisition respects suspension/status availability; the Operations workspace provides the complete fictional suspension/restoration rehearsal. All 36 Rust tests and Clippy with warnings denied pass; all 8 native checks pass in 19.23 seconds. The final metadata-reader change was checked by the Rust gate; live upstream reads remain unverified. Database environment is checked before applying future migrations. No installed package was modified. See MONITORING.md for adapter scope and remaining live evidence.
+
+B08b is published as `41ed1b5fd25d10cee9dddea60aebc1692d7276e1`, matching local `c99510d983d3a2b1cf94b70fc79774e3d6f64c32` and tree `fbce332d923232a60293437c86b2e9d7d817eb0d`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34266967804).
+
+B08b adds the native publication status, exact-file export, issue/PR attachment, retry, base update and local provider rehearsal. The rehearsal uses the real approval/publication/reconciliation functions against an in-memory provider and labels every result as simulated. The native delivery and media origin now use `catalogue-live`; an unavailable branch preserves truthful empty/cached browsing. Authors can withdraw pending submissions before delivery work starts. All 33 Rust tests and workspace Clippy pass. All 8 native checks pass in 19.36 seconds, including author-to-reviewed-to-delivered rehearsal at three sizes and 200% scale. B08a is published as `b83fa5569bc7449a2b375b335901f014428c9a82`, local `b444dcacf748ca4371ef133f7ceb981b7bd77f3d`, matching tree `8f9a35b8625942ad3d46d6d8fb0aaad2539a5f94`.
+
+B08a implements the operator-owned GitHub App adapter, signed webhook intake, exact private approval checks, durable issue/PR checkpoints, source PR attachment and non-forced rebase recovery, isolated live-branch delivery and atomic catalogue replacement. Provider errors are redacted and explicit; no App credentials or live deployment have been created. B08a verification: all 31 Rust tests pass, including forged approval content, role revocation, raw-body HMAC/delivery deduplication, lost-issue reconciliation and atomic replacement preservation; workspace Clippy with warnings denied passes. B08b connects native recovery and a local rehearsal. Configuration and remaining live gates are in PUBLICATION.md.
+
+B07 is published as `9a8dd9c923d8df3edf890a388890ef50d7692669`, matching local `ee0d87270ee43a219e8f22cf8992f5acfaaedb13` and tree `e82109e1204db3ba5e5026eb57348eff5bab8624`. [CI passed](https://github.com/tcballard/OmaStore/actions/runs/34259543054).
+
+B07 verification: all 27 Rust tests and Clippy with warnings denied pass. All 8 native CTest checks pass in 16.89 seconds, including sample submission, checks, role switch, evidence import and independent approval via keyboard at three sizes and 200% scaling. No production approval or public listing was created.
+
+B07 adds the independent reviewer queue and native workspace, field-level revision differences, author-visible decisions, current role checks, exact approval payloads and append-only review history. Sensitive capabilities require two distinct eligible reviewers. Project-control history remains a conflict even after a claim is revoked. Submitted media can be inspected without exposing later private draft files. Core media previews verify bytes and use owned temporary files; demo video playback uses the native system player. Policy tests cover self-approval, missing checks/evidence, two votes, stale concurrent decisions, replay, immutable receipts, private findings and London DST. B06 is published as `edcd37d8287cefbea413349cab8dd38fef3a7e29`, matching local `51fa9bffb7cad4120bb9b9c86c9a1c01575c033e` and tree `5b6d649d0ee52d6c9c7482c6d7668bc04c151305`.
+
+
+
+B06 adds a durable SQLite checks queue, expiring leases, bounded source/link/provenance reads, explicit unavailable findings, retry commands and immutable independent VM-report intake. The service dispatcher and pause mechanism are documented in REVIEW_OPERATIONS.md. Sample checks use the same leases and completion transitions in a development-only database. Seven workflow tests pass, including stale-worker rejection and lease recovery; no actual submitted program has been executed as a check. B05b is published as `d6f1aaa9246d58ac532b71ac9ea4c3812518083b`, matching local `0e2ad5a6b86da6b17b2ef93a04490e349bc496c2` and tree `7d4b94867f0e9482313c73894bb2a4fdb210c1bf`.
+
+
+
+B05b adds the native full-field draft editor, local recovery scoped to account and service, optimistic server sync, an explicit conflict merge acknowledgement, media selection, exact preview, submission and revision status. HTTP mutation retries use a persisted key; a failed subsequent refresh cannot misreport a committed action. Expired login polling clears correctly. Local edits survive network failure without becoming public. The template contains empty author facts, not demo claims.
+
+B05a commit: `79129ba`. B05b verification: all 22 Rust tests passed, including authenticated HTTP upload/private-access checks; all 8 native CTest checks passed in 15.40 seconds, including creating a draft, keyboard typing and private autosave at three sizes and 200% scale. The recursive native editor uses dynamic QML loading after the runtime rejected static recursion. Media replacement retains historical bytes and counts the current draft selection. The checked UI is offscreen Linux; real Omarchy accessibility/media-dialog evidence remains outstanding.
+
+
+
+B04b is committed locally as `d2e341a4ee3d8363f5397a6d2a0173c6d92ae308` and published as `d17855a5ab5968882f8cce41bb486f229cecf8c9`, with identical tree `3750cc37a612fe44047fdc3f5b5844cc027af955`. The author continuation is [draft PR #2](https://github.com/tcballard/OmaStore/pull/2), stacked on PR #1.
+
+B05a adds private versioned drafts, atomic idempotent commands, immutable submitted candidates, revision-scoped findings, and authenticated media upload/read endpoints. Images are decoded and normalised; videos are bounded and metadata-stripped by resource-limited FFmpeg subprocesses. Files live behind an explicit private/public object-storage interface. The default persistent-volume implementation works without an external object provider. Public catalogue writes remain unavailable until independent review and publication. Drafts are bounded to 80 KiB to leave room for recovery data inside the native 256 KiB transport. Six workflow unit tests pass; the expanded HTTP/native acceptance checks are running in B05b. Retention and operational media cleanup remain tracked for B16.
+
+## Earlier native preview receipt
+
 Date: 8 September 2026. Branch: `build/native-discovery`. Scope: B01, B02, B03 and bounded extension B03b, followed by the executed-byte evidence correction. Review: [draft PR #1](https://github.com/tcballard/OmaStore/pull/1).
 
 Verified implementation: [`887d44947beee29ca45c89b7ff5f6888542d3ae6`](https://github.com/tcballard/OmaStore/commit/887d44947beee29ca45c89b7ff5f6888542d3ae6), with Git tree `3ddb5cd7b037d8838d3dd72fab187700109e633f`. The published tree exactly matches the locally checked tree. The following documentation receipt commit does not change implementation files.

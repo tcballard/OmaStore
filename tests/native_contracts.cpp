@@ -46,7 +46,7 @@ private slots:
     }
     void unapprovedOriginsNeverEnterThePreviewFetcher() {
         MediaPreview preview;
-        for (const auto &url : {"https://127.0.0.1/private.png", "file:///etc/passwd", "https://example.com/image.png", "https://raw.githubusercontent.com/tcballard/OmaStore/main/media/../secret.png"}) {
+        for (const auto &url : {"https://127.0.0.1/private.png", "file:///etc/passwd", "https://example.com/image.png", "https://raw.githubusercontent.com/tcballard/OmaStore/catalogue-live/media/../secret.png"}) {
             preview.load({{"url", url}, {"sha256", QString(64, 'a')}, {"kind", "screenshot"}});
             QCOMPARE(preview.status(), QString("external"));
             QVERIFY(preview.source().isEmpty());

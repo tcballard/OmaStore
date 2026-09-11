@@ -10,7 +10,7 @@ use std::{
 
 // A release-controlled origin. Catalogue records and IPC requests cannot override it.
 pub const ORIGIN: &str =
-    "https://raw.githubusercontent.com/tcballard/OmaStore/main/data/registry.json";
+    "https://raw.githubusercontent.com/tcballard/OmaStore/catalogue-live/data/registry.json";
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -50,6 +50,10 @@ impl Client {
             etag: None,
         };
         client.load_cache();
+        #[cfg(feature = "development-catalogue")]
+        if demo {
+            client.load_sample();
+        }
         client
     }
 
@@ -111,6 +115,8 @@ impl Client {
 
     pub fn refresh(&mut self) -> Value {
         if self.demo {
+            #[cfg(feature = "development-catalogue")]
+            self.load_sample();
             return self.info();
         }
         let result = self.fetch();
@@ -121,6 +127,34 @@ impl Client {
         self.info()
     }
 
+    #[cfg(feature = "development-catalogue")]
+    fn load_sample(&mut self) {
+        let read = || -> Option<Catalogue> {
+            let path = crate::workspace::sample_catalogue_path().ok()?;
+            let mut bytes = Vec::new();
+            File::open(path)
+                .ok()?
+                .take((MAX_CATALOGUE_BYTES + 1) as u64)
+                .read_to_end(&mut bytes)
+                .ok()?;
+            Catalogue::parse(&bytes, true).ok()
+        };
+        if let Some(c) = read() {
+            for app in c.apps {
+                self.catalogue.apps.retain(|a| a.id != app.id);
+                self.catalogue.apps.push(app);
+            }
+            for maker in c.makers {
+                self.catalogue.makers.retain(|m| m.id != maker.id);
+                self.catalogue.makers.push(maker);
+            }
+            for recipe in c.recipes {
+                self.catalogue.recipes.retain(|r| r.id != recipe.id);
+                self.catalogue.recipes.push(recipe);
+            }
+            self.catalogue.revision = c.revision;
+        }
+    }
     fn fetch(&mut self) -> Result<(), &'static str> {
         let agent: ureq::Agent = ureq::Agent::config_builder()
             .https_only(true)

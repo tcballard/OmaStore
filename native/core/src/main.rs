@@ -1,4 +1,19 @@
 mod catalogue;
+mod workspace;
+struct Runtime {
+    catalogue: catalogue::Client,
+    workspace: Option<workspace::Client>,
+    demo: bool,
+}
+impl Runtime {
+    fn new(demo: bool) -> Self {
+        Self {
+            catalogue: catalogue::Client::new(demo),
+            workspace: None,
+            demo,
+        }
+    }
+}
 use omastore_catalogue::query;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -26,7 +41,7 @@ fn error(id: Option<&str>, code: &str) -> Value {
         "ok": false, "error": {"code": code}})
 }
 
-fn respond(line: &[u8], client: &mut catalogue::Client) -> Value {
+fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
     let request: Request = match serde_json::from_slice(line) {
         Ok(request) => request,
         Err(_) => return error(None, "invalid_request"),
@@ -37,6 +52,18 @@ fn respond(line: &[u8], client: &mut catalogue::Client) -> Value {
     if request.protocol_version != PROTOCOL_VERSION {
         return error(Some(&request.id), "unsupported_protocol");
     }
+    if let Some(method) = request.method.strip_prefix("workspace.") {
+        let client = runtime
+            .workspace
+            .get_or_insert_with(|| workspace::Client::new(runtime.demo));
+        return match client.dispatch(method, request.params) {
+            Ok(result) => {
+                json!({"protocol_version":PROTOCOL_VERSION,"id":request.id,"ok":true,"result":result})
+            }
+            Err(e) => error(Some(&request.id), e.code),
+        };
+    }
+    let client = &mut runtime.catalogue;
     let now = chrono::Utc::now();
     let result: Result<Value, &str> = match request.method.as_str() {
         "candidate.prepare" => {
@@ -47,7 +74,7 @@ fn respond(line: &[u8], client: &mut catalogue::Client) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "candidate.prepare"]}),
+            "capabilities": ["core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
@@ -80,11 +107,7 @@ fn respond(line: &[u8], client: &mut catalogue::Client) -> Value {
     }
 }
 
-fn serve(
-    mut input: impl BufRead,
-    mut output: impl Write,
-    client: &mut catalogue::Client,
-) -> io::Result<()> {
+fn serve(mut input: impl BufRead, mut output: impl Write, runtime: &mut Runtime) -> io::Result<()> {
     loop {
         let mut line = Vec::new();
         let bytes = input
@@ -98,7 +121,7 @@ fn serve(
         let response = if oversized {
             error(None, "message_too_large")
         } else {
-            respond(&line, client)
+            respond(&line, runtime)
         };
         let bytes = serde_json::to_vec(&response)?;
         if bytes.len() + 1 > MAX_LINE_BYTES {
@@ -120,7 +143,7 @@ fn serve(
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let mut client = catalogue::Client::new(args.iter().any(|s| s == "--demo"));
+    let mut client = Runtime::new(args.iter().any(|s| s == "--demo"));
     match args.as_slice() {
         [] => serve(io::stdin().lock(), io::stdout().lock(), &mut client),
         [arg] if arg == "--stdio" => serve(io::stdin().lock(), io::stdout().lock(), &mut client),
@@ -149,12 +172,7 @@ mod tests {
         let input =
             b"not json\n{\"protocol_version\":1,\"id\":\"next\",\"method\":\"core.info\"}\n";
         let mut output = Vec::new();
-        serve(
-            Cursor::new(input),
-            &mut output,
-            &mut catalogue::Client::new(false),
-        )
-        .unwrap();
+        serve(Cursor::new(input), &mut output, &mut Runtime::new(false)).unwrap();
         let values: Vec<Value> = String::from_utf8(output)
             .unwrap()
             .lines()
@@ -170,12 +188,7 @@ mod tests {
     fn oversized_input_ends_the_stream_with_a_bounded_error() {
         let input = vec![b'x'; MAX_LINE_BYTES + 100];
         let mut output = Vec::new();
-        serve(
-            Cursor::new(input),
-            &mut output,
-            &mut catalogue::Client::new(false),
-        )
-        .unwrap();
+        serve(Cursor::new(input), &mut output, &mut Runtime::new(false)).unwrap();
         assert!(output.len() < 200);
         let reply: Value = serde_json::from_slice(&output).unwrap();
         assert_eq!(reply["error"]["code"], "message_too_large");
@@ -185,12 +198,12 @@ mod tests {
     fn unsupported_protocol_and_write_methods_are_rejected() {
         let reply = respond(
             br#"{"protocol_version":2,"id":"a","method":"core.info"}"#,
-            &mut catalogue::Client::new(false),
+            &mut Runtime::new(false),
         );
         assert_eq!(reply["error"]["code"], "unsupported_protocol");
         let reply = respond(
             br#"{"protocol_version":1,"id":"b","method":"install"}"#,
-            &mut catalogue::Client::new(false),
+            &mut Runtime::new(false),
         );
         assert_eq!(reply["error"]["code"], "unknown_method");
     }

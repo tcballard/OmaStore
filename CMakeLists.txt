@@ -15,24 +15,25 @@ find_program(CARGO_EXECUTABLE cargo REQUIRED)
 qt_standard_project_setup()
 
 set(CORE_BINARY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-core")
+set(OMASTORE_CARGO_TARGET_DIR "${CMAKE_BINARY_DIR}/cargo" CACHE PATH "Cargo build cache directory")
 option(OMASTORE_DEVELOPMENT_DATA "Embed explicitly synthetic development listings" OFF)
 set(CARGO_FEATURE_ARGS "")
 if(OMASTORE_DEVELOPMENT_DATA)
-    list(APPEND CARGO_FEATURE_ARGS --features omastore-core/development-catalogue,omastore-service/development-catalogue)
+    list(APPEND CARGO_FEATURE_ARGS --features omastore-core/development-catalogue,omastore-service/development-catalogue,omastore-service/development-workflow)
 endif()
 # Invoke Cargo each time: it owns incremental tracking for every Rust module.
 add_custom_target(omastore-core ALL
     COMMAND "${CARGO_EXECUTABLE}" build --locked --release
         --manifest-path "${CMAKE_SOURCE_DIR}/Cargo.toml"
-        --target-dir "${CMAKE_BINARY_DIR}/cargo"
+        --target-dir "${OMASTORE_CARGO_TARGET_DIR}"
         ${CARGO_FEATURE_ARGS}
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "${CMAKE_BINARY_DIR}/cargo/release/omastore-core" "${CORE_BINARY}"
+        "${OMASTORE_CARGO_TARGET_DIR}/release/omastore-core" "${CORE_BINARY}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "${CMAKE_BINARY_DIR}/cargo/release/omastore-service" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-service"
+        "${OMASTORE_CARGO_TARGET_DIR}/release/omastore-service" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-service"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "${CMAKE_BINARY_DIR}/cargo/release/omastore-validate" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-validate"
+        "${OMASTORE_CARGO_TARGET_DIR}/release/omastore-validate" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/omastore-validate"
     BYPRODUCTS "${CORE_BINARY}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     VERBATIM
@@ -53,11 +54,15 @@ set_source_files_properties(native/ui/qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS 
 set_source_files_properties(native/ui/qml/AppCard.qml PROPERTIES QT_RESOURCE_ALIAS AppCard.qml)
 set_source_files_properties(native/ui/qml/DetailPage.qml PROPERTIES QT_RESOURCE_ALIAS DetailPage.qml)
 set_source_files_properties(native/ui/qml/SubmitPage.qml PROPERTIES QT_RESOURCE_ALIAS SubmitPage.qml)
+set_source_files_properties(native/ui/qml/WorkspacePage.qml PROPERTIES QT_RESOURCE_ALIAS WorkspacePage.qml)
+set_source_files_properties(native/ui/qml/ReviewPanel.qml PROPERTIES QT_RESOURCE_ALIAS ReviewPanel.qml)
+set_source_files_properties(native/ui/qml/DraftPanel.qml PROPERTIES QT_RESOURCE_ALIAS DraftPanel.qml)
+set_source_files_properties(native/ui/qml/ValueEditor.qml PROPERTIES QT_RESOURCE_ALIAS ValueEditor.qml)
 qt_add_qml_module(omastore
     URI OmaStore
     VERSION 1.0
     RESOURCE_PREFIX /qt/qml
-    QML_FILES native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml
+    QML_FILES native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
 )
 target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network

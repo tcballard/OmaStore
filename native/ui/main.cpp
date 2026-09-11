@@ -60,6 +60,7 @@ int main(int argc, char *argv[]) {
     QTemporaryDir testSettings;
     if (parser.isSet(smokeTest) || parser.isSet(uiTest) || parser.isSet(screenshot)) {
         dataDirectory = testSettings.filePath("data");
+        qputenv("XDG_DATA_HOME",testSettings.filePath("xdg-data").toUtf8());
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, testSettings.path());
     }
@@ -139,6 +140,82 @@ int main(int argc, char *argv[]) {
                     auto *submit = findItem(window->contentItem(), "navSubmit");
                     if (submit) { submit->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
                     QTest::qWait(150);
+                    if (demo) {
+                        for (int i=0;i<40 && core.loading();++i) QTest::qWait(50);
+                        auto *sampleSignIn=findItem(window->contentItem(),"sampleSignIn");
+                        if (sampleSignIn) {sampleSignIn->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for (int i=0;i<40 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspace().value("actor").toMap().value("id").toString()=="development:author","sample author sign-in");
+                        auto *newDraft=findItem(window->contentItem(),"newDraft");
+                        if (newDraft) {newDraft->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for (int i=0;i<60 && (core.loading() || !findItem(window->contentItem(),"field-apps-0-name"));++i) QTest::qWait(50);
+                        auto *draftName=findItem(window->contentItem(),"field-apps-0-name");
+                        check(draftName!=nullptr,"native draft editor created");
+                        if (draftName) {draftName->forceActiveFocus();for (const auto character:QByteArray("My draft")) QTest::keyClick(window,character);QTest::keyClick(window,Qt::Key_Tab);}
+                        QTest::qWait(850);
+                        check(core.workspaceReply().value("localSaved").toBool(),"private draft autosave");
+                        core.workspaceAction("drafts.sample",{});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        const auto sampleDraft=core.workspaceReply();
+                        core.workspaceAction("command",{{"command","submit_draft"},{"id",sampleDraft.value("id")},{"version",sampleDraft.value("version")},{"confirm_public_preview",true}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        const auto revisions=core.workspace().value("revisions").toList();
+                        check(!revisions.isEmpty(),"immutable sample submission");
+                        core.workspaceAction("checks.run_sample",{});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        core.workspaceAction("auth.sandbox",{{"name","reviewer"}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        auto press=[window](QQuickItem *item) {if(item){item->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}};
+                        press(findItem(window->contentItem(),"reviewWorkspaceTab"));
+                        QTest::qWait(50);press(findItem(window->contentItem(),"loadReviewQueue"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"inspectReview"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("independent").toBool(),"reviewer independence");
+                        press(findItem(window->contentItem(),"sampleEvidence"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        auto *reviewReason=findItem(window->contentItem(),"reviewReason");
+                        if(reviewReason){reviewReason->forceActiveFocus();for(const auto character:QByteArray("Fictional QA review")) QTest::keyClick(window,character);}
+                        press(findItem(window->contentItem(),"reviewAcknowledgement"));
+                        press(findItem(window->contentItem(),"approveReview"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("state").toString()=="approved","independent sample approval");
+                        const auto approvedRevision=core.workspaceReply().value("id");
+                        core.workspaceAction("auth.sandbox",{{"name","author"}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"authorWorkspaceTab"));
+                        core.workspaceAction("revisions.get",{{"id",approvedRevision}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"requestPublication"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("state").toString()=="publication_pending","publication requested");
+                        press(findItem(window->contentItem(),"samplePublication"));
+                        for(int i=0;i<80 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("state").toString()=="published","local provider delivery observed");
+                        core.workspaceAction("auth.sandbox",{{"name","operator"}});
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"operationsWorkspaceTab"));
+                        press(findItem(window->contentItem(),"loadMonitoringQueue"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        press(findItem(window->contentItem(),"sampleMonitoring"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        auto *monitorReason=findItem(window->contentItem(),"monitoringReason");
+                        if(monitorReason){monitorReason->forceActiveFocus();for(const auto character:QByteArray("Simulated operator review"))QTest::keyClick(window,character);}
+                        press(findItem(window->contentItem(),"suspendDistribution"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(!core.workspaceReply().value("holds").toList().isEmpty(),"audited distribution suspension");
+                        press(findItem(window->contentItem(),"monitoringAcknowledgement"));
+                        press(findItem(window->contentItem(),"restoreDistribution"));
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+                        check(core.workspaceReply().value("holds").toList().isEmpty(),"reviewed distribution restoration");
+
+                        core.refresh();
+                        for(int i=0;i<60 && core.loading();++i) QTest::qWait(50);
+
+                    }
+                    auto *localTab=findItem(window->contentItem(),"localWorksheetTab");
+                    if (localTab) {localTab->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                    QTest::qWait(100);
                     auto *name = findItem(window->contentItem(), "field-name");
                     if (name) {
                         name->forceActiveFocus();
@@ -161,7 +238,7 @@ int main(int argc, char *argv[]) {
             });
         });
         QObject::connect(&core, &CoreBridge::stateChanged, &app, [&] { if (!core.ready() && !core.error().isEmpty()) app.exit(1); });
-        QTimer::singleShot(10000, &app, [&app] { app.exit(1); });
+        QTimer::singleShot(20000, &app, [&app] { app.exit(1); });
     }
 #endif
     core.start();

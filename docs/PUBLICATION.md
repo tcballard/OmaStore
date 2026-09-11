@@ -1,0 +1,31 @@
+# Publication bridge
+
+B08 keeps the private review database as approval authority. See [ADR 0005](adr/0005-publication-authority.md). The service supports public intake, exact-content PR preparation, an external GitHub App check, merge observation and delivery reconciliation. Native status, recovery, exact-file export and a local rehearsal are implemented in B08b. No production App registration, branch rule or deployment is implied by these adapters.
+
+## Configure the operator-owned App
+
+Install an OmaStore GitHub App on the catalogue repository with Contents, Issues, Pull requests and Checks write permissions, Metadata read, and the `pull_request` webhook event. Require the check named `OmaStore / approved content` from that specific App on the publication branch. Configure `catalogue-live` so only the product App can update it; disable force pushes and deletion. Keep operator deployment authority separate from contributor PR workflows. Do not execute a candidate, PR workflow or uploaded script in the private service.
+
+Set `OMASTORE_GITHUB_APP_ID`, `OMASTORE_GITHUB_INSTALLATION_ID`, `OMASTORE_GITHUB_PRIVATE_KEY_FILE` and `OMASTORE_GITHUB_WEBHOOK_SECRET_FILE`. Secret files must be regular private files, mode 0600, in an operator-owned directory. The webhook secret is the exact file bytes, at least 32 bytes; do not add a trailing newline unless it is part of the configured secret. The RSA key is PEM. Installation tokens stay in memory, are repository-scoped and expire; they are never sent to Qt or stored in the database.
+
+Defaults: `OMASTORE_PUBLISH_REPOSITORY=tcballard/OmaStore`, `OMASTORE_PUBLISH_BRANCH=main`, `OMASTORE_DELIVERY_BRANCH=catalogue-live`. Repository and branch names are operator configuration, never candidate input. The native release's fixed catalogue/media origin must match a different deployment's repository and delivery branch. `OMASTORE_SERVICE_ORIGIN` is the HTTPS origin serving the catalogue API and webhook endpoint `/api/v1/github/webhook`. Keep the service's catalogue path on its persistent writable volume, outside a mutable contributor checkout.
+
+Missing or invalid App configuration leaves the bridge disabled and reports a redacted reason through auth/publication status. Private drafting and public browsing remain available. `OMASTORE_PUBLICATION_PAUSED=1` pauses external writes and reconciliation while retaining signed webhook intake. Development databases cannot be passed to the real GitHub adapter. A process-wide worker loop and a database dispatch lease coordinate replicas. Provider calls have bounded timeouts and retries; exhausted or ambiguous outcomes remain visible.
+
+## Submission and recovery
+
+The author's explicit immutable preview confirmation queues one logical public intake. The issue links the exact submitted candidate at `/api/v1/submissions/{revisionId}`. Drafts and private findings stay private. The submission page is a proposal, not an endorsement. A lost issue-create response searches for the exact revision marker and does not repeat creation. A missing/ambiguous match requires attaching the known issue or operator reconciliation.
+
+After independent approval, `request_publication` queues the PR. The worker freezes the registry, media hashes, public receipt and trusted base before creating a branch. The public receipt grants no authority. The App reads the actual PR head and changed paths; extra workflow/code changes, forged receipts, stale evidence and revoked independent reviewers fail the check. Source and delivery branch transitions are distinct from the revision's `published` state.
+
+Commands use the existing authenticated `/api/v1/commands` endpoint, fresh role checks, an idempotency key and optimistic revision version. `recover_publication` accepts `retry`, `retry_intake`, `attach_issue`, `attach_pr` or `rebase`, with an optional positive `number`. Only the author or a maintainer may recover a revision. The worker checks attached resources and their exact contents. Rebase creates a normal merge commit and a non-forced branch advance; concurrent or manual branch edits cause a conflict. Recovery cannot change approved content.
+
+An approved contributor can inspect `/api/v1/publication/{id}/manifest` after preparation to obtain the exact registry, receipt reference and file hashes for an existing PR. Use the native “Export exact PR files” action to obtain the exact UTF-8 file values and hashes without inventing evidence. Attach the PR number, then wait for the external App check. Direct GitHub PRs changing catalogue content fail until attached to current private approval. Code-only PRs receive a separate informational success from the same App; that cannot publish a catalogue.
+
+The App never merges a source PR. After a maintainer merges it, the worker verifies again, builds a delivery commit containing the approved content and preserves unrelated delivered entries. It fetches and validates the live branch before atomic local replacement. Failed reads, validation or replacement retain the previous catalogue file. A deployment response is separately fetched from the public API; until it contains the approved content, the revision remains pending delivery. A stale or failed public response does not become payment, compatibility or installation permission.
+
+## Verification still required before release
+
+Exercise the complete flow with an operator-owned GitHub App and disposable repository: public issue, exact approved PR, App-specific required check, review and merge, protected delivery branch, deployed catalogue read, lost response, timeout, rebase conflict, role revocation and repeated webhook. Record the real repository, commit, delivery revision and outcomes without credentials. Local Rust tests establish software behaviour; they do not establish those live provider or deployment facts.
+
+The native preview's “Rehearse local publication” action creates in-memory provider objects and runs the actual authority/check/delivery code. It makes no network calls, updates only the private playground catalogue and is absent from ordinary builds. Repeated successful rehearsal is idempotent; interrupted simulation can reset its ephemeral provider checkpoints without creating any real external side effect. A separate test confirms that a public-response outage cannot mark delivery complete.
