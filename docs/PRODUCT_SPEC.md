@@ -24,6 +24,8 @@ Establish a coherent visual direction and reusable components for the new site. 
 
 **2. Build the storefront as a native application.**
 
+Design target confirmed by Tom: macOS App Store-level polish expressed through native Omarchy conventions. Functional bundle completion is not visual acceptance. Prioritise Discover and the app-detail-to-installation journey before catalogue expansion; ADR 0011 records the first polish pass.
+
 The implementation repository is `tcballard/OmaStore`. It was empty before B00. Inspect the current checkout and handoff before extending it. The storefront opens in its own desktop window. A browser or webview does not supply the primary interface.
 
 | Area | Implementation contract | Owning bundle |

@@ -27,6 +27,7 @@ ApplicationWindow {
     minimumHeight: 600
     title: (d.app || {}).name ? d.app.name + " · OmaStore" : "OmaStore"
     onClosing: function(event) { if (worksheet.dirty && !discardClose) { event.accepted = false; unsaved.open(); } }
+    font.family: storeTheme.body
     color: storeTheme.page
     palette.window: storeTheme.page
     palette.base: storeTheme.surface
@@ -39,28 +40,36 @@ ApplicationWindow {
     palette.mid: storeTheme.line
     palette.placeholderText: storeTheme.muted
 
-    QtObject {
-        id: storeTheme
-        readonly property color page: desktop.dark ? "#1d2420" : "#f7f7f2"
-        readonly property color surface: desktop.dark ? "#262e28" : "#ffffff"
-        readonly property color sidebar: desktop.dark ? "#19201b" : "#edefe7"
-        readonly property color ink: desktop.dark ? "#edf0e7" : "#243429"
-        readonly property color muted: desktop.dark ? "#b6c0b7" : "#546458"
-        readonly property color accent: desktop.dark ? "#b2d495" : "#375c33"
-        readonly property color line: desktop.dark ? "#455147" : "#c4ccc0"
-        readonly property color wash: desktop.dark ? "#354536" : "#e2ead9"
-        readonly property real scale: desktop.textScale
-        readonly property string mono: desktop.monoFont
-    }
-    function navigate(index) { core.closeDetail(); section = index; }
+    StoreTheme { id: storeTheme; desktop: window.desktop }
+    function navigate(index) { core.closeDetail(); if(index !== section) browsePosition = 0; section = index; if (index === 0 && Object.keys(core.query).length) core.clearFilters(); }
+    property real browsePosition: 0
+    property string lastAppId: ""
+    property string lastFocusName: ""
+    function openApp(id, origin) { lastAppId = id; lastFocusName = origin || "app-" + id; if (section === 0) section = 1; core.showApp(id); }
     function readable(value) { return String(value || "unknown").replace(/_/g, " "); }
-    function focusSearch() { navigate(1); searchField.forceActiveFocus(); searchField.selectAll(); }
+    function focusSearch() { navigate(1); topHeader.searchInput.forceActiveFocus(); topHeader.searchInput.selectAll(); }
     Shortcut { sequence: "Ctrl+K"; onActivated: window.focusSearch() }
     Shortcut { sequence: "Ctrl+F"; onActivated: window.focusSearch() }
     Shortcut { sequence: "Alt+Left"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible && !purchasesDialog.visible; onActivated: window.back() }
     Shortcut { sequence: "Escape"; enabled: window.showingSubpage && !planDialog.visible && !settingsDialog.visible && !remixDialog.visible && !purchasesDialog.visible; onActivated: window.back() }
     Shortcut { sequence: "Ctrl+R"; onActivated: core.refresh() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
+
+    // Keep focused controls visible when the editorial view stacks under tiling.
+    onActiveFocusItemChanged: Qt.callLater(function() {
+        const item = window.activeFocusItem;
+        if (!item) return;
+        let ancestor = item.parent;
+        while (ancestor) {
+            if (typeof ancestor.contentY === "number" && ancestor.contentHeight > ancestor.height) {
+                const point = item.mapToItem(ancestor, 0, 0);
+                if (point.y < 0) ancestor.contentY += point.y - 8;
+                else if (point.y + item.height > ancestor.height) ancestor.contentY += point.y + item.height - ancestor.height + 8;
+                break;
+            }
+            ancestor = ancestor.parent;
+        }
+    })
 
     Connections {
         target:window.core
@@ -72,70 +81,22 @@ ApplicationWindow {
     SettingsDialog {id:settingsDialog;core:window.core;theme:storeTheme}
     PlanDialog {id:planDialog;core:window.core;theme:storeTheme}
 
-    RowLayout {
+    ColumnLayout {
         anchors.fill: parent
         spacing: 0
-        Rectangle {
-            Layout.preferredWidth: window.width < 950 ? 156 : 196
-            Layout.fillHeight: true
-            color: storeTheme.sidebar
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 16
-                spacing: 6
-                Label { text: "OmaStore"; font.family: storeTheme.mono; font.pixelSize: 23 * storeTheme.scale; font.bold: true; color: storeTheme.ink; Layout.topMargin: 20; Layout.bottomMargin: 4 }
-                Label { text: "A place for good tools."; font.pixelSize: 11 * storeTheme.scale; color: storeTheme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; Layout.bottomMargin: 32 }
-                Repeater {
-                    model: window.sections
-                    ItemDelegate {
-                        required property int index
-                        required property string modelData
-                        objectName: "nav" + modelData
-                        Layout.fillWidth: true
-                        implicitHeight: Math.max(42, contentItem.implicitHeight + 20)
-                        text: modelData
-                        highlighted: window.section === index
-                        palette.highlightedText: storeTheme.ink
-                        font.bold: highlighted
-                        Accessible.role: Accessible.PageTab
-                        Accessible.name: modelData
-                        Accessible.selected: highlighted
-                        background: Rectangle { radius: 5; color: parent.highlighted ? storeTheme.wash : (parent.hovered ? storeTheme.surface : "transparent"); border.color: parent.activeFocus ? storeTheme.accent : "transparent"; border.width: 2 }
-                        onClicked: window.navigate(index)
-                    }
-                }
-                Item { Layout.fillHeight: true }
-                Label { text: "FOR OMARCHY"; font.family: storeTheme.mono; font.pixelSize: 11 * storeTheme.scale; color: storeTheme.muted; Layout.bottomMargin: 3 }
-                Label { text: "Independent community\npreview · 0.1.0"; color: storeTheme.muted; font.pixelSize: 11 * storeTheme.scale; wrapMode: Text.Wrap; Layout.fillWidth: true }
-                Button { text: "About & shortcuts"; flat: true; Layout.fillWidth: true; onClicked: about.open() }
-            }
+        StoreHeader {
+            id: topHeader
+            core: window.core; canGoBack: window.showingSubpage
+            onBackRequested: window.back()
+            onSearchRequested: (query) => { window.navigate(1); core.setFilter("q", query); }
+            Layout.fillWidth: true; theme: storeTheme; section: window.section
+            onNavigate: (index) => window.navigate(index)
+            onAboutRequested: about.open()
         }
-        Rectangle { Layout.preferredWidth: 1; Layout.fillHeight: true; color: storeTheme.line }
         ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: true
             spacing: 0
-            Pane {
-                Layout.fillWidth: true
-                padding: 18
-                background: Rectangle { color: storeTheme.page }
-                RowLayout {
-                    anchors.fill: parent
-                    ToolButton { objectName: "backButton"; text: "← Back"; visible: window.showingSubpage; onClicked: window.back() }
-                    TextField {
-                        id: searchField
-                        objectName: "searchField"
-                        Layout.fillWidth: true
-                        placeholderText: "Search for an app or a purpose…"
-                        text: core.query.q || ""
-                        maximumLength: 200
-                        Accessible.name: "Search applications"
-                        onTextEdited: { window.navigate(1); core.setFilter("q", text); }
-                    }
-                    ToolButton { text: "Refresh"; enabled: core.ready && !core.loading; onClicked: core.refresh(); ToolTip.visible: hovered; ToolTip.text: "Refresh the catalogue · Ctrl+R" }
-                }
-            }
-            Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             Pane {
                 visible: !!core.catalogue.demo || core.catalogue.source === "cached" || core.catalogue.source === "stale" || !!core.catalogue.warning
                 Layout.fillWidth: true
@@ -163,15 +124,40 @@ ApplicationWindow {
                 id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : (window.section === 3 ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage))
+                sourceComponent: window.showingDetail ? detailPage : (window.section === 0 && core.apps.some(a => a.id === "repo-omacalc") ? showcasePage : (window.section === 3 ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage)))
+            }
+            AppShelf {
+                visible: (window.section === 0 || window.section === 1) && core.apps.length > 0
+                Layout.fillWidth: true; theme: storeTheme; core: window.core
+                selectedId: (core.detail.app || {}).id || (window.section === 0 ? "repo-omacalc" : "")
+                onChosen: (id) => window.openApp(id, "shelf-" + id)
+                onBrowseRequested: { window.navigate(1); window.showFilters = true; }
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: storeTheme.line }
             RowLayout {
                 Layout.fillWidth: true
                 Layout.margins: 12
-                Label { text: core.loading ? "Loading…" : (core.ready ? (core.catalogue.demo ? "SAMPLE MODE" : "CATALOGUE · " + (core.catalogue.revision || "")) : "CONNECTING"); color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale; textFormat: Text.PlainText }
+                Label { text: core.loading ? "Loading…" : (core.ready ? (core.catalogue.demo ? "SAMPLE MODE" : "Catalogue available offline") : "CONNECTING"); color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale; textFormat: Text.PlainText }
                 Item { Layout.fillWidth: true }
-                Label { text: "Ctrl+K  Search"; color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale }
+                Label { text: "Independent community project · Not affiliated with Omacom"; color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale }
+            }
+        }
+    }
+
+    Component {
+        id: showcasePage
+        ScrollView {
+            id: showcaseScroll
+            objectName: "browseScroll"
+            contentWidth: availableWidth; clip: true
+            ColumnLayout {
+                width: showcaseScroll.availableWidth
+                AppShowcase {
+                    Layout.fillWidth: true; theme: storeTheme; core: window.core
+                    details: ({app: core.apps.find(a => a.id === "repo-omacalc") || {}})
+                    overview: true
+                    onInspectRequested: window.openApp("repo-omacalc", "discoverCalculator")
+                }
             }
         }
     }
@@ -180,6 +166,18 @@ ApplicationWindow {
         id: browsePage
         ScrollView {
             id: browseScroll
+            objectName: "browseScroll"
+            Component.onCompleted: Qt.callLater(function() {
+                function locate(item) {
+                    if (item.objectName === window.lastFocusName) return item;
+                    const children = item.children || [];
+                    for (let i=0; i<children.length; ++i) { const found=locate(children[i]); if(found) return found; }
+                    return null;
+                }
+                if (window.lastFocusName) { const control=locate(browseScroll); if(control) control.forceActiveFocus(Qt.BacktabFocusReason); }
+                contentItem.contentY = window.browsePosition;
+            })
+            Component.onDestruction: { if (contentItem) window.browsePosition = contentItem.contentY; }
             clip: true
             contentWidth: availableWidth
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -187,25 +185,52 @@ ApplicationWindow {
                 width: browseScroll.availableWidth
                 spacing: 22
                 Item { Layout.preferredHeight: 2 }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 28; Layout.rightMargin: 28
-                    spacing: 10
-                    Label { text: window.section === 3 ? "YOUR OWN SHORTLIST" : (window.section === 0 ? "THE COMMUNITY STOREFRONT" : "FIND SOMETHING USEFUL"); color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 11 * storeTheme.scale; font.letterSpacing: 1 }
-                    Label { text: window.section === 3 ? "Saved for later." : (window.section === 0 ? "Find your next\nfavourite tool." : "Apps, on your terms."); color: storeTheme.ink; font.pixelSize: (window.width < 950 ? 32 : 42) * storeTheme.scale; font.bold: true; wrapMode: Text.Wrap; Layout.fillWidth: true }
-                    Label { text: window.section === 3 ? "A local shortlist on this device. Installed-app management is still to come." : "See what it does. Know what it needs. Support the people who make it."; color: storeTheme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; Layout.maximumWidth: 630 }
-                }
-                EditorialPanel {visible:window.section===0;Layout.leftMargin:28;Layout.rightMargin:28;core:window.core;theme:storeTheme;onMakerChosen:(id)=>window.showMaker(id)}
                 RowLayout {
-                    Layout.fillWidth: true; Layout.leftMargin: 28; Layout.rightMargin: 28
-                    Label { text: window.section === 3 ? core.saved.length + " saved" : core.total + (core.total === 1 ? " application" : " applications"); font.bold: true; color: storeTheme.ink }
+                    Layout.fillWidth: true
+                    Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset
+                    ColumnLayout {
+                        Layout.fillWidth: true; spacing: 6
+                        Label { text: window.section === 0 ? "Discover" : "Find your next app"; color: storeTheme.ink; font.pixelSize: storeTheme.titleSize * storeTheme.scale; font.weight: Font.Bold; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                        Label { text: window.section === 0 ? "Good tools. A desktop that feels like yours." : "Explore the catalogue, one useful tool at a time."; color: storeTheme.muted; font.pixelSize: 14 * storeTheme.scale; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                    }
+                }
+                DiscoveryFeature {
+                    visible: window.section === 0 && core.apps.some(a => a.id === "repo-omacalc")
+                    Layout.fillWidth: true; Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset
+                    theme: storeTheme
+                    onChosen: window.openApp("repo-omacalc", "discoverCalculator")
+                }
+                ColumnLayout {
+                    visible: window.section === 0 && (core.catalogue.categories || []).length > 0
+                    Layout.fillWidth: true; Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset
+                    spacing: 12
+                    Label { text: "What would you like to do?"; color: storeTheme.ink; font.pixelSize: storeTheme.sectionSize * storeTheme.scale; font.weight: Font.DemiBold }
+                    Flow {
+                        Layout.fillWidth: true; spacing: 8
+                        Repeater {
+                            model: core.catalogue.categories || []
+                            ActionButton {
+                                required property string modelData
+                                objectName: "purpose-" + modelData
+                                theme: storeTheme
+                                text: ({writing:"Write something",video:"Work with video",presentations:"Tell a story",utilities:"Everyday essentials",games:"Take a break"})[modelData] || window.readable(modelData)
+                                Accessible.name: "Browse " + window.readable(modelData)
+                                onClicked: { window.navigate(1); core.clearFilters(); core.setFilter("category", modelData); }
+                            }
+                        }
+                    }
+                }
+                EditorialPanel {visible:window.section===0 && ((core.community["editorial.list"] || {}).items || []).length > 0;Layout.leftMargin:storeTheme.inset;Layout.rightMargin:storeTheme.inset;core:window.core;theme:storeTheme;onMakerChosen:(id)=>window.showMaker(id)}
+                RowLayout {
+                    Layout.fillWidth: true; Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset
+                    Label { text: window.section === 0 ? "Explore the apps" : core.total + (core.total === 1 ? " application" : " applications"); font.pixelSize: storeTheme.sectionSize * storeTheme.scale; font.weight: Font.DemiBold; color: storeTheme.ink }
                     Item { Layout.fillWidth: true }
-                    Button { text: window.showFilters ? "Hide filters" : "Filters"; visible: window.section !== 3; onClicked: window.showFilters = !window.showFilters }
-                    Button { text: "Clear"; visible: window.section !== 3 && Object.keys(core.query).length > 0; onClicked: core.clearFilters() }
+                    ActionButton { theme: storeTheme; text: window.showFilters ? "Hide filters" : "Filters"; visible: window.section !== 3; onClicked: window.showFilters = !window.showFilters }
+                    ActionButton { theme: storeTheme; text: "Clear"; visible: window.section !== 3 && Object.keys(core.query).length > 0; onClicked: core.clearFilters() }
                 }
                 Flow {
                     visible: window.showFilters && window.section !== 3
-                    Layout.fillWidth: true; Layout.leftMargin: 28; Layout.rightMargin: 28
+                    Layout.fillWidth: true; Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset
                     spacing: 10
                     Repeater {
                         model: [
@@ -229,9 +254,9 @@ ApplicationWindow {
                 }
                 GridLayout {
                     id: cards
-                    Layout.fillWidth: true; Layout.leftMargin: 28; Layout.rightMargin: 28
+                    Layout.fillWidth: true; Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset
                     columns: width >= 710 ? 2 : 1
-                    columnSpacing: 14; rowSpacing: 14
+                    columnSpacing: 16; rowSpacing: 12
                     Repeater {
                         model: window.section === 3 ? core.saved : core.apps
                         AppCard {
@@ -241,7 +266,7 @@ ApplicationWindow {
                             theme: storeTheme
                             Layout.fillWidth: true
                             Layout.preferredWidth: (cards.width - (cards.columns - 1) * cards.columnSpacing) / cards.columns
-                            onChosen: core.showApp(app.id)
+                            onChosen: window.openApp(app.id)
                             onRemoveRequested: core.removeSaved(app.id)
                         }
                     }
@@ -296,12 +321,12 @@ ApplicationWindow {
                 Item { Layout.preferredHeight: 24 }
                 Label { text: window.sections[window.section]; font.pixelSize: 36 * storeTheme.scale; font.bold: true; Layout.margins: 28 }
                 Label {
-                    Layout.leftMargin: 28; Layout.rightMargin: 28; Layout.fillWidth: true
+                    Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset; Layout.fillWidth: true
                     text: window.section === 2 ? "A good setup is more than a list of apps." : (window.section === 4 ? "Software has people behind it." : "Bring something useful to the shelf.")
                     font.pixelSize: 24 * storeTheme.scale; wrapMode: Text.Wrap
                 }
                 Label {
-                    Layout.leftMargin: 28; Layout.rightMargin: 28; Layout.fillWidth: true
+                    Layout.leftMargin: storeTheme.inset; Layout.rightMargin: storeTheme.inset; Layout.fillWidth: true
                     text: window.section === 2 ? "Published setups will explain a workflow, show each component and let you choose what belongs on your machine. Setup publication and installation are still being built." :
                           (window.section === 4 ? "Maker profiles will arrive with reviewed listings. A community nomination will stay clearly unclaimed until project control is verified." :
                           "Submissions will be free. Authors can offer free software, receive support or sell through their own checkout with no OmaStore fee. Author sign-in and private submission workspaces are still being built.")

@@ -1,5 +1,25 @@
 # Bundle status
 
+11 September 2026: restored `design/storefront-polish` / PR #5 as the active
+continuation. Duplicate scaffold-based PRs #6–#8 are closed. Existing B00–B22
+implementation and approved appearance are retained. Native and Arch CI at
+641ab7a passed; fresh local restoration checks and capture are in BUILD_HANDOFF.md.
+
+10 September 2026: B03 appearance continuation is verified on offscreen Linux:
+11 ordinary and 10 sample checks passed, with one local D-Bus skip per suite.
+Real Omarchy acceptance remains pending. Follow Omarchy defaults on; the approved
+OmaStore editorial style remains selectable. Read-only theme/font integration
+and isolated live-reload tests are implemented (ADR 0013). No host settings,
+installation adapter or commerce release gate is enabled.
+
+10 September 2026: approved authored shelf completes the B03/B12 presentation
+continuation. Native square-edged dark shell, editorial app showcase and
+persistent keyboard shelf are implemented. Ordinary native checks: eight
+passes, one local D-Bus skip; sample checks: nine passes, one D-Bus skip.
+See ADR 0012, `design-qa.md` and the handoff for actual captures and limits.
+Arch preview recipe revision 4 adds the SVG runtime dependency. Remote CI and
+package status are tracked on PR 5; real Omarchy acceptance is still pending.
+
 Product spec: version 0.2, native-first edition. Earlier web-first bundle descriptions are superseded.
 
 | Bundle | Deliverable | Dependencies | Status |
@@ -42,3 +62,7 @@ Arch packaging correction: first real CI build exposed unresolved bundled SQLite
 Repository preview native verification: full ordinary/sample native CI and isolated-media checks passed in [run 34397410622](https://github.com/tcballard/OmaStore/actions/runs/34397410622). The local ordinary Qt build also passed five checks (D-Bus skipped), and its actual six-entry window was inspected. This is offscreen Linux evidence; real Omarchy acceptance remains outstanding.
 
 Arch package verification: [run 34398115220](https://github.com/tcballard/OmaStore/actions/runs/34398115220) passed at `94214915628ba532dc0d7262c442534785c1dbb7`, including the unprivileged package build, archive-content inspection and artifact upload. The `omastore-preview-arch-x86_64` artifact contains the installable preview, checksum and source revision. Disabling makepkg LTO resolved the observed SQLite linker failure. No package was installed on an actual Omarchy host.
+
+B03/B12 storefront polish: in_progress. Discover, purpose navigation, detail hierarchy and installation sheet are being verified against the actual native build. The requested App Store polish is an explicit visual target, distinct from earlier functional completion.
+
+B03/B12 storefront polish: implemented and verified on offscreen Linux. Eight ordinary and nine sample checks pass (D-Bus skipped in each). Actual light/dark, detail and blocked-plan captures are in docs/screenshots. The purpose/filter and preserved scroll/focus journey passes at small and 200% sizes. The whole-store visual target and real Omarchy acceptance remain outstanding; this completes the authorised first polish pass.

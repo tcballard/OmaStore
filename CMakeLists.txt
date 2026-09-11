@@ -74,12 +74,27 @@ set_source_files_properties(native/ui/qml/RemixDialog.qml PROPERTIES QT_RESOURCE
 set_source_files_properties(native/ui/qml/SettingsDialog.qml PROPERTIES QT_RESOURCE_ALIAS SettingsDialog.qml)
 set_source_files_properties(native/ui/qml/ReadinessPanel.qml PROPERTIES QT_RESOURCE_ALIAS ReadinessPanel.qml)
 set_source_files_properties(native/ui/qml/MonitoringPanel.qml PROPERTIES QT_RESOURCE_ALIAS MonitoringPanel.qml)
+set_source_files_properties(native/ui/qml/StoreTheme.qml PROPERTIES QT_RESOURCE_ALIAS StoreTheme.qml)
+set_source_files_properties(native/ui/qml/ActionButton.qml PROPERTIES QT_RESOURCE_ALIAS ActionButton.qml)
+set_source_files_properties(native/ui/qml/AppSymbol.qml PROPERTIES QT_RESOURCE_ALIAS AppSymbol.qml)
+set_source_files_properties(native/ui/qml/DiscoveryFeature.qml PROPERTIES QT_RESOURCE_ALIAS DiscoveryFeature.qml)
+set_source_files_properties(native/ui/assets/omacalc-upstream.png PROPERTIES QT_RESOURCE_ALIAS assets/omacalc-upstream.png)
 qt_add_qml_module(omastore
     URI OmaStore
     VERSION 1.0
     RESOURCE_PREFIX /qt/qml
-    QML_FILES native/ui/qml/RefundsPanel.qml native/ui/qml/FinancesPanel.qml native/ui/qml/CommerceOffersPanel.qml native/ui/qml/PurchasesDialog.qml native/ui/qml/CommercePanel.qml native/ui/qml/RemixDialog.qml native/ui/qml/SettingsDialog.qml native/ui/qml/ReadinessPanel.qml native/ui/qml/LibraryPage.qml native/ui/qml/PlanDialog.qml native/ui/qml/SetupsPage.qml native/ui/qml/CataloguePicker.qml native/ui/qml/MakersPage.qml native/ui/qml/EditorialPanel.qml native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
+    RESOURCES native/ui/assets/omacalc-upstream.png
+    QML_FILES native/ui/qml/StoreTheme.qml native/ui/qml/ActionButton.qml native/ui/qml/AppSymbol.qml native/ui/qml/DiscoveryFeature.qml native/ui/qml/RefundsPanel.qml native/ui/qml/FinancesPanel.qml native/ui/qml/CommerceOffersPanel.qml native/ui/qml/PurchasesDialog.qml native/ui/qml/CommercePanel.qml native/ui/qml/RemixDialog.qml native/ui/qml/SettingsDialog.qml native/ui/qml/ReadinessPanel.qml native/ui/qml/LibraryPage.qml native/ui/qml/PlanDialog.qml native/ui/qml/SetupsPage.qml native/ui/qml/CataloguePicker.qml native/ui/qml/MakersPage.qml native/ui/qml/EditorialPanel.qml native/ui/qml/MonitoringPanel.qml native/ui/qml/ReviewPanel.qml native/ui/qml/DraftPanel.qml native/ui/qml/ValueEditor.qml native/ui/qml/Main.qml native/ui/qml/AppCard.qml native/ui/qml/DetailPage.qml native/ui/qml/SubmitPage.qml native/ui/qml/WorkspacePage.qml
 )
+foreach(component IN ITEMS AppShelf AppShowcase StoreHeader)
+    set_source_files_properties(native/ui/qml/${component}.qml PROPERTIES QT_RESOURCE_ALIAS ${component}.qml)
+endforeach()
+file(GLOB OMASTORE_DESIGN_ASSETS RELATIVE "${CMAKE_SOURCE_DIR}" native/ui/assets/fonts/*.ttf native/ui/assets/icons/*.svg)
+foreach(asset IN LISTS OMASTORE_DESIGN_ASSETS)
+    string(REPLACE "native/ui/" "" alias "${asset}")
+    set_source_files_properties(${asset} PROPERTIES QT_RESOURCE_ALIAS "${alias}")
+endforeach()
+qt_target_qml_sources(omastore QML_FILES native/ui/qml/AppShelf.qml native/ui/qml/AppShowcase.qml native/ui/qml/StoreHeader.qml RESOURCES ${OMASTORE_DESIGN_ASSETS})
 target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network
 )
@@ -98,10 +113,18 @@ install(FILES packaging/io.github.tcballard.OmaStore.desktop
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 install(FILES packaging/io.github.tcballard.OmaStore.metainfo.xml
     DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo")
+install(FILES native/ui/assets/OMACALC-LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
+install(FILES native/ui/assets/fonts/InstrumentSerif-OFL.txt native/ui/assets/fonts/IBMPlexSans-OFL.txt DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
+install(FILES native/ui/assets/icons/LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore" RENAME Feather-LICENSE)
 install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
 
 if(BUILD_TESTING)
     qt_add_executable(native-contracts tests/native_contracts.cpp native/ui/MediaPreview.cpp native/ui/MediaPreview.h native/ui/Preparation.cpp native/ui/Preparation.h)
+    qt_add_executable(desktop-settings-tests tests/desktop_settings.cpp native/ui/DesktopSettings.cpp native/ui/DesktopSettings.h)
+    target_include_directories(desktop-settings-tests PRIVATE native/ui)
+    target_link_libraries(desktop-settings-tests PRIVATE Qt6::Core Qt6::Gui Qt6::DBus Qt6::Test)
+    add_test(NAME desktop-settings COMMAND desktop-settings-tests)
+    set_tests_properties(desktop-settings PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
     target_include_directories(native-contracts PRIVATE native/ui)
     target_link_libraries(native-contracts PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test)
     add_test(NAME native-contracts COMMAND native-contracts)
@@ -111,6 +134,17 @@ if(BUILD_TESTING)
     add_test(NAME native-instance COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/native_instance.py" "$<TARGET_FILE:omastore>")
     set_tests_properties(native-instance PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77)
     add_test(NAME native-startup COMMAND omastore --smoke-test)
+    if(NOT OMASTORE_DEVELOPMENT_DATA)
+        add_test(NAME repository-journey COMMAND omastore --storefront-test)
+        foreach(THEME IN ITEMS dark light)
+            add_test(NAME repository-theme-${THEME} COMMAND omastore --storefront-test --window-size 800x600 --theme-fixture "${CMAKE_SOURCE_DIR}/tests/fixtures/themes/${THEME}")
+            set_tests_properties(repository-theme-${THEME} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 30)
+        endforeach()
+        add_test(NAME repository-journey-small COMMAND omastore --storefront-test --window-size 800x600)
+        add_test(NAME repository-journey-hidpi COMMAND omastore --storefront-test --window-size 800x600)
+        set_tests_properties(repository-journey-hidpi PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software;QT_SCALE_FACTOR=2")
+        set_tests_properties(repository-journey repository-journey-small PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
+    endif()
     if(OMASTORE_DEVELOPMENT_DATA)
         add_test(NAME native-lifecycle COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tests/lifecycle_process.py" "${CORE_BINARY}")
         set_tests_properties(native-lifecycle PROPERTIES TIMEOUT 20)
