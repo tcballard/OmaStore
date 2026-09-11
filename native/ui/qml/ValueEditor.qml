@@ -13,7 +13,7 @@ ColumnLayout {
     readonly property bool composite: value !== null && typeof value === "object"
     readonly property bool array: Array.isArray(value)
     readonly property string title: field.replace(/([A-Z])/g, " $1").replace(/_/g, " ")
-    readonly property var choices: ({appType:["desktop","terminal","shell_plugin","web","service"],maturity:["development","preview","stable"],class:["open_source","source_available","proprietary","unknown"],offline:["yes","no","optional","unknown"],account:["yes","no","optional","unknown"],activation:["yes","no","optional","unknown"],model:["free","donation","pay_what_you_want","paid","upgrade","paid_features","subscription","service","working_preview"],tax:["included","excluded","unknown"]})[field] || []
+    readonly property var choices: ({appType:["desktop","terminal","shell_plugin","web","service"],maturity:["unknown","development","preview","stable"],class:["open_source","source_available","proprietary","unknown"],offline:["yes","no","optional","unknown"],account:["yes","no","optional","unknown"],activation:["yes","no","optional","unknown"],model:["free","donation","pay_what_you_want","paid","upgrade","paid_features","subscription","service","working_preview"],tax:["included","excluded","unknown"]})[field] || []
     spacing: 5
     Layout.fillWidth: true
     Loader {

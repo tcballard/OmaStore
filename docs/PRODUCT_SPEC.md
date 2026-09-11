@@ -8,6 +8,8 @@ OmaStore is the working codename for a new project. Tom has supplied [tcballard/
 
 Correction: Tom explicitly confirmed on 8 September that the storefront itself must be native to Omarchy. This edition supersedes the web-first implementation order. The previous edition also incorrectly treated `tcballard/omarchy-apps` as this project's implementation baseline. That relationship was not established by the brief. Its repository-specific constraints, claimed seed records and migration work are superseded by the greenfield requirements below. Do not clone or modify that repository on the strength of this document.
 
+9 September 2026 repository-preview decision: Tom authorised bootstrapping discovery from existing published Omarchy application packages. Six community-indexed entries now replace the empty bundle. These are unclaimed informational entries, not author-submitted approvals or runtime test evidence. See ADR 0010. Author participation and managed commerce are not prerequisites for this discovery preview.
+
 **1. Read this execution contract before beginning a bundle.**
 
 Read this specification and any instructions in the working environment. Inspect the current state of `tcballard/OmaStore` before scaffolding; the empty-repository observation is a dated snapshot. If it is still empty, create the foundation described in B00. Otherwise preserve subsequent work and read its instructions, contribution/submission policies, package scripts and latest handoff where present. Do not claim a file, command or integration exists before creating or inspecting it.
@@ -55,7 +57,7 @@ No cloud hosting project, domain, web framework or database account is required 
 | P11 | Compatibility evidence describes a particular release and environment. It is not official Omarchy certification or a security guarantee. |
 | P12 | Payments do not change search ranking, review priority, approval or editorial selection. Tom's apps require independent approval and editorial selection. |
 | P13 | Initial launch is an independent community project. Reference the current plugin marketplace, preserving upstream IDs and attribution. |
-| P14 | The later optional checkout proposes a 5% service fee before tax, plus disclosed provider charges. It remains disabled until the commerce gate is met. |
+| P14 | Stripe is the default payment provider for optional managed checkout (confirmed by Tom on 9 September 2026). The checkout proposes a 5% service fee before tax, plus disclosed provider charges. It remains disabled until the commerce gate is met. |
 
 Omarchy already documents commercial apps and an existing plugin publishing process. Follow the live runtime contract when implementing adapters. Do not assume plugin listing validation establishes security. [Commercial apps](https://omarchy.org/manual/commercial-apps-services/), [plugin publishing](https://plugins.omarchy.org/publish.html), [plugin runtime](https://omarchy.org/manual/shell-plugins/).
 
@@ -110,7 +112,7 @@ Require an icon and two real screenshots for ordinary app submissions. Require a
 | Native plan | Plan ID/digest, snapshot/release references, local-state fingerprint, selected operations, required privileges, external steps and expiry | Local Rust core |
 | Native journal | Plan/operation IDs, intended action, before/after identity, timestamps, state, observed outcome and bounded diagnostics | Local SQLite; no automatic upload |
 
-Use `desktop`, `terminal`, `shell_plugin`, `web` and `service` for app type; `development`, `preview` and `stable` for maturity; `open_source`, `source_available`, `proprietary` and `unknown` for licence class. Keep uncertain values unknown until established. Upstream version strings are opaque: do not require every project to use semantic versioning.
+Use `desktop`, `terminal`, `shell_plugin`, `web` and `service` for app type; `unknown`, `development`, `preview` and `stable` for maturity; `open_source`, `source_available`, `proprietary` and `unknown` for licence class. Keep uncertain values unknown until established. Upstream version strings are opaque: do not require every project to use semantic versioning.
 
 Define release identity as a discriminated union: `source_commit` with canonical repository/full commit; `binary_artifact` with publisher-controlled source/version and SHA-256; or `repository_package` with repository/package/version and available package-signature evidence. Each test record also identifies the bytes executed. Proprietary submissions use a verified publisher and binary/package evidence, with inspection limitations. The new submission policy must explain the different inspection paths.
 

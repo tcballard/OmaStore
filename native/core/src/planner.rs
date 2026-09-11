@@ -398,6 +398,27 @@ mod tests {
         serde_json::from_str(include_str!("../../../tests/fixtures/catalogue.json")).unwrap()
     }
     #[test]
+    fn repository_entry_targets_the_published_package_but_does_not_authorise_it() {
+        let c = Catalogue::parse(
+            include_bytes!("../../../data/repository/catalogue.json"),
+            false,
+        )
+        .unwrap();
+        let selection = Selection::App {
+            id: "repo-omacalc".into(),
+        };
+        let now = 1_800_000_000;
+        let (host, _, packages) = sample(&c, &selection, BTreeMap::new(), now).unwrap();
+        assert_eq!(
+            targets(&c, &["repo-omacalc".into()], &host),
+            vec!["omarchy/omacalc"]
+        );
+        let plan = build(&c, selection, &host, &json!({}), Ok(packages), now).unwrap();
+        assert!(!plan.blockers.is_empty());
+        assert_eq!(plan.operations[0].action, "blocked");
+        assert_eq!(plan.operations[0].package.as_deref(), Some("omacalc"));
+    }
+    #[test]
     fn local_recipe_selection_keeps_exact_releases_and_rejects_duplicates() {
         let c: Catalogue =
             serde_json::from_str(include_str!("../../../tests/fixtures/catalogue.json")).unwrap();

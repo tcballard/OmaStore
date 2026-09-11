@@ -1,0 +1,505 @@
+{
+  "schemaVersion": 1,
+  "channel": "public",
+  "revision": "repository-preview-fcda8e853dc4",
+  "buildRevision": "repository-preview-v1",
+  "generatedAt": "2026-09-09T19:33:24.412852Z",
+  "apps": [
+    {
+      "id": "repo-omacalc",
+      "slug": "omacalc",
+      "name": "OmaCalc",
+      "summary": "Calculate in a small native desktop window.",
+      "description": "Calculate in a small native desktop window.\n\nCommunity-indexed from the Omarchy stable x86_64 package repository. The upstream maker has not claimed this listing. Screenshots and an independent OmaStore desktop test are not yet recorded.",
+      "tags": [
+        "utilities",
+        "omarchy-repository"
+      ],
+      "category": "utilities",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "licence": {
+        "class": "open_source",
+        "identifier": "MIT AND OFL-1.1",
+        "url": null
+      },
+      "makerIds": [
+        "upstream-omacom"
+      ],
+      "homepage": "https://github.com/omacom-io/omacalc",
+      "source": "https://github.com/omacom-io/omacalc",
+      "support": "https://github.com/omacom-io/omacalc",
+      "media": [],
+      "capabilities": [],
+      "currentReleaseId": "repository-release",
+      "releases": [
+        {
+          "id": "repository-release",
+          "version": "0.2.2-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "omacalc",
+            "version": "0.2.2-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "omacalc",
+            "url": "https://github.com/omacom/omarchy-pkgs/tree/master/pkgbuilds/omacalc"
+          },
+          "notes": "Observed in the stable x86_64 index at 2026-09-09T19:33:24.412852Z. Published package metadata is not an OmaStore runtime test. Current local availability and signatures must be checked before installation.",
+          "offline": "unknown",
+          "account": "unknown",
+          "activation": "unknown",
+          "serviceCosts": "The application package is free; external services or game purchases may have separate costs. Check upstream terms.",
+          "privileges": [
+            "system-package-installation"
+          ],
+          "services": [],
+          "removal": "Remove the application package through the system package manager. Keep personal documents and application data."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "upstream-omacom",
+          "model": "free",
+          "url": "https://github.com/omacom-io/omacalc",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": "2026-09-09T19:33:24.412852Z",
+          "entitlement": "Open-source package under its upstream licence. This is a community reference, not a managed seller offer.",
+          "terms": "https://github.com/omacom-io/omacalc",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "repo-omacut",
+      "slug": "omacut",
+      "name": "OmaCut",
+      "summary": "Trim the beginning and end of a video.",
+      "description": "Trim the beginning and end of a video.\n\nCommunity-indexed from the Omarchy stable x86_64 package repository. The upstream maker has not claimed this listing. Screenshots and an independent OmaStore desktop test are not yet recorded.",
+      "tags": [
+        "video",
+        "omarchy-repository"
+      ],
+      "category": "video",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "licence": {
+        "class": "open_source",
+        "identifier": "MIT",
+        "url": null
+      },
+      "makerIds": [
+        "upstream-omacom"
+      ],
+      "homepage": "https://github.com/omacom-io/omacut",
+      "source": "https://github.com/omacom-io/omacut",
+      "support": "https://github.com/omacom-io/omacut",
+      "media": [],
+      "capabilities": [],
+      "currentReleaseId": "repository-release",
+      "releases": [
+        {
+          "id": "repository-release",
+          "version": "0.4.0-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "omacut",
+            "version": "0.4.0-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "omacut",
+            "url": "https://github.com/omacom/omarchy-pkgs/tree/master/pkgbuilds/omacut"
+          },
+          "notes": "Observed in the stable x86_64 index at 2026-09-09T19:33:24.412852Z. Published package metadata is not an OmaStore runtime test. Current local availability and signatures must be checked before installation.",
+          "offline": "unknown",
+          "account": "unknown",
+          "activation": "unknown",
+          "serviceCosts": "The application package is free; external services or game purchases may have separate costs. Check upstream terms.",
+          "privileges": [
+            "system-package-installation"
+          ],
+          "services": [],
+          "removal": "Remove the application package through the system package manager. Keep personal documents and application data."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "upstream-omacom",
+          "model": "free",
+          "url": "https://github.com/omacom-io/omacut",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": "2026-09-09T19:33:24.412852Z",
+          "entitlement": "Open-source package under its upstream licence. This is a community reference, not a managed seller offer.",
+          "terms": "https://github.com/omacom-io/omacut",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "repo-omawrite",
+      "slug": "omawrite",
+      "name": "OmaWrite",
+      "summary": "Write and edit Markdown in a native desktop app.",
+      "description": "Write and edit Markdown in a native desktop app.\n\nCommunity-indexed from the Omarchy stable x86_64 package repository. The upstream maker has not claimed this listing. Screenshots and an independent OmaStore desktop test are not yet recorded.",
+      "tags": [
+        "writing",
+        "omarchy-repository"
+      ],
+      "category": "writing",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "licence": {
+        "class": "open_source",
+        "identifier": "MIT AND OFL-1.1",
+        "url": null
+      },
+      "makerIds": [
+        "upstream-omacom"
+      ],
+      "homepage": "https://github.com/omacom-io/omawrite",
+      "source": "https://github.com/omacom-io/omawrite",
+      "support": "https://github.com/omacom-io/omawrite",
+      "media": [],
+      "capabilities": [],
+      "currentReleaseId": "repository-release",
+      "releases": [
+        {
+          "id": "repository-release",
+          "version": "0.5.0-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "omawrite",
+            "version": "0.5.0-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "omawrite",
+            "url": "https://github.com/omacom/omarchy-pkgs/tree/master/pkgbuilds/omawrite"
+          },
+          "notes": "Observed in the stable x86_64 index at 2026-09-09T19:33:24.412852Z. Published package metadata is not an OmaStore runtime test. Current local availability and signatures must be checked before installation.",
+          "offline": "unknown",
+          "account": "unknown",
+          "activation": "unknown",
+          "serviceCosts": "The application package is free; external services or game purchases may have separate costs. Check upstream terms.",
+          "privileges": [
+            "system-package-installation"
+          ],
+          "services": [],
+          "removal": "Remove the application package through the system package manager. Keep personal documents and application data."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "upstream-omacom",
+          "model": "free",
+          "url": "https://github.com/omacom-io/omawrite",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": "2026-09-09T19:33:24.412852Z",
+          "entitlement": "Open-source package under its upstream licence. This is a community reference, not a managed seller offer.",
+          "terms": "https://github.com/omacom-io/omawrite",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "repo-omapresent",
+      "slug": "omapresent",
+      "name": "OmaPresent",
+      "summary": "Create presentations using Markdown.",
+      "description": "Create presentations using Markdown.\n\nCommunity-indexed from the Omarchy stable x86_64 package repository. The upstream maker has not claimed this listing. Screenshots and an independent OmaStore desktop test are not yet recorded.",
+      "tags": [
+        "presentations",
+        "omarchy-repository"
+      ],
+      "category": "presentations",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "licence": {
+        "class": "open_source",
+        "identifier": "MIT",
+        "url": null
+      },
+      "makerIds": [
+        "upstream-jethrojones"
+      ],
+      "homepage": "https://github.com/jethrojones/omapresent",
+      "source": "https://github.com/jethrojones/omapresent",
+      "support": "https://github.com/jethrojones/omapresent",
+      "media": [],
+      "capabilities": [],
+      "currentReleaseId": "repository-release",
+      "releases": [
+        {
+          "id": "repository-release",
+          "version": "0.1.3-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "omapresent",
+            "version": "0.1.3-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "omapresent",
+            "url": "https://github.com/omacom/omarchy-pkgs/tree/master/pkgbuilds/omapresent"
+          },
+          "notes": "Observed in the stable x86_64 index at 2026-09-09T19:33:24.412852Z. Published package metadata is not an OmaStore runtime test. Current local availability and signatures must be checked before installation.",
+          "offline": "unknown",
+          "account": "unknown",
+          "activation": "unknown",
+          "serviceCosts": "The application package is free; external services or game purchases may have separate costs. Check upstream terms.",
+          "privileges": [
+            "system-package-installation"
+          ],
+          "services": [],
+          "removal": "Remove the application package through the system package manager. Keep personal documents and application data."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "upstream-jethrojones",
+          "model": "free",
+          "url": "https://github.com/jethrojones/omapresent",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": "2026-09-09T19:33:24.412852Z",
+          "entitlement": "Open-source package under its upstream licence. This is a community reference, not a managed seller offer.",
+          "terms": "https://github.com/jethrojones/omapresent",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "repo-localsend",
+      "slug": "localsend",
+      "name": "LocalSend",
+      "summary": "Share files between nearby devices.",
+      "description": "Share files between nearby devices.\n\nCommunity-indexed from the Omarchy stable x86_64 package repository. The upstream maker has not claimed this listing. Screenshots and an independent OmaStore desktop test are not yet recorded.",
+      "tags": [
+        "utilities",
+        "omarchy-repository"
+      ],
+      "category": "utilities",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "licence": {
+        "class": "open_source",
+        "identifier": "Apache-2.0",
+        "url": null
+      },
+      "makerIds": [
+        "upstream-localsend-project"
+      ],
+      "homepage": "https://github.com/localsend/localsend",
+      "source": "https://github.com/localsend/localsend",
+      "support": "https://github.com/localsend/localsend",
+      "media": [],
+      "capabilities": [],
+      "currentReleaseId": "repository-release",
+      "releases": [
+        {
+          "id": "repository-release",
+          "version": "1.18.2-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "localsend",
+            "version": "1.18.2-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "localsend",
+            "url": "https://github.com/omacom/omarchy-pkgs/tree/master/pkgbuilds/localsend"
+          },
+          "notes": "Observed in the stable x86_64 index at 2026-09-09T19:33:24.412852Z. Published package metadata is not an OmaStore runtime test. Current local availability and signatures must be checked before installation.",
+          "offline": "unknown",
+          "account": "unknown",
+          "activation": "unknown",
+          "serviceCosts": "The application package is free; external services or game purchases may have separate costs. Check upstream terms.",
+          "privileges": [
+            "system-package-installation"
+          ],
+          "services": [],
+          "removal": "Remove the application package through the system package manager. Keep personal documents and application data."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "upstream-localsend-project",
+          "model": "free",
+          "url": "https://github.com/localsend/localsend",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": "2026-09-09T19:33:24.412852Z",
+          "entitlement": "Open-source package under its upstream licence. This is a community reference, not a managed seller offer.",
+          "terms": "https://github.com/localsend/localsend",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "repo-heroic-games-launcher-bin",
+      "slug": "heroic-games-launcher-bin",
+      "name": "Heroic Games Launcher",
+      "summary": "Manage games from Epic, GOG and Amazon.",
+      "description": "Manage games from Epic, GOG and Amazon.\n\nCommunity-indexed from the Omarchy stable x86_64 package repository. The upstream maker has not claimed this listing. Screenshots and an independent OmaStore desktop test are not yet recorded.",
+      "tags": [
+        "games",
+        "omarchy-repository"
+      ],
+      "category": "games",
+      "appType": "desktop",
+      "maturity": "unknown",
+      "licence": {
+        "class": "open_source",
+        "identifier": "GPL-3.0-only",
+        "url": null
+      },
+      "makerIds": [
+        "upstream-heroic-project"
+      ],
+      "homepage": "https://heroicgameslauncher.com/",
+      "source": null,
+      "support": "https://heroicgameslauncher.com/",
+      "media": [],
+      "capabilities": [],
+      "currentReleaseId": "repository-release",
+      "releases": [
+        {
+          "id": "repository-release",
+          "version": "2.22.1-1",
+          "identity": {
+            "kind": "repository_package",
+            "repository": "omarchy",
+            "package": "heroic-games-launcher-bin",
+            "version": "2.22.1-1",
+            "signature": null
+          },
+          "architectures": [
+            "x86_64"
+          ],
+          "route": {
+            "kind": "arch_package",
+            "repository": "omarchy",
+            "package": "heroic-games-launcher-bin",
+            "url": "https://github.com/omacom/omarchy-pkgs/tree/master/pkgbuilds/heroic-games-launcher-bin"
+          },
+          "notes": "Observed in the stable x86_64 index at 2026-09-09T19:33:24.412852Z. Published package metadata is not an OmaStore runtime test. Current local availability and signatures must be checked before installation.",
+          "offline": "unknown",
+          "account": "unknown",
+          "activation": "unknown",
+          "serviceCosts": "The application package is free; external services or game purchases may have separate costs. Check upstream terms.",
+          "privileges": [
+            "system-package-installation"
+          ],
+          "services": [],
+          "removal": "Remove the application package through the system package manager. Keep personal documents and application data."
+        }
+      ],
+      "offers": [
+        {
+          "sellerId": "upstream-heroic-project",
+          "model": "free",
+          "url": "https://heroicgameslauncher.com/",
+          "price": null,
+          "billingInterval": null,
+          "tax": "unknown",
+          "checkedAt": "2026-09-09T19:33:24.412852Z",
+          "entitlement": "Open-source package under its upstream licence. This is a community reference, not a managed seller offer.",
+          "terms": "https://heroicgameslauncher.com/",
+          "refund": null,
+          "cancellation": null
+        }
+      ],
+      "tests": []
+    }
+  ],
+  "makers": [
+    {
+      "id": "upstream-omacom",
+      "slug": "upstream-omacom",
+      "name": "Omacom",
+      "bio": "Upstream attribution from public project information. This community entry does not imply participation in OmaStore.",
+      "homepage": "https://github.com/omacom-io",
+      "claim": "unclaimed",
+      "claimEvidence": null
+    },
+    {
+      "id": "upstream-jethrojones",
+      "slug": "upstream-jethrojones",
+      "name": "Jethro Jones",
+      "bio": "Upstream attribution from public project information. This community entry does not imply participation in OmaStore.",
+      "homepage": "https://github.com/jethrojones",
+      "claim": "unclaimed",
+      "claimEvidence": null
+    },
+    {
+      "id": "upstream-localsend-project",
+      "slug": "upstream-localsend-project",
+      "name": "LocalSend project",
+      "bio": "Upstream attribution from public project information. This community entry does not imply participation in OmaStore.",
+      "homepage": "https://github.com/localsend",
+      "claim": "unclaimed",
+      "claimEvidence": null
+    },
+    {
+      "id": "upstream-heroic-project",
+      "slug": "upstream-heroic-project",
+      "name": "Heroic Games Launcher project",
+      "bio": "Upstream attribution from public project information. This community entry does not imply participation in OmaStore.",
+      "homepage": "https://github.com/Heroic-Games-Launcher",
+      "claim": "unclaimed",
+      "claimEvidence": null
+    }
+  ],
+  "recipes": [],
+  "editorial": []
+}

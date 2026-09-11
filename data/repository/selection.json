@@ -1,0 +1,56 @@
+[
+  {
+    "package": "omacalc",
+    "name": "OmaCalc",
+    "category": "utilities",
+    "makerId": "omacom",
+    "makerName": "Omacom",
+    "makerHomepage": "https://github.com/omacom-io",
+    "summary": "Calculate in a small native desktop window."
+  },
+  {
+    "package": "omacut",
+    "name": "OmaCut",
+    "category": "video",
+    "makerId": "omacom",
+    "makerName": "Omacom",
+    "makerHomepage": "https://github.com/omacom-io",
+    "summary": "Trim the beginning and end of a video."
+  },
+  {
+    "package": "omawrite",
+    "name": "OmaWrite",
+    "category": "writing",
+    "makerId": "omacom",
+    "makerName": "Omacom",
+    "makerHomepage": "https://github.com/omacom-io",
+    "summary": "Write and edit Markdown in a native desktop app."
+  },
+  {
+    "package": "omapresent",
+    "name": "OmaPresent",
+    "category": "presentations",
+    "makerId": "jethrojones",
+    "makerName": "Jethro Jones",
+    "makerHomepage": "https://github.com/jethrojones",
+    "summary": "Create presentations using Markdown."
+  },
+  {
+    "package": "localsend",
+    "name": "LocalSend",
+    "category": "utilities",
+    "makerId": "localsend-project",
+    "makerName": "LocalSend project",
+    "makerHomepage": "https://github.com/localsend",
+    "summary": "Share files between nearby devices."
+  },
+  {
+    "package": "heroic-games-launcher-bin",
+    "name": "Heroic Games Launcher",
+    "category": "games",
+    "makerId": "heroic-project",
+    "makerName": "Heroic Games Launcher project",
+    "makerHomepage": "https://github.com/Heroic-Games-Launcher",
+    "summary": "Manage games from Epic, GOG and Amazon."
+  }
+]

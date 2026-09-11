@@ -1,0 +1,9 @@
+# Repository observation
+
+Six desktop apps are selected in `selection.json`. Descriptions there are OmaStore summaries; upstream project links and maker names are attribution, not account claims. The application licence identifiers come from the package index; upstream code and assets retain their licences. No screenshots or logos are copied.
+
+`omarchy.db.zst` is the exact HTTPS response from the Omarchy stable x86_64 index on 9 September 2026. `omarchy.db.tar.gz` contains the same decompressed tar stream in a Python-readable compression format. `stable-x86_64.json` records the source URL, observation time, hashes and selected fields. Package file digests are observed metadata, not a claim that we downloaded or tested those binaries. Repository/package signatures were not verified during this discovery capture.
+
+Run `./bin/build-repository-catalogue --check` from a checkout to verify the archives' recorded hashes, selected package fields and generated `catalogue.json`. The separate `data/registry.json` remains owned by approved author publication. Run without `--check` to regenerate after reviewing inputs. The generator does not download data, source a PKGBUILD, install packages or publish the catalogue.
+
+To refresh: retrieve the fixed stable x86_64 index, retain the exact response, decompress it without executing or extracting archive paths, record both archive hashes and the new observation time, and review changed selected descriptors against the current package/project information. Replace these files as one reviewed change. Missing packages, architecture changes and upstream URL/licence changes require review; never silently fall back to an edge build or a similarly named app. Re-run the generator, Rust catalogue validator and tests. Use the system package manager's current signed repository state for installation.

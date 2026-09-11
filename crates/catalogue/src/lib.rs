@@ -34,6 +34,7 @@ vocabulary!(AppType {
     Service
 });
 vocabulary!(Maturity {
+    Unknown,
     Development,
     Preview,
     Stable

@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "repository": "omarchy",
+  "channel": "stable",
+  "architecture": "x86_64",
+  "observedAt": "2026-09-09T19:33:24.412852Z",
+  "indexUrl": "https://pkgs.omarchy.org/stable/x86_64/omarchy.db",
+  "indexSha256": "fcda8e853dc41f018c7207fe536b0f76f31314ec34757d62a6f392dccf9605c7",
+  "signatureVerification": "not-performed; package manager must verify before installation",
+  "packages": [
+    {
+      "NAME": "heroic-games-launcher-bin",
+      "VERSION": "2.22.1-1",
+      "DESC": "An Open source Launcher for Epic, Amazon and GOG Games",
+      "URL": "https://heroicgameslauncher.com/",
+      "ARCH": "x86_64",
+      "LICENSE": "GPL-3.0-only",
+      "FILENAME": "heroic-games-launcher-bin-2.22.1-1-x86_64.pkg.tar.zst",
+      "SHA256SUM": "722954769a522139d780401d1275871c0c2363e02356d4c07afb411c1a48a048"
+    },
+    {
+      "NAME": "localsend",
+      "VERSION": "1.18.2-1",
+      "DESC": "An open source cross-platform alternative to AirDrop",
+      "URL": "https://github.com/localsend/localsend",
+      "ARCH": "x86_64",
+      "LICENSE": "Apache-2.0",
+      "FILENAME": "localsend-1.18.2-1-x86_64.pkg.tar.zst",
+      "SHA256SUM": "78de6d045d53456e90037a6da96066f0f4000f88af9e319d7a21a84aff3dc961"
+    },
+    {
+      "NAME": "omacalc",
+      "VERSION": "0.2.2-1",
+      "DESC": "Dead-simple calculator built with Qt Quick",
+      "URL": "https://github.com/omacom-io/omacalc",
+      "ARCH": "x86_64",
+      "LICENSE": "MIT\nOFL-1.1",
+      "FILENAME": "omacalc-0.2.2-1-x86_64.pkg.tar.zst",
+      "SHA256SUM": "a4c902cc360d1b7a4857e299f20a4638b66f3ee56a533d4ab19f7b293d642ed0"
+    },
+    {
+      "NAME": "omacut",
+      "VERSION": "0.4.0-1",
+      "DESC": "Dead-simple video length trimmer built with Qt Quick and ffmpeg",
+      "URL": "https://github.com/omacom-io/omacut",
+      "ARCH": "x86_64",
+      "LICENSE": "MIT",
+      "FILENAME": "omacut-0.4.0-1-x86_64.pkg.tar.zst",
+      "SHA256SUM": "78a298421c356c801b9354abc7e26a39571fcccd61609451c4b639a2f662f1ca"
+    },
+    {
+      "NAME": "omapresent",
+      "VERSION": "0.1.3-1",
+      "DESC": "Dead-simple, Markdown-only presentation app built with Qt Quick",
+      "URL": "https://github.com/jethrojones/omapresent",
+      "ARCH": "x86_64",
+      "LICENSE": "MIT",
+      "FILENAME": "omapresent-0.1.3-1-x86_64.pkg.tar.zst",
+      "SHA256SUM": "20d49b0dbfd11653606bfb61c16d348cf71ae1b0a7ad2675bc817b8aea496e3d"
+    },
+    {
+      "NAME": "omawrite",
+      "VERSION": "0.5.0-1",
+      "DESC": "Dead-simple Markdown writing app built with Qt Quick",
+      "URL": "https://github.com/omacom-io/omawrite",
+      "ARCH": "x86_64",
+      "LICENSE": "MIT\nOFL-1.1",
+      "FILENAME": "omawrite-0.5.0-1-x86_64.pkg.tar.zst",
+      "SHA256SUM": "9f2fbf11c3b731f341198b6d7b911462bfe6a3477e1cb80dc1006d1e9de05fb1"
+    }
+  ],
+  "archiveSha256": "71d7f600e282c28055a99dd55b6830e1632f6c358a567b6a8601d21d6407303b"
+}

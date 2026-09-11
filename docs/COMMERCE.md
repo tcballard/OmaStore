@@ -2,10 +2,11 @@
 
 Managed checkout is disabled. External author checkout and support links remain available with no OmaStore commission. Development examples do not represent real purchases, participating sellers or author demand.
 
-ADR 0009 defines the candidate direct-charge provider arrangement and closed release gate. The managed fee is 5% of the discounted subtotal before tax, rounded down in the currency's minor unit. Refund fee reversals use cumulative proportions; provider charges and retained processing costs stay separate and must be disclosed under the actual terms.
+Stripe is the default payment provider, confirmed by Tom on 9 September 2026. The existing Stripe test adapter is the implementation path. ADR 0009 defines the proposed Connect direct-charge arrangement and closed release gate. The managed fee is 5% of the discounted subtotal before tax, rounded down in the currency's minor unit. Refund fee reversals use cumulative proportions; provider charges and retained processing costs stay separate and must be disclosed under the actual terms.
 
 | Required operating fact | Current evidence | Effect |
 | --- | --- | --- |
+| Default payment provider | Stripe, confirmed by Tom on 9 September 2026 | Provider selection settled; use the existing Stripe test adapter |
 | Five authors requesting managed checkout | Missing | Entry gate closed |
 | Actual operator and provider agreement | Missing | No live credentials/charges |
 | Seller identity and Connect liability arrangement | Candidate design only | No seller onboarding |

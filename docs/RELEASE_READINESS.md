@@ -8,7 +8,7 @@ This is a development build and an implementation handoff, not a public launch s
 | Actual Omarchy discovery, portals, accessibility | Pending real desktop run with host and application versions, screenshots and failures |
 | Five authors, three outside Tom's projects | No participants recorded |
 | Author update | Sample immutable revision/review/publication flow tested; real author update pending |
-| 20–30 real applications | Public catalogue contains zero listings; development examples are separate |
+| 20–30 real applications | Six real community-indexed repository apps bundled; no claimed maker participation or runtime tests; development examples remain separate |
 | Three tested setups | Selective sample setup works; real catalogue/evidence pending |
 | Ten managed lifecycles | Interruption/replay/partial/removal contracts and independent sample processes tested; actual Omarchy lifecycle report pending |
 | 18 of 20 newcomers succeed unaided | No participants measured; separate task time from downloads |

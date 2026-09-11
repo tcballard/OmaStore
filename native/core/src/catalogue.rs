@@ -33,7 +33,7 @@ pub struct Client {
 
 impl Client {
     pub fn new(demo: bool) -> Self {
-        let seed = include_bytes!("../../../data/registry.json").as_slice();
+        let seed = include_bytes!("../../../data/repository/catalogue.json").as_slice();
         #[cfg(feature = "development-catalogue")]
         let seed = if demo {
             include_bytes!("../../../tests/fixtures/catalogue.json").as_slice()
@@ -272,7 +272,7 @@ mod tests {
         client
             .accept(
                 200,
-                Some(include_bytes!("../../../data/registry.json")),
+                Some(include_bytes!("../../../data/repository/catalogue.json")),
                 Some("\"one\"".into()),
             )
             .unwrap();

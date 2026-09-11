@@ -19,7 +19,7 @@ ScrollView {
             { key: "description", label: "Description", hint: "What it does, who it helps, and its limits", max: 12000 },
             { key: "category", label: "Category", options: ["productivity", "writing", "development", "design", "media", "games", "utilities"] },
             { key: "appType", label: "App type", options: ["desktop", "terminal", "shell_plugin", "web", "service"] },
-            { key: "maturity", label: "Maturity", options: ["development", "preview", "stable"] },
+            { key: "maturity", label: "Maturity", options: ["unknown", "development", "preview", "stable"] },
             { key: "homepage", label: "App website", hint: "https://…" },
             { key: "support", label: "Support destination", hint: "https://…" }
         ]},

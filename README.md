@@ -4,11 +4,13 @@ A native community application storefront for Omarchy. Discover useful software,
 
 OmaStore runs in its own Qt Quick window with a Rust core. The current preview includes search, app and maker pages, editorial stories, release feeds, selective setups, evidence labels, cached browsing and a local library. It can review exact package plans, rehearse independent installation/removal workers, reconcile interruptions and preview diagnostic exports. The native author workspace supports private drafts, media, exact previews, independent review and publication recovery. Selective settings have explicit diffs, consent and conflict-aware restore; local remixes retain attribution. Purchases support durable receipts, offline perpetual licences, subscription cycles, cancellations and refunds, with separate author finance and operator support records. Desktop colour scheme and text scaling follow the settings portal.
 
-**Development preview.** The public catalogue is empty until genuine listings are reviewed. A separate demo build contains six explicitly fictional listings for exercising the interface. The demo also supports fictional author/reviewer/operator sessions and a local publication rehearsal. Real provider integration and Omarchy desktop evidence remain release gates; live package writes remain disabled until actual Omarchy lifecycle evidence is recorded. Selective settings/remixes and the full fictional commerce lifecycle are implemented. Live setting adapters and real payments remain separately gated.
+**Development preview.** The ordinary build includes six real applications indexed from Omarchy’s stable x86_64 package repository: OmaCalc, OmaCut, OmaWrite, OmaPresent, LocalSend and Heroic Games Launcher. These community entries have unclaimed makers and no OmaStore runtime test or screenshot claims. A separate demo build contains six explicitly fictional listings for exercising the interface. The demo also supports fictional author/reviewer/operator sessions and a local publication rehearsal. Real provider integration and Omarchy desktop evidence remain release gates; live package writes remain disabled until actual Omarchy lifecycle evidence is recorded. Selective settings/remixes and the full fictional commerce lifecycle are implemented. Live setting adapters and real payments remain separately gated.
 
 ![Actual native preview showing explicitly fictional development listings](docs/qa/native-discovery.png)
 
 ## Build and try it on Omarchy
+
+For the real repository preview, use the ordinary `dev` build below. The `demo` build remains the separate fictional playground. The [repository preview guide](docs/REPOSITORY_PREVIEW.md) explains the first desktop exercise.
 
 Requirements: Linux, Qt 6.4+, CMake 3.22+, Ninja, C++17 and the pinned Rust toolchain. Bring Omarchy up to date using its normal updater first. On Omarchy/Arch:
 
