@@ -345,7 +345,7 @@ void CoreBridge::acceptDevice(const QString &scope, const QVariantMap &result, c
                         m_launchability.clear(); m_launcherSnapshot=m_device.value("snapshot").toString();
                     }
                 } else {
-                    if (m_device.isEmpty()) { m_device=m_inventoryMetadata; m_appStates=m_inventoryStage; }
+                    if (!m_device.value("observedAt").isValid() || m_device.value("observedAt").isNull()) { m_device=m_inventoryMetadata; m_appStates=m_inventoryStage; }
                     invalidateDevice("Device status unavailable. Any retained versions are from the last successful check.");
                     m_device.insert("host",m_inventoryMetadata.value("host"));
                 }
@@ -390,7 +390,7 @@ void CoreBridge::acceptDevice(const QString &scope, const QVariantMap &result, c
 
 
 void CoreBridge::invalidateDevice(const QString &notice) {
-    bool observed=false;
+    bool observed=m_device.value("observedAt").isValid() && !m_device.value("observedAt").isNull();
     QVariantList items;
     for (auto it=m_appStates.begin(); it!=m_appStates.end(); ++it) {
         auto item=it.value().toMap();
@@ -437,6 +437,9 @@ QVariantMap CoreBridge::actionForApp(const QString &id) const {
     }
     if (state=="update_available") return make("system_update","Update with Omarchy…");
     if (launch.contains("items")) { auto action=make("no_launcher","No desktop launcher"); action.insert("enabled",false); return action; }
+    for (const auto &pending:m_pending) if (pending.scope=="launcher:"+id) {
+        auto action=make("check_launch","Checking launcher…"); action.insert("enabled",false); return action;
+    }
     return make("check_launch",launch.contains("error")?"Retry launcher check":"Check launch options…");
 }
 void CoreBridge::activateAppAction(const QString &id, bool secondary) {
