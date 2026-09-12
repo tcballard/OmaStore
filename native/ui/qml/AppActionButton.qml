@@ -5,10 +5,10 @@ ActionButton {
     required property var core
     required property string appId
     property bool secondary: false
-    readonly property var action: { core.actionRevision; return core.actionForApp(appId); }
+    readonly property var appAction: { core.actionRevision; return core.actionForApp(appId); }
     objectName: (secondary ? "secondary-action-" : "app-action-") + appId
-    text: (secondary ? action.secondaryLabel : action.label) || ""
-    visible: !secondary || !!action.secondaryKind
-    enabled: !!action.enabled
+    text: (secondary ? appAction.secondaryLabel : appAction.label) || ""
+    visible: !secondary || !!appAction.secondaryKind
+    enabled: !!appAction.enabled
     onClicked: core.activateAppAction(appId, secondary)
 }

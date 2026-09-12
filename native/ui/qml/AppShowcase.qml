@@ -10,7 +10,7 @@ Item {
     property bool overview: false
     signal inspectRequested()
     readonly property var deviceState: core.appStates[app.id] || ({})
-    readonly property var action: { core.actionRevision; return core.actionForApp(app.id || ""); }
+    readonly property var appAction: { core.actionRevision; return core.actionForApp(app.id || ""); }
     readonly property var app: details.app || ({})
     readonly property bool calculator: app.id === "repo-omacalc"
     readonly property bool compact: width < 1000 || theme.scale > 1.4
@@ -51,11 +51,11 @@ Item {
                     theme: hero.theme; primary: true
                     textSize: 18; implicitWidth: 296; implicitHeight: 56
                     objectName: hero.overview ? "discoverCalculator" : "previewAppPlan"
-                    text: hero.overview ? "Explore OmaCalc" : hero.action.label
-                    enabled: hero.overview ? core.ready && !core.loading : !!hero.action.enabled
+                    text: hero.overview ? "Explore OmaCalc" : hero.appAction.label
+                    enabled: hero.overview ? core.ready && !core.loading : !!hero.appAction.enabled
                     onClicked: hero.overview ? hero.inspectRequested() : core.activateAppAction(hero.app.id)
                 }
-                AppActionButton {core:hero.core;theme:hero.theme;appId:hero.app.id || "";secondary:true;visible:!hero.overview&&!!action.secondaryKind}
+                AppActionButton {core:hero.core;theme:hero.theme;appId:hero.app.id || "";secondary:true;visible:!hero.overview&&!!hero.appAction.secondaryKind}
                 Label { text: hero.overview ? (hero.app.priceLabel || "") : (hero.details.summary || {}).priceLabel || ""; color: theme.ink; font.pixelSize: 14 * theme.scale; topPadding: 10; textFormat: Text.PlainText }
             }
             AppStateLabel { id: statusLabel; core: hero.core; theme: hero.theme; appId: hero.app.id || ""; Layout.fillWidth: true }
