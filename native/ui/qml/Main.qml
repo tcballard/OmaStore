@@ -18,7 +18,7 @@ ApplicationWindow {
     property int section: 0
     property bool showFilters: false
     readonly property bool showingDetail: !!core.detail.app
-    readonly property var sections: ["Discover", "Apps", "Setups", "Library", "Makers", "Submit"]
+    readonly property var sections: ["Discover", "Apps", "Setups", "Library", "Makers", "Submit", "Saved", "Updates"]
     readonly property var d: core.detail
     visible: true
     width: 1180
@@ -75,7 +75,7 @@ ApplicationWindow {
         target:window.core
         function onHandoffReady(identity){if(identity.kind==="setup"){window.setupSelection=identity.id;window.setupRevision=identity.revision;window.navigate(2);}}
     }
-    Component {id:libraryPage;LibraryPage {core:window.core;theme:storeTheme;onPurchasesRequested:purchasesDialog.openFor("");onRemixesRequested:remixDialog.openFor(null);onSettingsRequested:settingsDialog.openFor([])}}
+    Component {id:libraryPage;LibraryPage {core:window.core;theme:storeTheme;destinationTab:window.section===6?1:window.section===7?4:0;onPurchasesRequested:purchasesDialog.openFor("");onRemixesRequested:remixDialog.openFor(null);onSettingsRequested:settingsDialog.openFor([])}}
     RemixDialog {id:remixDialog;core:window.core;theme:storeTheme;onSettingsRequested:(refs)=>settingsDialog.openFor(refs);onAuthorCreated:window.navigate(5)}
     PurchasesDialog {id:purchasesDialog;core:window.core;theme:storeTheme}
     SettingsDialog {id:settingsDialog;core:window.core;theme:storeTheme}
@@ -124,7 +124,7 @@ ApplicationWindow {
                 id: body
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : (window.section === 0 && core.apps.some(a => a.id === "repo-omacalc") ? showcasePage : (window.section === 3 ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage)))
+                sourceComponent: window.showingDetail ? detailPage : (window.section === 0 && core.apps.some(a => a.id === "repo-omacalc") ? showcasePage : ((window.section === 3 || window.section === 6 || window.section === 7) ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage)))
             }
             AppShelf {
                 visible: (window.section === 0 || window.section === 1) && core.apps.length > 0

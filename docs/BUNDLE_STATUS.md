@@ -1,5 +1,10 @@
 # Bundle status
 
+12 September 2026: B13a device-state foundation implemented_unverified. Shared
+read-only inventory/app status, pacman update parsing, Installed/Saved/Updates
+destinations and updater handoff are implemented. Focused core tests passed;
+final native/package verification is pending. See ADR 0015.
+
 11 September 2026: B02 repository synchronisation continuation implemented.
 Startup/hourly/manual checks update the reviewed stable x86_64 app selection
 from the published index. Live HTTPS and restart-cache checks pass; approved

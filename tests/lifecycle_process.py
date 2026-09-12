@@ -33,6 +33,10 @@ with tempfile.TemporaryDirectory() as directory:
         consent = {"id": plan["digest"], "digest": plan["digest"], "accepted": False}
         assert not request(core, "operations.confirm", consent)["ok"]
         assert request(core, "library.list", {})["result"]["items"] == []
+        inventory = request(core, "library.inventory", {"filter":"installed"})["result"]
+        assert inventory["items"] == [] and inventory["installedCount"] == 0
+        assert request(core,"library.app_status",{"id":"demo-fieldnotes"})["result"]["items"][0]["state"] == "not_installed"
+        assert not request(core,"library.inventory",{"filter":"installed","command":"bad"})["ok"]
         consent["accepted"] = True
         accepted = request(core, "operations.confirm", consent)
         assert accepted["ok"] and accepted["result"]["state"] in ("awaiting_user", "running"), accepted
@@ -49,6 +53,10 @@ with tempfile.TemporaryDirectory() as directory:
         assert state["state"] == "succeeded", state
         library = request(recovered, "library.list", {})["result"]
         assert library["items"][0]["present"] and not library["items"][0]["preexisting"]
+        inventory = request(recovered,"library.inventory",{"filter":"installed"})["result"]
+        assert inventory["installedCount"] == 1 and inventory["items"][0]["primaryAction"] == "open"
+        assert request(recovered,"library.app_status",{"id":"demo-fieldnotes"})["result"]["items"][0]["installedVersion"] == inventory["items"][0]["installedVersion"]
+        assert request(recovered,"library.inventory",{"filter":"updates"})["result"]["items"] == []
         replay = request(recovered, "operations.confirm", consent)
         assert replay["ok"] and replay["result"]["state"] == "succeeded", replay
         assert request(recovered, "library.list", {})["result"]["lastSequence"] == library["lastSequence"]
@@ -64,6 +72,8 @@ with tempfile.TemporaryDirectory() as directory:
         assert state["state"]=="succeeded",state
         assert not request(recovered,"library.list",{})["result"]["items"][0]["present"]
         assert request(recovered,"operations.confirm",remove_consent)["result"]["state"]=="succeeded"
+        assert request(recovered,"library.inventory",{"filter":"installed"})["result"]["installedCount"] == 0
+        assert request(recovered,"library.app_status",{"id":"demo-fieldnotes"})["result"]["items"][0]["state"] == "not_installed"
         fresh=request(recovered,"operations.replan",{"id":removal["digest"]})["result"]
         assert fresh["operations"][0]["action"]=="noop"
         print("PASS: consent, worker survival, durable observation, explicit removal and replay without duplicate mutation")

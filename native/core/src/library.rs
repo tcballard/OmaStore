@@ -133,7 +133,7 @@ impl Store {
         if h.simulated != self.demo {
             return Err("local_mode_mismatch");
         }
-        if h.state != "supported" {
+        if h.state != "supported" || h.locked {
             return Ok(());
         }
         let tx = db(self
@@ -167,7 +167,7 @@ impl Store {
                         ReleaseIdentity::RepositoryPackage { version, .. } => version,
                         _ => &release.version,
                     };
-                    db(tx.execute("INSERT INTO installed_apps(id,name,package,repository,observed_version,present,last_seen_at,preexisting,source_state,catalogue_release,catalogue_version) VALUES(?1,?2,?3,?4,?5,1,?6,1,'observed_locally',?7,?8) ON CONFLICT(id) DO UPDATE SET name=excluded.name,catalogue_release=excluded.catalogue_release,catalogue_version=excluded.catalogue_version",params![app.id,app.name,package,repository,installed,now,release.id,package_version]))?;
+                    db(tx.execute("INSERT INTO installed_apps(id,name,package,repository,observed_version,present,last_seen_at,preexisting,source_state,catalogue_release,catalogue_version) VALUES(?1,?2,?3,?4,?5,1,?6,1,'observed_locally',?7,?8) ON CONFLICT(id) DO UPDATE SET name=excluded.name,package=excluded.package,repository=excluded.repository,observed_version=excluded.observed_version,present=1,last_seen_at=excluded.last_seen_at,catalogue_release=excluded.catalogue_release,catalogue_version=excluded.catalogue_version",params![app.id,app.name,package,repository,installed,now,release.id,package_version]))?;
                 }
             }
         }

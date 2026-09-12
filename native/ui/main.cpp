@@ -237,6 +237,15 @@ int main(int argc, char *argv[]) {
                         const auto local=core.community().value("library.list").toMap();
                         check(local.value("items").toList().isEmpty(),"proposal is never labelled installed");
                         check(!local.value("operations").toList().isEmpty(),"proposal survives in the local journal");
+                        check(core.community().value("library.inventory").toMap().value("installedCount",-1).toInt()==0,"installed destination reads device inventory");
+                        auto *updates=findItem(window->contentItem(),"navUpdates");check(updates!=nullptr,"updates destination exists");
+                        if(updates){updates->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        check(window->property("section").toInt()==7 && core.community().value("library.inventory").toMap().value("filter").toString()=="updates","updates destination reads update inventory");
+                        auto *saved=findItem(window->contentItem(),"navSaved");check(saved!=nullptr,"saved destination exists");
+                        if(saved){saved->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
+                        check(window->property("section").toInt()==6,"saved destination remains separate");
                         core.openHandoff("omastore://setup/demo-writing-desk?revision=1");
                         for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
                         check(window->property("setupSelection").toString()=="demo-writing-desk","identity handoff opens exact setup");

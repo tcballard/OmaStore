@@ -301,3 +301,30 @@ The full continuation branch is `build/native-marketplace`, stacked on `build/au
 B00–B22 implementation is complete. Read the spec, status and applicable ADRs before additional changes. The next release work is gathering the actual desktop, deployment, author/pilot and provider evidence; the software must not label those gates passed from fixture success. PLAYGROUND.md explains how to exercise the implemented sample flows, and DHH_NOTE.md is prepared but unsent.
 
 Undo code through explicit bundle reversions while preserving durable private records. Use the backup/new-destination restore procedure before service migrations or deployment. Never clear commerce, installation or settings errors by deleting their journals. Do not remove broad XDG directories or buyer documents. Packaging stages under `build/stage` for reversible rehearsal. No host application package, Omarchy setting or real payment was changed by this build session.
+
+
+## 12 September 2026 — B13a device-state foundation
+
+Starting revision: c7694841cced21be794e627720818d352d93a873 (merged main).
+Branch: feat/device-app-state. Requirements: UX08, B13-A3/A6, B15-A4/A5.
+Tom authorised backend wiring for Discover, Installed, Saved and Updates while
+leaving final UX/visual tailoring to later screenshot-led passes.
+
+Added one bounded inventory projection and per-app status endpoint, fixed the
+four-column pacman update parser (including ignored updates), and wired device
+views and detail actions. Catalogue versions never establish local updates.
+Unknown hosts and package locks preserve durable observations without claiming
+zero apps or up-to-date status. Launcher selection and system update use existing
+validated adapters and explicit updater confirmation. No live gate was enabled.
+
+Initial focused sample-core run: 30 passed, one explicit live HTTPS test ignored.
+Workspace Clippy passed before final pagination refinements. Full local workspace
+testing encountered corrupt/empty compiler objects and linker errors in unchanged
+workflow code; a clean nonincremental run is being used for final verification.
+Qt is absent and system package installation is unavailable in this workspace,
+so native and Arch checks must run on GitHub. Real Omarchy testing remains pending.
+
+Next slice: continuous device refresh and operation state across cards, followed
+by navigation-state preservation and screenshot-led layout refinement. This slice
+is limited to current catalogue apps; retained journal entries are not deleted
+when a listing leaves the catalogue.

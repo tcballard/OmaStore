@@ -1,6 +1,7 @@
 mod catalogue;
 mod execution;
 mod handoff;
+mod inventory;
 mod library;
 mod lifecycle;
 mod planner;
@@ -117,7 +118,7 @@ fn respond(line: &[u8], runtime: &mut Runtime) -> Value {
         "core.info" if request.params == json!({}) => Ok(
             json!({"service": "omastore-core", "version": env!("CARGO_PKG_VERSION"),
             "platform": std::env::consts::OS, "architecture": std::env::consts::ARCH,
-            "capabilities": ["workspace.commerce.lifecycle","workspace.commerce.packet.export","workspace.commerce.status","workspace.commerce.author","workspace.commerce.prices","workspace.commerce.prepare","workspace.commerce.purchase","workspace.commerce.orders","workspace.commerce.order","workspace.commerce.reconcile","workspace.commerce.retry","workspace.commerce.recover","workspace.commerce.pending","workspace.commerce.resume","workspace.commerce.licence.export","workspace.commerce.licence.verify","remixes.create","remixes.list","remixes.get","remixes.rename","remixes.export","remixes.import","settings.apply","settings.history","settings.restore_preview","settings.restore","settings.reconcile","settings.adapters","settings.preview","settings.get","workspace.operations.dashboard","workspace.feed.info","operations.reconcile", "operations.replan", "operations.diagnostics", "operations.diagnostics.export", "library.setups", "library.detach_setup", "library.remember_setup","operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.remix", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
+            "capabilities": ["workspace.commerce.lifecycle","workspace.commerce.packet.export","workspace.commerce.status","workspace.commerce.author","workspace.commerce.prices","workspace.commerce.prepare","workspace.commerce.purchase","workspace.commerce.orders","workspace.commerce.order","workspace.commerce.reconcile","workspace.commerce.retry","workspace.commerce.recover","workspace.commerce.pending","workspace.commerce.resume","workspace.commerce.licence.export","workspace.commerce.licence.verify","remixes.create","remixes.list","remixes.get","remixes.rename","remixes.export","remixes.import","settings.apply","settings.history","settings.restore_preview","settings.restore","settings.reconcile","settings.adapters","settings.preview","settings.get","workspace.operations.dashboard","workspace.feed.info","operations.reconcile", "operations.replan", "operations.diagnostics", "operations.diagnostics.export", "library.setups", "library.detach_setup", "library.remember_setup","operations.status", "operations.confirm", "operations.cancel", "system.handoff","library.app_status", "library.inventory", "library.list", "library.refresh", "library.launchers", "library.launch", "operations.get", "operations.events", "handoff.open","system.probe", "system.plan", "core.info", "catalogue.info", "catalogue.refresh", "apps.list", "apps.get", "makers.list", "makers.get", "editorial.list", "editorial.get", "setups.list", "setups.select", "setups.export", "setups.import", "apps.pick", "candidate.prepare", "workspace.state", "workspace.command", "workspace.drafts.get", "workspace.drafts.cache", "workspace.drafts.new", "workspace.drafts.remix", "workspace.drafts.preview", "workspace.revisions.get", "workspace.media.upload"]}),
         ),
         "catalogue.info" if request.params == json!({}) => Ok(client.info()),
         "catalogue.refresh" if request.params == json!({}) => Ok(client.refresh()),
@@ -395,6 +396,23 @@ fn local_request(runtime: &mut Runtime, method: &str, params: Value) -> platform
                 )?;
             }
             lifecycle::status(&store, &plan.digest)
+        }
+        "library.inventory" | "library.app_status" => {
+            let query: inventory::Query = if method == "library.app_status" {
+                let p: Lookup = serde_json::from_value(params).map_err(|_| "invalid_request")?;
+                inventory::Query {
+                    id: Some(p.id),
+                    ..Default::default()
+                }
+            } else {
+                serde_json::from_value(params).map_err(|_| "invalid_request")?
+            };
+            let host = local_host(runtime, &store)?;
+            let now = chrono::Utc::now().timestamp();
+            if !host.locked {
+                store.observe(&runtime.catalogue.catalogue, &host, now)?;
+            }
+            inventory::view(&runtime.catalogue.catalogue, &host, query, now)
         }
         "library.list" | "library.refresh" => {
             let p: Page = serde_json::from_value(params).map_err(|_| "invalid_request")?;
