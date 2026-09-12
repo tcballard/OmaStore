@@ -154,6 +154,13 @@ int main(int argc, char *argv[]) {
                     check(core.query().value("q").toString() == "fieldnotes", "search text");
                     if (demo && core.apps().size() == 1) {
                         const auto id = core.apps().first().toMap().value("id").toString();
+                        for(int i=0;i<100&&core.deviceRefreshing();++i)QTest::qWait(50);
+                        auto *cardAction=findItem(window->contentItem(),"app-action-"+id);
+                        check(cardAction && cardAction->isEnabled(),"shared card action is available");
+                        if(cardAction){cardAction->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
+                        check(core.detail().isEmpty() && !core.community().value("system.plan").toMap().isEmpty(),"card action does not also navigate to details");
+                        auto *cardPlan=findItem(window->contentItem(),"closePlan");if(cardPlan){cardPlan->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         auto *card = findItem(window->contentItem(), "app-" + id);
                         if (card) {
                             auto *accessible = QAccessible::queryAccessibleInterface(card);

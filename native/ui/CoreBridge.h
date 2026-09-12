@@ -8,6 +8,7 @@
 
 class CoreBridge final : public QObject {
     Q_OBJECT
+    Q_PROPERTY(int actionRevision READ actionRevision NOTIFY actionsChanged)
     Q_PROPERTY(QVariantMap device READ device NOTIFY deviceChanged)
     Q_PROPERTY(QVariantMap appStates READ appStates NOTIFY deviceChanged)
     Q_PROPERTY(QVariantList activity READ activity NOTIFY activityChanged)
@@ -37,6 +38,9 @@ public:
     void openHandoff(const QString &uri);
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void refreshDevice();
+    int actionRevision() const { return m_actionRevision; }
+    Q_INVOKABLE QVariantMap actionForApp(const QString &id) const;
+    Q_INVOKABLE void activateAppAction(const QString &id, bool secondary = false);
     QVariantMap device() const { return m_device; }
     QVariantMap appStates() const { return m_appStates; }
     QVariantList activity() const { return m_activity; }
@@ -76,6 +80,8 @@ public:
     QVariantMap workspace() const { return m_workspace; }
     QVariantMap workspaceReply() const { return m_workspaceReply; }
 signals:
+    void actionsChanged();
+    void appActionRequested(const QString &kind, const QString &id, const QVariantList &choices);
     void deviceChanged();
     void activityChanged();
     void stateChanged();
@@ -93,7 +99,11 @@ private:
     bool request(const QString &method, const QVariantMap &params = {}, const QString &scope = {});
     void pollDevice();
     void acceptDevice(const QString &scope, const QVariantMap &result, const QString &error = {});
+    void invalidateDevice(const QString &notice);
     QTimer m_deviceTimer;
+    int m_actionRevision = 0;
+    QVariantMap m_launchability;
+    QString m_launcherSnapshot;
     QVariantMap m_device, m_appStates, m_inventoryStage, m_inventoryMetadata;
     QVariantList m_inventoryItems, m_activity;
     bool m_inventoryRunning = false, m_deviceRequested = false, m_activityCurrent = false;

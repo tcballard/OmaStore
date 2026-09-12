@@ -104,7 +104,26 @@ ApplicationWindow {
 
     Connections {
         target:window.core
+        function onAppActionRequested(kind,id,choices) {
+            if(kind==="system_update") sharedUpdatePrompt.open();
+            else if(kind==="choose_launcher"){sharedLaunchPrompt.appId=id;sharedLaunchPrompt.choices=choices;sharedLaunchPrompt.open();}
+        }
         function onHandoffReady(identity){if(identity.kind==="setup"){window.setupSelection=identity.id;window.setupRevision=identity.revision;window.navigate(2);}}
+    }
+    Dialog {
+        id: sharedUpdatePrompt; parent: Overlay.overlay; anchors.centerIn: parent
+        modal: true; title: "Open Omarchy’s updater?"; width: Math.min(560,window.width-32)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentItem: Label { text: "This opens the system updater. It may update other packages and apply Omarchy migrations too. Review its prompts in the terminal."; wrapMode: Text.Wrap }
+        onAccepted: core.communityAction("system.handoff",{kind:"update",confirmed:true})
+    }
+    Dialog {
+        id: sharedLaunchPrompt; parent: Overlay.overlay; anchors.centerIn: parent
+        property string appId: ""; property var choices: []
+        modal: true; title: "Choose a launcher"; standardButtons: Dialog.Cancel
+        contentItem: ColumnLayout {
+            Repeater {model:sharedLaunchPrompt.choices;Button {required property string modelData;text:modelData;onClicked:{core.communityAction("library.launch",{id:sharedLaunchPrompt.appId,desktop:modelData});sharedLaunchPrompt.close();}}}
+        }
     }
     Component {id:libraryPage;LibraryPage {core:window.core;theme:storeTheme;destinationTab:window.section===6?1:window.section===7?4:0;onPurchasesRequested:purchasesDialog.openFor("");onRemixesRequested:remixDialog.openFor(null);onSettingsRequested:settingsDialog.openFor([])}}
     RemixDialog {id:remixDialog;core:window.core;theme:storeTheme;onSettingsRequested:(refs)=>settingsDialog.openFor(refs);onAuthorCreated:window.navigate(5)}
@@ -149,6 +168,15 @@ ApplicationWindow {
                     anchors.fill: parent
                     Label { text: core.error; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
                     Button { text: core.ready ? "Clear filters" : "Reconnect"; onClicked: core.ready ? core.clearFilters() : core.start() }
+                }
+            }
+            Pane {
+                visible: !!core.device.stale; Layout.fillWidth: true; padding: 8
+                background: Rectangle { color: storeTheme.wash }
+                RowLayout {
+                    anchors.fill: parent
+                    Label {text:core.device.notice || "Showing last checked device status.";Layout.fillWidth:true;wrapMode:Text.Wrap}
+                    ActionButton {theme:storeTheme;text:core.ready?"Recheck":"Reconnect";enabled:!core.loading;onClicked:core.ready?core.refreshDevice():core.start()}
                 }
             }
             Loader {

@@ -94,8 +94,9 @@ foreach(asset IN LISTS OMASTORE_DESIGN_ASSETS)
     string(REPLACE "native/ui/" "" alias "${asset}")
     set_source_files_properties(${asset} PROPERTIES QT_RESOURCE_ALIAS "${alias}")
 endforeach()
+set_source_files_properties(native/ui/qml/AppActionButton.qml PROPERTIES QT_RESOURCE_ALIAS AppActionButton.qml)
 set_source_files_properties(native/ui/qml/AppStateLabel.qml PROPERTIES QT_RESOURCE_ALIAS AppStateLabel.qml)
-qt_target_qml_sources(omastore QML_FILES native/ui/qml/AppStateLabel.qml native/ui/qml/AppShelf.qml native/ui/qml/AppShowcase.qml native/ui/qml/StoreHeader.qml RESOURCES ${OMASTORE_DESIGN_ASSETS})
+qt_target_qml_sources(omastore QML_FILES native/ui/qml/AppActionButton.qml native/ui/qml/AppStateLabel.qml native/ui/qml/AppShelf.qml native/ui/qml/AppShowcase.qml native/ui/qml/StoreHeader.qml RESOURCES ${OMASTORE_DESIGN_ASSETS})
 target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network
 )

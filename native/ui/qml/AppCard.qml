@@ -38,6 +38,11 @@ ItemDelegate {
             Label { text: card.app.priceLabel + "  →"; font.weight: Font.DemiBold; color: theme.accent; font.pixelSize: 12 * theme.scale; textFormat: Text.PlainText }
         }
         AppStateLabel { core: card.core; theme: card.theme; appId: card.app.id; Layout.fillWidth: true }
+        Flow {
+            Layout.fillWidth: true; spacing: 8
+            AppActionButton { core: card.core; theme: card.theme; appId: card.app.id }
+            AppActionButton { core: card.core; theme: card.theme; appId: card.app.id; secondary: true }
+        }
         RowLayout {
             visible: card.bookmark
             Label { text: "Saved on this device"; color: theme.muted; Layout.fillWidth: true; font.pixelSize: 11 * theme.scale }
