@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 ItemDelegate {
     id: card
+    required property var core
     required property var app
     required property var theme
     signal chosen()
@@ -36,6 +37,7 @@ ItemDelegate {
             Label { text: card.app.evidenceLabel; color: theme.muted; font.pixelSize: 10 * theme.scale; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
             Label { text: card.app.priceLabel + "  →"; font.weight: Font.DemiBold; color: theme.accent; font.pixelSize: 12 * theme.scale; textFormat: Text.PlainText }
         }
+        AppStateLabel { core: card.core; theme: card.theme; appId: card.app.id; Layout.fillWidth: true }
         RowLayout {
             visible: card.bookmark
             Label { text: "Saved on this device"; color: theme.muted; Layout.fillWidth: true; font.pixelSize: 11 * theme.scale }

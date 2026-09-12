@@ -94,7 +94,8 @@ foreach(asset IN LISTS OMASTORE_DESIGN_ASSETS)
     string(REPLACE "native/ui/" "" alias "${asset}")
     set_source_files_properties(${asset} PROPERTIES QT_RESOURCE_ALIAS "${alias}")
 endforeach()
-qt_target_qml_sources(omastore QML_FILES native/ui/qml/AppShelf.qml native/ui/qml/AppShowcase.qml native/ui/qml/StoreHeader.qml RESOURCES ${OMASTORE_DESIGN_ASSETS})
+set_source_files_properties(native/ui/qml/AppStateLabel.qml PROPERTIES QT_RESOURCE_ALIAS AppStateLabel.qml)
+qt_target_qml_sources(omastore QML_FILES native/ui/qml/AppStateLabel.qml native/ui/qml/AppShelf.qml native/ui/qml/AppShowcase.qml native/ui/qml/StoreHeader.qml RESOURCES ${OMASTORE_DESIGN_ASSETS})
 target_link_libraries(omastore PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Network
 )
@@ -119,6 +120,13 @@ install(FILES native/ui/assets/icons/LICENSE DESTINATION "${CMAKE_INSTALL_DATADI
 install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/omastore")
 
 if(BUILD_TESTING)
+    qt_add_executable(core-session-tests tests/core_session.cpp native/ui/CoreBridge.cpp native/ui/CoreBridge.h)
+    set_target_properties(core-session-tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bridge-tests")
+    configure_file(tests/bridge_service.py "${CMAKE_BINARY_DIR}/bridge-tests/omastore-core" COPYONLY)
+    target_include_directories(core-session-tests PRIVATE native/ui)
+    target_link_libraries(core-session-tests PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+    add_test(NAME core-session COMMAND core-session-tests)
+    set_tests_properties(core-session PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 45)
     qt_add_executable(native-contracts tests/native_contracts.cpp native/ui/MediaPreview.cpp native/ui/MediaPreview.h native/ui/Preparation.cpp native/ui/Preparation.h)
     qt_add_executable(desktop-settings-tests tests/desktop_settings.cpp native/ui/DesktopSettings.cpp native/ui/DesktopSettings.h)
     target_include_directories(desktop-settings-tests PRIVATE native/ui)

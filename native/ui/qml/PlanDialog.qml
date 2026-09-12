@@ -45,7 +45,7 @@ Dialog {
             }
         }
     }
-    Timer {interval:750;running:dialog.visible;repeat:true;onTriggered:{dialog.nowSeconds=Date.now()/1000;if(dialog.plan.digest&&!dialog.core.loading&&(dialog.phase==="awaiting_user"||dialog.phase==="running"))dialog.core.communityAction("operations.status",{id:dialog.plan.digest});}}
+    Timer {interval:750;running:dialog.visible;repeat:true;onTriggered:{dialog.nowSeconds=Date.now()/1000;}}
     ScrollView {
         anchors.fill:parent;contentWidth:availableWidth;clip:true
         ColumnLayout {

@@ -63,6 +63,7 @@ ColumnLayout {
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 3
                     Label { text: entry.modelData.name; color: theme.ink; font.pixelSize: 14 * theme.scale; elide: Text.ElideRight; Layout.fillWidth: true; textFormat: Text.PlainText }
+                    AppStateLabel { core: shelf.core; theme: shelf.theme; appId: entry.modelData.id; Layout.fillWidth: true }
                     Label { text: entry.modelData.category; color: theme.muted; font.pixelSize: 11 * theme.scale; textFormat: Text.PlainText }
                     Label { text: (entry.modelData.priceLabel || "View details") + (shelf.selectedId === entry.modelData.id ? " · Selected" : ""); color: theme.accent; font.pixelSize: 10 * theme.scale }
                 }

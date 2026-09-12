@@ -15,6 +15,12 @@
 namespace { constexpr qsizetype MaxLineBytes = 256 * 1024; }
 CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(demo) {
     m_clock.start();
+    m_deviceTimer.setInterval(1000);
+    connect(&m_deviceTimer, &QTimer::timeout, this, &CoreBridge::pollDevice);
+    m_deviceTimer.start();
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState state) {
+        if (state == Qt::ApplicationActive) refreshDevice();
+    });
     m_repositorySync.setInterval(60 * 1000);
     connect(&m_repositorySync, &QTimer::timeout, this, [this] { if (m_clock.elapsed() >= m_nextRepositorySync) refresh(); });
     const auto arguments = QCoreApplication::arguments();
@@ -60,15 +66,15 @@ void CoreBridge::start() {
     m_process.setArguments(args); m_process.setProcessChannelMode(QProcess::SeparateChannels);
     m_timeout.start(); m_process.start(); emit stateChanged();
 }
-void CoreBridge::request(const QString &method, const QVariantMap &params) {
-    if (m_process.state() != QProcess::Running || m_pending.size() >= 16) return;
+bool CoreBridge::request(const QString &method, const QVariantMap &params, const QString &scope) {
+    if (m_process.state() != QProcess::Running || m_pending.size() >= 16) return false;
     const QString id = QString::number(++m_sequence);
-    if (method.startsWith("remixes.") || method.startsWith("settings.") || method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick" || method.startsWith("system.") || method.startsWith("library.") || method.startsWith("operations.") || method=="handoff.open") m_communityRequests[method]=id;
+    if (scope.isEmpty() && (method.startsWith("remixes.") || method.startsWith("settings.") || method.startsWith("makers.") || method.startsWith("editorial.") || method.startsWith("setups.") || method=="apps.pick" || method.startsWith("system.") || method.startsWith("library.") || method.startsWith("operations.") || method=="handoff.open")) m_communityRequests[method]=id;
     if (method == "candidate.prepare") m_candidateRequest = id;
     if (method == "apps.get") m_detailRequestId=id;
-    m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor")});
+    m_pending.insert(id, {method, m_clock.elapsed(), m_generation, params.contains("cursor"), scope});
     const QJsonObject envelope{{"protocol_version", 1}, {"id", id}, {"method", method}, {"params", QJsonObject::fromVariantMap(params)}};
-    m_process.write(QJsonDocument(envelope).toJson(QJsonDocument::Compact) + '\n'); emit stateChanged();
+    m_process.write(QJsonDocument(envelope).toJson(QJsonDocument::Compact) + '\n'); emit stateChanged(); return true;
 }
 void CoreBridge::readOutput() {
     while (m_process.bytesAvailable() > 0) {
@@ -89,6 +95,12 @@ void CoreBridge::acceptReply(const QByteArray &line) {
     if (parse.error != QJsonParseError::NoError || !doc.isObject() || reply.value("protocol_version").toInt(-1) != 1
         || !reply.value("ok").isBool() || !m_pending.contains(id)) { fail("The local service sent an unsupported message."); return; }
     const auto pending = m_pending.take(id);
+    if (!pending.scope.isEmpty()) {
+        if (reply.value("ok").toBool() && !reply.value("result").isObject()) { fail("The local service sent an invalid result."); return; }
+        acceptDevice(pending.scope, reply.value("result").toObject().toVariantMap(),
+                     reply.value("ok").toBool() ? QString{} : reply.value("error").toObject().value("code").toString("invalid_result"));
+        emit stateChanged(); return;
+    }
     if(pending.method=="apps.get" && id!=m_detailRequestId){emit stateChanged();return;}
     if (!reply.value("ok").toBool()) {
         const auto code = reply.value("error").toObject().value("code").toString();
@@ -157,6 +169,7 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         if(pending.method=="operations.replan") m_community.insert("system.plan",result);
         if(pending.method=="operations.get") m_community.insert("system.plan",result.value("plan").toMap());
         emit communityChanged();
+        if(pending.method=="operations.confirm" || pending.method=="operations.cancel" || pending.method=="operations.reconcile" || pending.method=="library.refresh" || pending.method=="system.handoff") refreshDevice();
         if(pending.method=="handoff.open") {
             if(result.value("kind").toString()=="app")showApp(result.value("id").toString());
             else communityAction("setups.select",{{"id",result.value("id")},{"revision",result.value("revision")}});
@@ -169,7 +182,7 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         m_ready = true; m_version = result.value("version").toString(); request("catalogue.info");
         if(!m_pendingHandoff.isEmpty()) { const auto uri=m_pendingHandoff;m_pendingHandoff.clear();communityAction("handoff.open",{{"uri",uri}}); }
     } else if (pending.method == "catalogue.info" || pending.method == "catalogue.refresh") {
-        m_catalogue = result; search(); communityAction("makers.list"); communityAction("editorial.list"); communityAction("setups.list"); emit dataChanged();
+        m_catalogue = result; refreshDevice(); search(); communityAction("makers.list"); communityAction("editorial.list"); communityAction("setups.list"); emit dataChanged();
         if (!m_detailRequested.isEmpty()) showApp(m_detailRequested);
     } else if (pending.method == "apps.list" && pending.generation == m_generation) {
         if (pending.append) m_apps.append(result.value("items").toList()); else m_apps = result.value("items").toList();
@@ -180,6 +193,9 @@ void CoreBridge::acceptReply(const QByteArray &line) {
     emit stateChanged();
 }
 void CoreBridge::fail(const QString &message) {
+    m_inventoryRunning = false; m_deviceRequested = false; m_appStates.clear();
+    m_device = {{"observationState", "unavailable"}, {"notice", "Device status unavailable. Reconnect to check again."}};
+    m_activityCurrent = false; emit deviceChanged(); emit activityChanged();
     m_timeout.stop(); m_ready = false; m_error = message; m_output.clear(); m_pending.clear();
     if (m_process.state() != QProcess::NotRunning) m_process.terminate();
     emit stateChanged();
@@ -267,3 +283,79 @@ void CoreBridge::copySetupLink() {
 void CoreBridge::openHandoff(const QString &uri) { if(uri.isEmpty() || uri.size()>400)return;if(m_ready)communityAction("handoff.open",{{"uri",uri}});else m_pendingHandoff=uri; }
 
 void CoreBridge::copyFeedLink(){const QUrl url(m_workspaceReply.value("feedUrl").toString(),QUrl::StrictMode);if(url.isValid()&&url.scheme()=="https"&&!url.host().isEmpty()&&url.userInfo().isEmpty())QGuiApplication::clipboard()->setText(url.toString());}
+
+
+bool CoreBridge::loading() const {
+    for (const auto &pending : m_pending) if (pending.scope.isEmpty()) return true;
+    return false;
+}
+void CoreBridge::refreshDevice() {
+    m_deviceRequested = true; m_nextActivity = 0;
+    emit deviceChanged();
+    QTimer::singleShot(0, this, &CoreBridge::pollDevice);
+}
+void CoreBridge::pollDevice() {
+    if (!m_ready || m_catalogue.isEmpty() || loading()) return;
+    for (const auto &pending : m_pending) if (!pending.scope.isEmpty()) return;
+    const auto now = m_clock.elapsed();
+    if (m_inventoryRunning) {
+        request("library.inventory", {{"offset",m_inventoryOffset},{"snapshot",m_inventoryMetadata.value("snapshot")}}, "inventory");
+    } else if (m_deviceRequested || now >= m_nextDevice) {
+        m_inventoryStage.clear(); m_inventoryItems.clear(); m_inventoryMetadata.clear(); m_inventoryOffset = 0;
+        m_inventoryRunning = true; m_deviceRequested = false;
+        request("library.inventory", {}, "inventory"); emit deviceChanged();
+    } else if (now >= m_nextActivity) {
+        request("library.activity", {}, "activity");
+    }
+}
+void CoreBridge::acceptDevice(const QString &scope, const QVariantMap &result, const QString &error) {
+    if (scope == "inventory") {
+        if (!error.isEmpty()) {
+            m_inventoryRunning = false; m_inventoryStage.clear(); m_inventoryItems.clear();
+            m_appStates.clear();
+            m_device = {{"observationState","unavailable"},{"notice","Device status changed or is unavailable. Checking again shortly."}};
+            m_nextDevice = m_clock.elapsed() + 3000;
+        } else {
+            if (m_inventoryOffset == 0) m_inventoryMetadata = result;
+            for (const auto &entry : result.value("items").toList()) {
+                const auto item = entry.toMap(); m_inventoryStage.insert(item.value("id").toString(), item);
+                m_inventoryItems.append(item);
+            }
+            const auto next = result.value("nextOffset");
+            if (!next.isNull() && next.isValid() && next.toInt() > m_inventoryOffset && next.toInt() <= 20000) {
+                m_inventoryOffset = next.toInt();
+            } else {
+                m_appStates = m_inventoryStage; m_device = m_inventoryMetadata;
+                m_device.insert("items", m_inventoryItems); m_device.insert("nextOffset", QVariant{});
+                m_inventoryRunning = false; m_nextDevice = m_clock.elapsed() + 15000;
+            }
+        }
+        emit deviceChanged();
+    } else if (scope == "activity") {
+        m_activityCurrent = error.isEmpty();
+        if (m_activityCurrent) {
+            const auto items = result.value("items").toList();
+            if (items != m_activity) { m_activity = items; m_deviceRequested = true; }
+            // Fetch complete results for an open review; summaries cannot replace
+            // per-component outcomes or execution eligibility.
+            const auto id = m_community.value("system.plan").toMap().value("digest").toString();
+            for (const auto &entry : m_activity) {
+                const auto item = entry.toMap();
+                const auto status = m_community.value("operations.status").toMap();
+                if (item.value("id").toString() == id &&
+                    (status.value("id").toString()!=id || status.value("version")!=item.value("version") || status.value("cancelRequested")!=item.value("cancelRequested")))
+                    request("operations.status", {{"id",id}}, "review");
+            }
+        }
+        bool active = false;
+        for (const auto &entry : m_activity) {
+            const auto state = entry.toMap().value("state").toString();
+            active |= state == "running" || state == "awaiting_user";
+        }
+        m_nextActivity = m_clock.elapsed() + (active ? 1000 : 15000);
+        emit activityChanged();
+    } else if (scope == "review" && error.isEmpty() && result.value("id") == m_community.value("system.plan").toMap().value("digest")) {
+        m_community.insert("operations.status", result); emit communityChanged();
+    }
+    QTimer::singleShot(0, this, &CoreBridge::pollDevice);
+}

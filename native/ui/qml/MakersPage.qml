@@ -66,7 +66,7 @@ ScrollView {
                 Button {text:"Next";enabled:page.results.nextOffset!==null && page.results.nextOffset!==undefined && !page.core.loading;onClicked:page.core.communityAction("makers.list",{q:search.text,offset:page.results.nextOffset,snapshot:page.results.snapshot})}
             }
             Label {visible:page.showing;text:"Applications · "+(page.profile.appCount || 0);font.bold:true}
-            Repeater {model:page.showing?(page.profile.apps || []):[];AppCard {required property var modelData;app:modelData;theme:page.theme;Layout.fillWidth:true;onChosen:page.core.showApp(app.id)}}
+            Repeater {model:page.showing?(page.profile.apps || []):[];AppCard {core:page.core;required property var modelData;app:modelData;theme:page.theme;Layout.fillWidth:true;onChosen:page.core.showApp(app.id)}}
             Button {visible:page.showing && page.profile.appCount>30;text:"Browse all applications from this maker";onClicked:page.browseApps(page.profile.id)}
             Label {visible:page.showing && (page.profile.stories || []).length>0;text:"Editorial contributions";font.bold:true}
             Repeater {model:page.showing?(page.profile.stories || []):[];Label {required property var modelData;text:modelData.title+"\n"+modelData.summary;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}}
