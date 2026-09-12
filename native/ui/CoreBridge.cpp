@@ -414,12 +414,18 @@ QVariantMap CoreBridge::actionForApp(const QString &id) const {
     if (!m_ready) return make("reconnect","Reconnect");
     for (const auto &entry:m_activity) {
         const auto op=entry.toMap(); const auto phase=op.value("state").toString();
-        if (phase!="running" && phase!="awaiting_user" && phase!="unknown" && phase!="failed") continue;
+        bool matches = false;
         for (const auto &app:op.value("apps").toList()) {
             const auto a=app.toMap();
             if (a.value("appId").toString()==id && (a.value("action")=="install" || a.value("action")=="remove"))
-                return make("review_operation", "Review operation", op.value("id").toString());
+                matches = true;
         }
+        if (!matches) continue;
+        // Activity prioritises unresolved work, then newest outcomes. A newer
+        // completed operation supersedes older failures for this app.
+        if (phase=="running" || phase=="awaiting_user" || phase=="unknown" || phase=="failed")
+            return make("review_operation", "Review operation", op.value("id").toString());
+        break;
     }
     const auto device=m_appStates.value(id).toMap();
     if (device.value("stale").toBool() || m_device.value("stale").toBool()) return make("refresh","Recheck status");

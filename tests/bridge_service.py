@@ -42,6 +42,9 @@ for line in sys.stdin:
     elif method == 'library.activity':
         result = {'items': [] if mode == 'initial' else [{'id': 'operation', 'state': 'failed',
                   'apps': [{'appId': 'first', 'action': 'install'}], 'cancelRequested': False}]}
+        if mode == 'recovered':
+            result['items'].insert(0, {'id': 'new-operation', 'state': 'succeeded',
+                                      'apps': [{'appId': 'first', 'action': 'install'}]})
     response = {'protocol_version': 1, 'id': req['id'], 'ok': error is None}
     response['error' if error else 'result'] = {'code': error} if error else result
     print(json.dumps(response), flush=True)

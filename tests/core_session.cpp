@@ -24,6 +24,9 @@ private slots:
         QCOMPARE(core.activity().first().toMap().value("state").toString(), QString("failed"));
         QCOMPARE(core.actionForApp("first").value("kind").toString(), QString("review_operation"));
         QTRY_COMPARE_WITH_TIMEOUT(core.actionForApp("second").value("kind").toString(), QString("open"), 5000);
+        mode("recovered"); core.refreshDevice();
+        QTRY_COMPARE_WITH_TIMEOUT(core.activity().size(), 2, 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(core.actionForApp("first").value("kind").toString(), QString("open"), 5000);
         mode("updates"); core.refreshDevice();
         QTRY_COMPARE_WITH_TIMEOUT(core.actionForApp("second").value("secondaryKind").toString(), QString("system_update"), 5000);
         QCOMPARE(core.actionForApp("second").value("kind").toString(), QString("open"));

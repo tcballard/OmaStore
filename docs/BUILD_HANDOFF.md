@@ -1,5 +1,14 @@
 # Build handoff
 
+PR #12 review correction: shared action selection now uses the first relevant
+operation in the activity ordering, matching the status label. A newer successful
+operation no longer leaves Open blocked by an older failure; unresolved operations
+retain priority. The controlled-process regression failed before the correction
+and passed after it. All 97 Rust tests passed (three opt-in tests ignored), formatting,
+all-feature Clippy and the native build passed. Full native checks and fresh remote
+CI are recorded separately. This is offscreen/fixture evidence, not live lifecycle
+acceptance. Revert the focused correction commit to undo it.
+
 11 September 2026, PR #9 CI correction: native run 34648363716 failed only
 `desktop-settings/atomicReplacementAndLateCreation`. The default five-second
 QTRY deadline raced the five-second recovery poll; Qt reported that the

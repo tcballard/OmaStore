@@ -1,5 +1,9 @@
 # Bundle status
 
+B13c PR review correction: newer completed operations supersede older failures
+when choosing app actions. The controlled-process regression passes; 97 Rust tests,
+formatting, Clippy and native compilation pass. Fresh CI remains the merge gate.
+
 12 September 2026: B13c shared actions and retained stale observations
 implemented_unverified; see ADR 0017. C++/QML changes and focused native
 regressions await CI. B13b final revision 7b9221e passed both CI workflows,
