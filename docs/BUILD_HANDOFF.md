@@ -363,3 +363,14 @@ checks now cover bounded activity and retained outcomes after core restart.
 Qt is absent locally; native/package CI is required before automated acceptance.
 No real package operation, system setting or live gate was changed. Final visual
 acceptance and real Omarchy lifecycle evidence remain outstanding.
+
+B13b local verification update: workspace Clippy (all targets/features) passed;
+the clean nonincremental workspace run passed 97 tests with three explicit
+integration tests ignored. The core protocol suite passed five tests, and the
+independent-worker lifecycle process passed, including new activity assertions.
+PR: https://github.com/tcballard/OmaStore/pull/11, based on PR #10.
+
+First B13b CI: Arch package passed; native compilation and the new core-session
+regression passed. Repository journeys caught an empty activity-banner binding
+reading the first element of an empty list. Guarded the empty list and rerunning
+native checks. No assertion or acceptance gate was removed.

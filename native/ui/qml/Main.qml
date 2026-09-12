@@ -172,7 +172,7 @@ ApplicationWindow {
                     anchors.fill: parent
                     Label {
                         Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText
-                        text: !core.activityCurrent ? "Operation progress unavailable. Reconnect to check its outcome." : core.activity.length + " recent operation(s) · " + (core.activity[0].state || "").replace(/_/g," ")
+                        text: !core.activityCurrent ? "Operation progress unavailable. Reconnect to check its outcome." : core.activity.length + " recent operation(s) · " + ((core.activity[0] || {}).state || "").replace(/_/g," ")
                     }
                     ActionButton { objectName: "openActivity"; theme: storeTheme; text: "Activity"; onClicked: activityTray.open() }
                 }
