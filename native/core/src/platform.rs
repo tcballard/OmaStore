@@ -42,6 +42,10 @@ pub struct Host {
     pub sync_databases: String,
     pub repositories: BTreeMap<String, bool>,
     pub installed: BTreeMap<String, String>,
+    #[serde(default)]
+    pub updates: BTreeMap<String, PackageUpdate>,
+    #[serde(default)]
+    pub databases_stale: bool,
     pub update_required: bool,
     pub locked: bool,
     pub simulated: bool,
@@ -158,6 +162,37 @@ pub fn installed(text: &str) -> Result<BTreeMap<String, String>> {
     }
     Ok(packages)
 }
+/// pacman -Qu uses `name installed -> available`, not the -Q record shape.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PackageUpdate {
+    pub installed_version: String,
+    pub available_version: String,
+    pub ignored: bool,
+}
+pub fn parse_updates(text: &str) -> Result<BTreeMap<String, PackageUpdate>> {
+    let mut updates = BTreeMap::new();
+    for line in text.lines() {
+        let f: Vec<_> = line.split_whitespace().collect();
+        if !(f.len() == 4 || (f.len() == 5 && f[4] == "[ignored]"))
+            || !package_token(f[0])
+            || !version(f[1])
+            || f[2] != "->"
+            || !version(f[3])
+        {
+            return Err("invalid_update_state");
+        }
+        let update = PackageUpdate {
+            installed_version: f[1].into(),
+            available_version: f[3].into(),
+            ignored: f.len() == 5,
+        };
+        if updates.insert(f[0].into(), update).is_some() || updates.len() > 20000 {
+            return Err("invalid_update_state");
+        }
+    }
+    Ok(updates)
+}
 fn sync_digest(repositories: &BTreeMap<String, bool>) -> Result<(String, bool)> {
     let mut hash = Sha256::new();
     let mut stale = false;
@@ -207,6 +242,8 @@ pub fn probe() -> Host {
         sync_databases: String::new(),
         repositories: BTreeMap::new(),
         installed: BTreeMap::new(),
+        updates: BTreeMap::new(),
+        databases_stale: false,
         update_required: false,
         locked: Path::new("/var/lib/pacman/db.lck").exists(),
         simulated: false,
@@ -269,7 +306,15 @@ pub fn probe() -> Host {
         {
             return Err("update_status_unavailable");
         }
-        h.update_required = stale || !installed(&updates.text)?.is_empty();
+        h.updates = parse_updates(&updates.text)?;
+        if h.updates
+            .iter()
+            .any(|(name, update)| h.installed.get(name) != Some(&update.installed_version))
+        {
+            return Err("package_state_changed");
+        }
+        h.databases_stale = stale;
+        h.update_required = stale || !h.updates.is_empty();
         h.state = "supported".into();
         h.reason = if h.update_required {
             "Run Omarchy's updater before planning an install"
@@ -363,6 +408,24 @@ pub fn resolve(targets: &[String]) -> Result<Vec<Package>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn update_rows_keep_versions_and_reject_ambiguous_output() {
+        let updates =
+            parse_updates("alpha 1:2.0-1 -> 1:2.1-1\nbeta 3-1 -> 4-1 [ignored]\n").unwrap();
+        assert_eq!(updates["alpha"].available_version, "1:2.1-1");
+        assert!(updates["beta"].ignored);
+        assert!(parse_updates("").unwrap().is_empty());
+        for bad in [
+            "alpha 1-1",
+            "alpha 1-1 => 2-1",
+            "alpha 1 -> 2 junk",
+            "--root 1 -> 2",
+            "alpha 1 -> 2\nalpha 1 -> 3",
+            "alpha 1 -> 2 [ignored] extra",
+        ] {
+            assert!(parse_updates(bad).is_err(), "{bad}");
+        }
+    }
     #[test]
     fn package_queries_reject_options_and_ambiguous_solver_output() {
         assert!(!package_token("--root"));

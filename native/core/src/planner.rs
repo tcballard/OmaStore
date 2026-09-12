@@ -352,6 +352,8 @@ pub fn sample(
         sync_databases: "fictional".into(),
         repositories: BTreeMap::new(),
         installed,
+        updates: BTreeMap::new(),
+        databases_stale: false,
         update_required: false,
         locked: false,
         simulated: true,

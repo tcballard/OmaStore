@@ -29,28 +29,11 @@ ColumnLayout {
         }
         Item { Layout.fillWidth: true }
         ToolButton { objectName: "backButton"; text: "Back"; visible: header.canGoBack; onClicked: header.backRequested() }
-        Repeater {
-            model: [{name:"Discover",index:0},{name:"Browse",index:1},{name:"Library",index:3}]
-            ToolButton {
-                id: tab
-                required property var modelData
-                objectName: "nav" + (modelData.name === "Browse" ? "Apps" : modelData.name)
-                text: modelData.name; font.pixelSize: 16 * theme.scale
-                palette.buttonText: header.section === modelData.index ? theme.accent : theme.ink
-                Accessible.role: Accessible.PageTab
-                Accessible.selected: header.section === modelData.index
-                background: Rectangle {
-                    color: tab.hovered ? theme.surface : "transparent"
-                    border.color: tab.activeFocus ? theme.accent : "transparent"
-                    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: theme.accent; visible: header.section === tab.modelData.index }
-                }
-                onClicked: header.navigate(modelData.index)
-            }
-        }
         ToolButton {
             objectName: "moreNavigation"; text: "More"; onClicked: menu.open()
             Menu {
                 id: menu
+                MenuItem { objectName: "navApps"; text: "Browse all apps"; onTriggered: header.navigate(1) }
                 MenuItem { objectName: "navSetups"; text: "Setups"; onTriggered: header.navigate(2) }
                 MenuItem { objectName: "navMakers"; text: "Makers"; onTriggered: header.navigate(4) }
                 MenuItem { objectName: "navSubmit"; text: "Submit"; onTriggered: header.navigate(5) }
@@ -91,6 +74,27 @@ ColumnLayout {
             Accessible.name: "Search applications"
             background: Rectangle { color: theme.surface; border.color: searchWide.activeFocus ? theme.accent : theme.line; border.width: searchWide.activeFocus ? 2 : 1 }
             onTextEdited: header.searchRequested(text)
+        }
+    }
+    Flow {
+        Layout.fillWidth:true;Layout.leftMargin:22;Layout.rightMargin:22;Layout.bottomMargin:8;spacing:12
+        Repeater {
+            model: [{name:"Discover",index:0},{name:"Installed",index:3},{name:"Saved",index:6},{name:"Updates",index:7}]
+            ToolButton {
+                id: tab
+                required property var modelData
+                objectName: "nav" + (modelData.name === "Installed" ? "Library" : modelData.name)
+                text: modelData.name; font.pixelSize: 16 * theme.scale
+                palette.buttonText: header.section === modelData.index ? theme.accent : theme.ink
+                Accessible.role: Accessible.PageTab
+                Accessible.selected: header.section === modelData.index
+                background: Rectangle {
+                    color: tab.hovered ? theme.surface : "transparent"
+                    border.color: tab.activeFocus ? theme.accent : "transparent"
+                    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: theme.accent; visible: header.section === tab.modelData.index }
+                }
+                onClicked: header.navigate(modelData.index)
+            }
         }
     }
     TextField {

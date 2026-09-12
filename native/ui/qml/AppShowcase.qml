@@ -9,6 +9,27 @@ Item {
     required property var details
     property bool overview: false
     signal inspectRequested()
+    property bool pendingLaunch:false
+    property string actionNotice:""
+    readonly property var deviceState: {
+        const items=(core.community["library.app_status"] || {}).items || [];
+        return items.find(item=>item.id===hero.app.id) || {};
+    }
+    function checkDevice() { if(!overview && app.id && core && core.ready)core.communityAction("library.app_status",{id:app.id}); }
+    Component.onCompleted:checkDevice()
+    onAppChanged:checkDevice()
+    Connections {
+        target:hero.core
+        function onCommunityChanged() {
+            const result=hero.core.community["library.launchers"] || {};
+            if(hero.pendingLaunch && result.id===hero.app.id) {
+                hero.pendingLaunch=false;
+                if(result.items.length===1)hero.core.communityAction("library.launch",{id:hero.app.id,desktop:result.items[0]});
+                else if(result.items.length>1)launchPrompt.open();
+                else hero.actionNotice="No supported desktop launcher found. Use the app’s normal system entry.";
+            }
+        }
+    }
     readonly property var app: details.app || ({})
     readonly property bool calculator: app.id === "repo-omacalc"
     readonly property bool compact: width < 1000 || theme.scale > 1.4
@@ -49,12 +70,19 @@ Item {
                     theme: hero.theme; primary: true
                     textSize: 18; implicitWidth: 296; implicitHeight: 56
                     objectName: hero.overview ? "discoverCalculator" : "previewAppPlan"
-                    text: hero.overview ? "Explore OmaCalc" : core.loading ? "Preparing…" : "Review installation"
+                    text: hero.overview ? "Explore OmaCalc" : core.loading ? "Preparing…" : hero.deviceState.primaryAction==="open"?"Open":hero.deviceState.primaryAction==="system_update"?"Update with Omarchy…":"Review installation"
                     enabled: core.ready && !core.loading
-                    onClicked: hero.overview ? hero.inspectRequested() : core.communityAction("system.plan", {kind:"app",id:hero.app.id})
+                    onClicked: {
+                        if(hero.overview)hero.inspectRequested();
+                        else if(hero.deviceState.primaryAction==="open") {hero.pendingLaunch=true;core.communityAction("library.launchers",{id:hero.app.id});}
+                        else if(hero.deviceState.primaryAction==="system_update")updatePrompt.open();
+                        else core.communityAction("system.plan",{kind:"app",id:hero.app.id});
+                    }
                 }
                 Label { text: hero.overview ? (hero.app.priceLabel || "") : (hero.details.summary || {}).priceLabel || ""; color: theme.ink; font.pixelSize: 14 * theme.scale; topPadding: 10; textFormat: Text.PlainText }
             }
+            Label {visible:!hero.overview && !!hero.deviceState.installedVersion;text:"Installed: "+hero.deviceState.installedVersion+(hero.deviceState.availableVersion?" · Available: "+hero.deviceState.availableVersion:"");color:theme.muted;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+            Label {visible:!!hero.actionNotice;text:hero.actionNotice;color:theme.muted;Layout.fillWidth:true;wrapMode:Text.Wrap}
             Label { text: (hero.details.summary || {}).evidenceLabel || hero.app.evidenceLabel || "Not tested on Omarchy"; color: theme.muted; font.pixelSize: 12 * theme.scale; Layout.fillWidth: true; wrapMode: Text.Wrap }
             Rectangle { visible: !hero.overview; Layout.fillWidth: true; height: 1; color: theme.line; Layout.topMargin: 12 }
             Flow {
@@ -78,6 +106,21 @@ Item {
                 Accessible.name: "Upstream OmaCalc screenshot showing its keypad and the result 133"
             }
             Label { text: "Upstream preview · Tokyo Night"; color: theme.muted; font.pixelSize: 11 * theme.scale; Layout.alignment: Qt.AlignHCenter }
+        }
+    }
+
+    Dialog {
+        id:updatePrompt;parent:Overlay.overlay;anchors.centerIn:parent;modal:true
+        title:"Open Omarchy’s updater?";width:Math.min(560,parent?parent.width-32:560)
+        standardButtons:Dialog.Ok|Dialog.Cancel
+        contentItem:Label {text:"The system updater may update other packages and apply Omarchy migrations too. Review its prompts in the terminal.";wrapMode:Text.Wrap}
+        onAccepted:core.communityAction("system.handoff",{kind:"update",confirmed:true})
+    }
+    Dialog {
+        id:launchPrompt;parent:Overlay.overlay;anchors.centerIn:parent;modal:true;title:"Choose a launcher"
+        standardButtons:Dialog.Cancel
+        contentItem:ColumnLayout {
+            Repeater {model:(core.community["library.launchers"] || {}).items || [];Button {required property string modelData;text:modelData;onClicked:{core.communityAction("library.launch",{id:hero.app.id,desktop:modelData});launchPrompt.close();}}}
         }
     }
 }
