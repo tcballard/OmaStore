@@ -12,7 +12,7 @@ ApplicationWindow {
     property string setupSelection:""
     property string setupRevision:""
     readonly property bool showingSubpage:showingDetail || (section===2 && !!setupSelection) || (section===4 && !!makerSelection)
-    function back(){if(showingDetail)core.closeDetail();else if(section===2){setupSelection="";setupRevision="";}else if(section===4)makerSelection="";}
+    function back(){if(showingDetail){core.closeDetail();Qt.callLater(restoreFocus);}else if(section===2){setupSelection="";setupRevision="";}else if(section===4)makerSelection="";}
     property string makerSelection: ""
     function showMaker(id) { makerSelection=id; navigate(4); core.communityAction("makers.get",{id:id}); }
     property int section: 0
@@ -41,11 +41,42 @@ ApplicationWindow {
     palette.placeholderText: storeTheme.muted
 
     StoreTheme { id: storeTheme; desktop: window.desktop }
-    function navigate(index) { core.closeDetail(); if(index !== section) browsePosition = 0; section = index; if (index === 0 && Object.keys(core.query).length) core.clearFilters(); }
+    property var navigationMemory: ({})
+    property var browseQuery: core.query
+    function rememberDestination() {
+        const item=body.item;
+        navigationMemory[section]={y:item && item.contentItem ? item.contentItem.contentY || 0 : 0,tab:item && item.tab!==undefined?item.tab:undefined,offset:item && item.inventoryOffset!==undefined?item.inventoryOffset:0};
+        if(section===1)browseQuery=Object.assign({},core.query);
+    }
+    function restoreDestination() {
+        const item=body.item, state=navigationMemory[section];
+        if(!item || !state)return;
+        if(state.tab!==undefined && item.tab!==undefined)item.tab=state.tab;
+        if(item.inventoryOffset!==undefined)item.inventoryOffset=state.offset;
+        Qt.callLater(function(){if(body.item===item && item.contentItem)item.contentItem.contentY=state.y;});
+    }
+    function navigate(index) {
+        if(index===section){core.closeDetail();return;}
+        rememberDestination(); core.closeDetail(); section=index;
+        if(index===0 && Object.keys(core.query).length)core.clearFilters();
+        if(index===1){const query=Object.assign({},browseQuery);browseQuery=query;core.clearFilters();Object.keys(query).forEach(k=>core.setFilter(k,query[k]));}
+        restoreDestination();
+    }
     property real browsePosition: 0
     property string lastAppId: ""
     property string lastFocusName: ""
-    function openApp(id, origin) { lastAppId = id; lastFocusName = origin || "app-" + id; if (section === 0) section = 1; core.showApp(id); }
+    function openApp(id, origin) { lastAppId=id; lastFocusName=origin || "app-"+id; core.showApp(id); }
+    function restoreFocus() {
+        function locate(item) {
+            if(!item)return null;
+            if(item.objectName===lastFocusName)return item;
+            const children=item.children || [];
+            for(let i=0;i<children.length;++i){const found=locate(children[i]);if(found)return found;}
+            return null;
+        }
+        const target=locate(body.item) || locate(window.contentItem);
+        if(target)target.forceActiveFocus(Qt.BacktabFocusReason);
+    }
     function readable(value) { return String(value || "unknown").replace(/_/g, " "); }
     function focusSearch() { navigate(1); topHeader.searchInput.forceActiveFocus(); topHeader.searchInput.selectAll(); }
     Shortcut { sequence: "Ctrl+K"; onActivated: window.focusSearch() }
@@ -122,9 +153,29 @@ ApplicationWindow {
             }
             Loader {
                 id: body
+                visible: !window.showingDetail
+                onLoaded: window.restoreDestination()
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: window.showingDetail ? detailPage : (window.section === 0 && core.apps.some(a => a.id === "repo-omacalc") ? showcasePage : ((window.section === 3 || window.section === 6 || window.section === 7) ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage)))
+                sourceComponent: (window.section === 0 && core.apps.some(a => a.id === "repo-omacalc") ? showcasePage : ((window.section === 3 || window.section === 6 || window.section === 7) ? libraryPage : window.section === 2 ? setupsPage : window.section === 4 ? makersPage : window.section === 5 ? submitPage : ((window.section === 0 || window.section === 1 || window.section === 3) ? browsePage : supportingPage)))
+            }
+            Loader {
+                active: window.showingDetail; visible: active
+                Layout.fillWidth: true; Layout.fillHeight: true
+                sourceComponent: detailPage
+            }
+            Pane {
+                visible: core.activity.length > 0
+                Layout.fillWidth: true; padding: 8
+                background: Rectangle { color: storeTheme.wash }
+                RowLayout {
+                    anchors.fill: parent
+                    Label {
+                        Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText
+                        text: !core.activityCurrent ? "Operation progress unavailable. Reconnect to check its outcome." : core.activity.length + " recent operation(s) · " + (core.activity[0].state || "").replace(/_/g," ")
+                    }
+                    ActionButton { objectName: "openActivity"; theme: storeTheme; text: "Activity"; onClicked: activityTray.open() }
+                }
             }
             AppShelf {
                 visible: (window.section === 0 || window.section === 1) && core.apps.length > 0
@@ -140,6 +191,33 @@ ApplicationWindow {
                 Label { text: core.loading ? "Loading…" : (core.ready ? (core.catalogue.demo ? "SAMPLE MODE" : (core.catalogue.repositoryCheckedAt ? "Packages checked " + new Date(core.catalogue.repositoryCheckedAt).toLocaleString(Qt.locale(), Locale.ShortFormat) : "Catalogue available offline")) : "CONNECTING"); color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale; textFormat: Text.PlainText }
                 Item { Layout.fillWidth: true }
                 Label { text: "Independent community project · Not affiliated with Omacom"; color: storeTheme.muted; font.family: storeTheme.mono; font.pixelSize: 10 * storeTheme.scale }
+            }
+        }
+    }
+
+    Dialog {
+        id: activityTray; objectName: "activityTray"
+        anchors.centerIn: parent; modal: true; title: "Recent activity"
+        width: Math.min(600, window.width-32); height: Math.min(500,window.height-32)
+        standardButtons: Dialog.Close
+        contentItem: ScrollView {
+            contentWidth: availableWidth; clip: true
+            ColumnLayout {
+                width: parent.width; spacing: 12
+                Label { visible: !core.activityCurrent; text: "Progress is unavailable. Reconnect before checking the outcome."; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                Repeater {
+                    model: core.activity
+                    Frame {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            anchors.fill: parent
+                            Label { text: (modelData.simulated?"Sample · ":"")+modelData.state.replace(/_/g," ")+(modelData.cancelRequested?" · Finishing current transaction":""); Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText }
+                            Label {text:modelData.apps.map(a=>(core.appStates[a.appId] || {}).name || a.appId).join(", ");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+                            ActionButton {theme:storeTheme;text:"Review operation";enabled:core.ready&&!core.loading;onClicked:{activityTray.close();core.communityAction("operations.get",{id:modelData.id});}}
+                        }
+                    }
+                }
             }
         }
     }
@@ -167,17 +245,6 @@ ApplicationWindow {
         ScrollView {
             id: browseScroll
             objectName: "browseScroll"
-            Component.onCompleted: Qt.callLater(function() {
-                function locate(item) {
-                    if (item.objectName === window.lastFocusName) return item;
-                    const children = item.children || [];
-                    for (let i=0; i<children.length; ++i) { const found=locate(children[i]); if(found) return found; }
-                    return null;
-                }
-                if (window.lastFocusName) { const control=locate(browseScroll); if(control) control.forceActiveFocus(Qt.BacktabFocusReason); }
-                contentItem.contentY = window.browsePosition;
-            })
-            Component.onDestruction: { if (contentItem) window.browsePosition = contentItem.contentY; }
             clip: true
             contentWidth: availableWidth
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -262,6 +329,7 @@ ApplicationWindow {
                         AppCard {
                             required property var modelData
                             app: modelData
+                            core: window.core
                             bookmark: window.section === 3
                             theme: storeTheme
                             Layout.fillWidth: true

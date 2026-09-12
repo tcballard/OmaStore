@@ -12,9 +12,15 @@ ScrollView {
     property int destinationTab:0
     property int tab:0
     onDestinationTabChanged:tab=destinationTab
-    readonly property var inventory: { const value=core.community["library.inventory"] || {}; return value.filter===(page.tab===4?"updates":"installed")?value:({}); }
-    function refreshInventory(offset) { const params={filter:page.tab===4?"updates":"installed",offset:offset || 0}; if(offset>0)params.snapshot=page.inventory.snapshot; core.communityAction("library.inventory",params); }
-    onTabChanged: { if(core && core.ready && (tab===0 || tab===4)) refreshInventory(0); }
+    property int inventoryOffset: 0
+    readonly property var inventory: {
+        const value=core.device;
+        const items=(value.items || []).filter(i => page.tab===4 ? i.state==="update_available" : i.state==="installed" || i.state==="update_available");
+        const offset=Math.min(page.inventoryOffset, Math.max(0, Math.floor((items.length-1)/30)*30));
+        return Object.assign({}, value, {items:items.slice(offset,offset+30),offset:offset,nextOffset:offset+30<items.length?offset+30:null});
+    }
+    function refreshInventory(offset) { inventoryOffset=offset || 0; }
+    onTabChanged: inventoryOffset=0
     property string pendingLaunch:""
     property string launchChoice:""
     property string notice:""
@@ -24,7 +30,7 @@ ScrollView {
     readonly property var library:core.community["library.list"] || ({})
     readonly property var launchers:core.community["library.launchers"] || ({})
     contentWidth:availableWidth;clip:true
-    Component.onCompleted:{tab=destinationTab;core.communityAction("library.list");page.refreshInventory(0);core.communityAction("library.setups");}
+    Component.onCompleted:{tab=destinationTab;core.communityAction("library.list");core.communityAction("library.setups");}
     Connections {
         target:page.core
         function onCommunityChanged(){
@@ -38,7 +44,7 @@ ScrollView {
                 else page.notice="This package has no supported desktop launcher. Use its normal system entry.";
             }
             const handoff=page.core.community["system.handoff"] || {};
-            if(handoff.requested)page.notice=handoff.simulated?"Sample updater handoff. No system changes were made.":"Updater opened. Refresh this device after it finishes.";
+            if(handoff.requested)page.notice=handoff.simulated?"Sample updater handoff. No system changes were made.":"Updater opened. Device status refreshes automatically when you return.";
             const result=page.core.community["library.launch"] || {};
             if(result.requested)page.notice=result.simulated?"Sample launch requested. No real application was opened.":"Open request sent to the system desktop launcher.";
         }
@@ -50,7 +56,7 @@ ScrollView {
             Layout.fillWidth:true;Layout.margins:28;spacing:18
             Label {text:"YOUR TOOLS, ON THIS DEVICE";font.family:page.theme.mono;color:page.theme.muted;Layout.fillWidth:true;wrapMode:Text.Wrap}
             Label {text:page.tab===0?"Installed":page.tab===1?"Saved":page.tab===4?"Updates":"Your library.";font.pixelSize:32*page.theme.scale;font.bold:true}
-            Label {text:page.inventory.notice || "Checking this device…";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+            Label {visible:page.tab===0 || page.tab===4;text:page.inventory.notice || "Checking this device…";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
             Label {visible:!!page.library.simulated;text:"Fictional device state · Package and launch rehearsals stay separate from this computer.";Layout.fillWidth:true;wrapMode:Text.Wrap}
             Label {visible:!!page.inventory.host && page.inventory.observationState!=="available";text:(page.inventory.host || {}).reason || "Device status unavailable";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
             Label {visible:!!page.notice;text:page.notice;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
@@ -64,7 +70,7 @@ ScrollView {
                 Button {objectName:"libraryUpdates";text:"Updates";highlighted:page.tab===4;onClicked:page.tab=4}
                 Button {text:"Setups";highlighted:page.tab===3;onClicked:{page.tab=3;page.core.communityAction("library.setups");}}
                 Button {objectName:"libraryActivity";text:"Proposals & activity";highlighted:page.tab===2;onClicked:page.tab=2}
-                Button {text:"Refresh this device";enabled:!page.core.loading;onClicked:{page.refreshInventory(0);page.core.communityAction("library.list");}}
+                Button {text:"Refresh this device";enabled:!page.core.loading&&!page.core.deviceRefreshing;onClicked:{page.core.refreshDevice();page.core.communityAction("library.list");}}
             }
             ColumnLayout {
                 visible:page.tab===0 || page.tab===4;Layout.fillWidth:true;spacing:12
@@ -79,6 +85,7 @@ ScrollView {
                             anchors.fill:parent
                             Label {text:modelData.name;font.bold:true;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
                             Label {text:"Installed: "+modelData.installedVersion+(modelData.availableVersion?" → Available: "+modelData.availableVersion:"")+"\n"+modelData.package+(modelData.updateIgnored?" · Held by package settings":"");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+                            AppStateLabel {core:page.core;theme:page.theme;appId:modelData.id;Layout.fillWidth:true}
                             Label {text:"Checked: "+new Date(modelData.observedAt*1000).toLocaleString();Layout.fillWidth:true;wrapMode:Text.Wrap}
                             Flow {
                                 Layout.fillWidth:true;spacing:8
@@ -95,7 +102,7 @@ ScrollView {
             ColumnLayout {
                 visible:page.tab===1;Layout.fillWidth:true;spacing:12
                 Label {visible:page.core.saved.length===0;text:"Save an app from its detail page to keep it here.";Layout.fillWidth:true;wrapMode:Text.Wrap}
-                Repeater {model:page.core.saved;Frame {required property var modelData;Layout.fillWidth:true;ColumnLayout {anchors.fill:parent;Label {text:modelData.name;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText} Flow {Layout.fillWidth:true;spacing:8;Button {text:"Inspect";onClicked:page.core.showApp(modelData.id)} Button {text:"Remove from saved";onClicked:page.core.removeSaved(modelData.id)}}}}}
+                Repeater {model:page.core.saved;Frame {required property var modelData;Layout.fillWidth:true;ColumnLayout {anchors.fill:parent;Label {text:modelData.name;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText} AppStateLabel {core:page.core;theme:page.theme;appId:modelData.id;Layout.fillWidth:true} Flow {Layout.fillWidth:true;spacing:8;Button {text:"Inspect";onClicked:page.core.showApp(modelData.id)} Button {text:"Remove from saved";onClicked:page.core.removeSaved(modelData.id)}}}}}
             }
             ColumnLayout {
                 visible:page.tab===2;Layout.fillWidth:true;spacing:12

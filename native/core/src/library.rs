@@ -265,6 +265,32 @@ impl Store {
             json!({"schemaVersion":1,"items":rows,"total":total,"offset":offset,"nextOffset":if offset+30<total{Some(offset+30)}else{None},"operations":operations,"lastSequence":sequence,"observedAt":observed.and_then(|s|s.parse::<i64>().ok()),"simulated":self.demo,"notice":"Installed versions are local observations. They do not update catalogue test evidence or prove the repository of an external installation. Proposals do not mean installed."}),
         )
     }
+    /// A bounded session tray, separate from proposal history. Active work wins
+    /// over recent outcomes; opening the tray never confirms or retries a plan.
+    pub fn activity(&mut self, now: i64) -> Result<Value> {
+        let ids: Vec<String> = {
+            let mut q = db(self.connection.prepare("SELECT id FROM operations WHERE state <> 'planned' ORDER BY CASE WHEN state IN ('running','awaiting_user','unknown') THEN 0 ELSE 1 END, updated_at DESC,id LIMIT 5"))?;
+            let rows = db(q.query_map([], |r| r.get(0)))?;
+            db(rows.collect())?
+        };
+        let mut items = Vec::new();
+        for id in ids {
+            let status = crate::recovery::inspect(self, &id, now)?;
+            let plan = self.plan(&id)?;
+            let apps: Vec<Value> = plan
+                .operations
+                .iter()
+                .take(100)
+                .map(|op| json!({"appId":op.app_id,"action":op.action}))
+                .collect();
+            items.push(
+                json!({"id":id,"state":status["state"],"version":status["version"],
+                "cancelRequested":status["cancelRequested"],"workerActive":status["workerActive"],
+                "simulated":plan.simulated,"apps":apps}),
+            );
+        }
+        Ok(json!({"items":items,"observedAt":now,"limit":5}))
+    }
     pub fn events(&self, id: &str, after: i64) -> Result<Value> {
         self.plan(id)?;
         let mut q=db(self.connection.prepare("SELECT sequence,state,code,at FROM operation_events WHERE operation_id=?1 AND sequence>?2 ORDER BY sequence LIMIT 100"))?;

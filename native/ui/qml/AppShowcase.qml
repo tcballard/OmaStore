@@ -11,13 +11,7 @@ Item {
     signal inspectRequested()
     property bool pendingLaunch:false
     property string actionNotice:""
-    readonly property var deviceState: {
-        const items=(core.community["library.app_status"] || {}).items || [];
-        return items.find(item=>item.id===hero.app.id) || {};
-    }
-    function checkDevice() { if(!overview && app.id && core && core.ready)core.communityAction("library.app_status",{id:app.id}); }
-    Component.onCompleted:checkDevice()
-    onAppChanged:checkDevice()
+    readonly property var deviceState: core.appStates[app.id] || ({})
     Connections {
         target:hero.core
         function onCommunityChanged() {
@@ -70,10 +64,11 @@ Item {
                     theme: hero.theme; primary: true
                     textSize: 18; implicitWidth: 296; implicitHeight: 56
                     objectName: hero.overview ? "discoverCalculator" : "previewAppPlan"
-                    text: hero.overview ? "Explore OmaCalc" : core.loading ? "Preparing…" : hero.deviceState.primaryAction==="open"?"Open":hero.deviceState.primaryAction==="system_update"?"Update with Omarchy…":"Review installation"
+                    text: hero.overview ? "Explore OmaCalc" : statusLabel.needsReview ? "Review operation" : core.loading ? "Preparing…" : hero.deviceState.primaryAction==="open"?"Open":hero.deviceState.primaryAction==="system_update"?"Update with Omarchy…":"Review installation"
                     enabled: core.ready && !core.loading
                     onClicked: {
                         if(hero.overview)hero.inspectRequested();
+                        else if(statusLabel.needsReview)core.communityAction("operations.get",{id:statusLabel.operation.id});
                         else if(hero.deviceState.primaryAction==="open") {hero.pendingLaunch=true;core.communityAction("library.launchers",{id:hero.app.id});}
                         else if(hero.deviceState.primaryAction==="system_update")updatePrompt.open();
                         else core.communityAction("system.plan",{kind:"app",id:hero.app.id});
@@ -81,6 +76,7 @@ Item {
                 }
                 Label { text: hero.overview ? (hero.app.priceLabel || "") : (hero.details.summary || {}).priceLabel || ""; color: theme.ink; font.pixelSize: 14 * theme.scale; topPadding: 10; textFormat: Text.PlainText }
             }
+            AppStateLabel { id: statusLabel; core: hero.core; theme: hero.theme; appId: hero.app.id || ""; Layout.fillWidth: true }
             Label {visible:!hero.overview && !!hero.deviceState.installedVersion;text:"Installed: "+hero.deviceState.installedVersion+(hero.deviceState.availableVersion?" · Available: "+hero.deviceState.availableVersion:"");color:theme.muted;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
             Label {visible:!!hero.actionNotice;text:hero.actionNotice;color:theme.muted;Layout.fillWidth:true;wrapMode:Text.Wrap}
             Label { text: (hero.details.summary || {}).evidenceLabel || hero.app.evidenceLabel || "Not tested on Omarchy"; color: theme.muted; font.pixelSize: 12 * theme.scale; Layout.fillWidth: true; wrapMode: Text.Wrap }

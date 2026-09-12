@@ -1,5 +1,11 @@
 # Bundle status
 
+12 September 2026: B13b shared storefront session implemented_unverified. Atomic
+device refresh, shared card/detail/library status, persistent operation activity
+and destination navigation memory are implemented. Focused Rust tests pass; new
+bridge and native interaction regressions await Qt CI. See ADR 0016. B13a PR #10
+has now passed both Native storefront and Arch preview package CI.
+
 12 September 2026: B13a device-state foundation implemented_unverified. Shared
 read-only inventory/app status, pacman update parsing, Installed/Saved/Updates
 destinations and updater handoff are implemented. Focused core tests passed;

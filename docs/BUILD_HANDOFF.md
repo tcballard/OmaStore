@@ -338,3 +338,28 @@ inventory and per-app state assertions before install, after restart and after
 removal. The original intermediate-cache errors did not recur in the clean run.
 PR: https://github.com/tcballard/OmaStore/pull/10. Native and Arch CI are the
 remaining automated gates; no local Qt or real Omarchy pass is claimed.
+
+
+## 12 September 2026 — B13b shared storefront session
+
+Starts from B13a remote aa23ca38e71f02e9175909c5256cc9162d718277 (local
+2d1d77c, identical tree). Branch feat/store-session; stacked on feat/device-app-state.
+B13a Native storefront 34692914280 and Arch preview package 34692914284 both
+passed. Requirements: UX02/UX08, B13-A3/A5/A6, B15-A1/A5.
+
+Shared session projection stages snapshot-bound inventory pages, refreshes on
+activation and operation completion, and keeps background loading separate.
+Device status is shared across all app surfaces. Bounded journal activity survives
+closed reviews and process reconnection; existing consent/recovery adapters remain.
+Mounted destination views preserve detail Back, while destination memory retains
+scroll, library tab/page and Browse filters. See ADR 0016 for polling and scope.
+
+Focused sample-core tests: 31 passed, one explicit live HTTPS test ignored.
+Added a controlled process-peer Qt test for atomic publication, snapshot change,
+background responsiveness, process loss, reconnect and absence of automatic writes.
+Native journey checks cover automatic installed status after closing operation
+review and returning from detail to the same Discover view. Process lifecycle
+checks now cover bounded activity and retained outcomes after core restart.
+Qt is absent locally; native/package CI is required before automated acceptance.
+No real package operation, system setting or live gate was changed. Final visual
+acceptance and real Omarchy lifecycle evidence remain outstanding.

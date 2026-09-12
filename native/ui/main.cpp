@@ -237,11 +237,12 @@ int main(int argc, char *argv[]) {
                         const auto local=core.community().value("library.list").toMap();
                         check(local.value("items").toList().isEmpty(),"proposal is never labelled installed");
                         check(!local.value("operations").toList().isEmpty(),"proposal survives in the local journal");
-                        check(core.community().value("library.inventory").toMap().value("installedCount",-1).toInt()==0,"installed destination reads device inventory");
+                        for(int i=0;i<100&&core.deviceRefreshing();++i)QTest::qWait(50);
+                        check(core.device().value("installedCount",-1).toInt()==0,"installed destination reads device inventory");
                         auto *updates=findItem(window->contentItem(),"navUpdates");check(updates!=nullptr,"updates destination exists");
                         if(updates){updates->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
-                        check(window->property("section").toInt()==7 && core.community().value("library.inventory").toMap().value("filter").toString()=="updates","updates destination reads update inventory");
+                        check(window->property("section").toInt()==7 && core.device().value("updateCount",-1).toInt()==0,"updates destination reads update inventory");
                         auto *saved=findItem(window->contentItem(),"navSaved");check(saved!=nullptr,"saved destination exists");
                         if(saved){saved->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         for(int i=0;i<60&&core.loading();++i)QTest::qWait(50);
@@ -256,8 +257,15 @@ int main(int argc, char *argv[]) {
                         auto *consent=findItem(window->contentItem(),"planConsent");
                         if(consent){consent->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         if(approve){approve->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
-                        for(int i=0;i<100 && core.community().value("operations.status").toMap().value("state").toString()!="succeeded";++i)QTest::qWait(50);
-                        check(core.community().value("operations.status").toMap().value("state").toString()=="succeeded","sample worker reaches verified local outcome");
+                        const auto operationId=core.community().value("system.plan").toMap().value("digest").toString();
+                        auto *during=findItem(window->contentItem(),"closePlan");if(during){during->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        auto *discover=findItem(window->contentItem(),"navDiscover");if(discover){discover->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
+                        for(int i=0;i<200 && (core.activity().isEmpty() || core.activity().first().toMap().value("state").toString()!="succeeded" || core.appStates().value("demo-fieldnotes").toMap().value("state").toString()!="installed");++i)QTest::qWait(50);
+                        check(!core.activity().isEmpty() && core.activity().first().toMap().value("state").toString()=="succeeded","sample worker progress continues with review closed");
+                        check(core.appStates().value("demo-fieldnotes").toMap().value("state").toString()=="installed","completion refreshes shared device state automatically");
+                        check(findItem(window->contentItem(),"openActivity")!=nullptr,"operation recovery remains accessible while browsing");
+                        core.communityAction("operations.get",{{"id",operationId}});
+                        for(int i=0;i<100&&core.loading();++i)QTest::qWait(50);
                         auto *previewDiagnostics=findItem(window->contentItem(),"previewDiagnostics");
                         if(previewDiagnostics){previewDiagnostics->forceActiveFocus();QTest::keyClick(window,Qt::Key_Space);}
                         for(int i=0;i<60 && core.loading();++i)QTest::qWait(50);
@@ -450,6 +458,7 @@ int main(int argc, char *argv[]) {
                     QTest::qWait(100);
                 }
                 if (!demo && (parser.isSet(storefrontTest) || parser.value(captureView) != "discover")) {
+                    auto *originalBrowse = findItem(window->contentItem(), "browseScroll");
                     auto *feature = findItem(window->contentItem(), "discoverCalculator");
                     check(feature != nullptr, "repository discovery feature");
                     if (feature) { feature->forceActiveFocus(); QTest::keyClick(window, Qt::Key_Space); }
@@ -481,6 +490,7 @@ int main(int argc, char *argv[]) {
                             QTest::keyClick(window,Qt::Key_Escape);
                             QTest::qWait(100);
                             check(core.detail().isEmpty(), "return to discovery");
+                            check(window->property("section").toInt()==0 && originalBrowse==findItem(window->contentItem(),"browseScroll"), "detail Back preserves its Discover origin and mounted scroll view");
                             check(core.isSaved("repo-omacalc"), "saved app survives return");
                             auto *shelf = findItem(window->contentItem(), "appShelf");
                             check(shelf != nullptr, "persistent catalogue shelf");

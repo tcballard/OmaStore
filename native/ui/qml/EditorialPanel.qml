@@ -42,7 +42,7 @@ ColumnLayout {
                 width:storyScroll.availableWidth;spacing:16
                 Label {text:panel.story.body || "";Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
                 Button {text:"By "+((panel.detail.maker || {}).name || "the maker");onClicked:{reading.close();panel.makerChosen(panel.story.authorMakerId);}}
-                Repeater {model:panel.detail.apps || [];AppCard {required property var modelData;app:modelData;theme:panel.theme;Layout.fillWidth:true;onChosen:{reading.close();panel.core.showApp(app.id);}}}
+                Repeater {model:panel.detail.apps || [];AppCard {core:panel.core;required property var modelData;app:modelData;theme:panel.theme;Layout.fillWidth:true;onChosen:{reading.close();panel.core.showApp(app.id);}}}
                 Label {text:"Rights: "+(panel.story.rights || "");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText;color:theme.muted}
             }
         }

@@ -8,6 +8,11 @@
 
 class CoreBridge final : public QObject {
     Q_OBJECT
+    Q_PROPERTY(QVariantMap device READ device NOTIFY deviceChanged)
+    Q_PROPERTY(QVariantMap appStates READ appStates NOTIFY deviceChanged)
+    Q_PROPERTY(QVariantList activity READ activity NOTIFY activityChanged)
+    Q_PROPERTY(bool deviceRefreshing READ deviceRefreshing NOTIFY deviceChanged)
+    Q_PROPERTY(bool activityCurrent READ activityCurrent NOTIFY activityChanged)
     Q_PROPERTY(bool ready READ ready NOTIFY stateChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY stateChanged)
     Q_PROPERTY(bool loaded READ loaded NOTIFY dataChanged)
@@ -31,6 +36,12 @@ public:
     Q_INVOKABLE void start();
     void openHandoff(const QString &uri);
     Q_INVOKABLE void refresh();
+    Q_INVOKABLE void refreshDevice();
+    QVariantMap device() const { return m_device; }
+    QVariantMap appStates() const { return m_appStates; }
+    QVariantList activity() const { return m_activity; }
+    bool deviceRefreshing() const { return m_inventoryRunning || m_deviceRequested; }
+    bool activityCurrent() const { return m_activityCurrent; }
     Q_INVOKABLE void copyFeedLink();
     Q_INVOKABLE void setFilter(const QString &key, const QString &value);
     Q_INVOKABLE void clearFilters();
@@ -48,7 +59,7 @@ public:
     Q_INVOKABLE void workspaceAction(const QString &action, const QVariantMap &params = {});
     void prepareCandidate(const QVariantMap &fields) { request("candidate.prepare", fields); }
     bool ready() const { return m_ready; }
-    bool loading() const { return !m_pending.isEmpty(); }
+    bool loading() const;
     bool loaded() const { return m_loaded; }
     QString version() const { return m_version; }
     QString error() const { return m_error; }
@@ -65,6 +76,8 @@ public:
     QVariantMap workspace() const { return m_workspace; }
     QVariantMap workspaceReply() const { return m_workspaceReply; }
 signals:
+    void deviceChanged();
+    void activityChanged();
     void stateChanged();
     void dataChanged();
     void detailChanged();
@@ -76,8 +89,16 @@ signals:
     void communityChanged();
     void handoffReady(const QVariantMap &identity);
 private:
-    struct Pending { QString method; qint64 since; int generation; bool append; };
-    void request(const QString &method, const QVariantMap &params = {});
+    struct Pending { QString method; qint64 since; int generation; bool append; QString scope; };
+    bool request(const QString &method, const QVariantMap &params = {}, const QString &scope = {});
+    void pollDevice();
+    void acceptDevice(const QString &scope, const QVariantMap &result, const QString &error = {});
+    QTimer m_deviceTimer;
+    QVariantMap m_device, m_appStates, m_inventoryStage, m_inventoryMetadata;
+    QVariantList m_inventoryItems, m_activity;
+    bool m_inventoryRunning = false, m_deviceRequested = false, m_activityCurrent = false;
+    qint64 m_nextDevice = 0, m_nextActivity = 0;
+    int m_inventoryOffset = 0;
     void readOutput();
     void acceptReply(const QByteArray &line);
     void fail(const QString &message);

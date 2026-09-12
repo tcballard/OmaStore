@@ -37,6 +37,8 @@ with tempfile.TemporaryDirectory() as directory:
         assert inventory["items"] == [] and inventory["installedCount"] == 0
         assert request(core,"library.app_status",{"id":"demo-fieldnotes"})["result"]["items"][0]["state"] == "not_installed"
         assert not request(core,"library.inventory",{"filter":"installed","command":"bad"})["ok"]
+        assert request(core, "library.activity", {})["result"]["items"] == []
+        assert not request(core, "library.activity", {"command":"bad"})["ok"]
         consent["accepted"] = True
         accepted = request(core, "operations.confirm", consent)
         assert accepted["ok"] and accepted["result"]["state"] in ("awaiting_user", "running"), accepted
@@ -51,6 +53,9 @@ with tempfile.TemporaryDirectory() as directory:
                 break
             time.sleep(0.1)
         assert state["state"] == "succeeded", state
+        activity = request(recovered, "library.activity", {})["result"]["items"]
+        assert activity[0]["id"] == plan["digest"] and activity[0]["state"] == "succeeded"
+        assert activity[0]["apps"] == [{"appId":"demo-fieldnotes", "action":"install"}]
         library = request(recovered, "library.list", {})["result"]
         assert library["items"][0]["present"] and not library["items"][0]["preexisting"]
         inventory = request(recovered,"library.inventory",{"filter":"installed"})["result"]
