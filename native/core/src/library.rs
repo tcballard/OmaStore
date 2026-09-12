@@ -429,6 +429,31 @@ mod tests {
         host.installed.clear();
         store.observe(&c, &host, now + 20).unwrap();
         assert_eq!(store.view(0).unwrap()["items"][0]["present"], true);
+        host.state = "supported".into();
+        host.locked = true;
+        store.observe(&c, &host, now + 21).unwrap();
+        assert_eq!(store.view(0).unwrap()["items"][0]["present"], true);
+        host.locked = false;
+        let mut changed = c.clone();
+        let app = changed
+            .apps
+            .iter_mut()
+            .find(|a| a.id == "demo-fieldnotes")
+            .unwrap();
+        let release = app
+            .releases
+            .iter_mut()
+            .find(|r| r.id == app.current_release_id)
+            .unwrap();
+        if let InstallRoute::ArchPackage { package, .. } = &mut release.route {
+            *package = "replacement-package".into();
+        }
+        host.installed
+            .insert("replacement-package".into(), "3-1".into());
+        store.observe(&changed, &host, now + 22).unwrap();
+        let item = store.view(0).unwrap()["items"][0].clone();
+        assert_eq!(item["package"], "replacement-package");
+        assert_eq!(item["installedVersion"], "3-1");
         assert!(Store::at(&path, false).is_err());
         let link = temp.path().join("link");
         std::os::unix::fs::symlink(&path, &link).unwrap();

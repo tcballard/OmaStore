@@ -328,3 +328,13 @@ Next slice: continuous device refresh and operation state across cards, followed
 by navigation-state preservation and screenshot-led layout refinement. This slice
 is limited to current catalogue apps; retained journal entries are not deleted
 when a listing leaves the catalogue.
+
+B13a verification update: the clean nonincremental workspace run passed 96 tests
+with three explicit integration tests ignored. The final focused core run passed
+31 tests with one live HTTPS test ignored, including snapshot pagination and
+package remapping/locked-observation regressions. The actual core process suite
+passed five tests; the independent-worker lifecycle test passed with added
+inventory and per-app state assertions before install, after restart and after
+removal. The original intermediate-cache errors did not recur in the clean run.
+PR: https://github.com/tcballard/OmaStore/pull/10. Native and Arch CI are the
+remaining automated gates; no local Qt or real Omarchy pass is claimed.

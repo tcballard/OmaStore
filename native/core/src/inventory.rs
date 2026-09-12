@@ -122,6 +122,59 @@ mod tests {
     use super::*;
     use std::collections::BTreeMap;
     #[test]
+    fn pagination_requires_the_same_catalogue_and_device_observation() {
+        let mut c: Catalogue =
+            serde_json::from_str(include_str!("../../../tests/fixtures/catalogue.json")).unwrap();
+        let selection = crate::planner::Selection::App {
+            id: "demo-fieldnotes".into(),
+        };
+        let (mut host, _, _) = crate::planner::sample(&c, &selection, BTreeMap::new(), 1).unwrap();
+        let original = c
+            .apps
+            .iter()
+            .find(|a| a.id == "demo-fieldnotes")
+            .unwrap()
+            .clone();
+        c.apps = (0..35)
+            .map(|i| {
+                let mut a = original.clone();
+                a.id = format!("sample-{i:02}");
+                a.name = format!("Sample {i:02}");
+                a
+            })
+            .collect();
+        let first = view(&c, &host, Query::default(), 1).unwrap();
+        assert_eq!(first["items"].as_array().unwrap().len(), 30);
+        assert_eq!(first["nextOffset"], 30);
+        let next = || Query {
+            offset: 30,
+            snapshot: Some(first["snapshot"].as_str().unwrap().into()),
+            ..Default::default()
+        };
+        assert_eq!(
+            view(&c, &host, next(), 2).unwrap()["items"]
+                .as_array()
+                .unwrap()
+                .len(),
+            5
+        );
+        host.installed.insert("unrelated".into(), "1-1".into());
+        assert_eq!(view(&c, &host, next(), 3).unwrap_err(), "snapshot_changed");
+        assert_eq!(
+            view(
+                &c,
+                &host,
+                Query {
+                    offset: 30,
+                    ..Default::default()
+                },
+                3
+            )
+            .unwrap_err(),
+            "snapshot_changed"
+        );
+    }
+    #[test]
     fn device_state_is_independent_of_catalogue_versions_and_saved_items() {
         let c: Catalogue =
             serde_json::from_str(include_str!("../../../tests/fixtures/catalogue.json")).unwrap();

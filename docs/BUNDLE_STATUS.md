@@ -3,7 +3,10 @@
 12 September 2026: B13a device-state foundation implemented_unverified. Shared
 read-only inventory/app status, pacman update parsing, Installed/Saved/Updates
 destinations and updater handoff are implemented. Focused core tests passed;
-final native/package verification is pending. See ADR 0015.
+clean workspace run passed 96 tests; final focused core run passed 31 tests,
+including paging and package-remapping regressions. Core protocol and independent
+worker lifecycle process checks pass. Native/package CI is pending on PR #10.
+See ADR 0015.
 
 11 September 2026: B02 repository synchronisation continuation implemented.
 Startup/hourly/manual checks update the reviewed stable x86_64 app selection
