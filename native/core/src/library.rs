@@ -167,7 +167,7 @@ impl Store {
                         ReleaseIdentity::RepositoryPackage { version, .. } => version,
                         _ => &release.version,
                     };
-                    db(tx.execute("INSERT INTO installed_apps(id,name,package,repository,observed_version,present,last_seen_at,preexisting,source_state,catalogue_release,catalogue_version) VALUES(?1,?2,?3,?4,?5,1,?6,1,'observed_locally',?7,?8) ON CONFLICT(id) DO UPDATE SET name=excluded.name,package=excluded.package,repository=excluded.repository,observed_version=excluded.observed_version,present=1,last_seen_at=excluded.last_seen_at,catalogue_release=excluded.catalogue_release,catalogue_version=excluded.catalogue_version",params![app.id,app.name,package,repository,installed,now,release.id,package_version]))?;
+                    db(tx.execute("INSERT INTO installed_apps(id,name,package,repository,observed_version,present,last_seen_at,preexisting,source_state,catalogue_release,catalogue_version) VALUES(?1,?2,?3,?4,?5,1,?6,1,'observed_locally',?7,?8) ON CONFLICT(id) DO UPDATE SET name=excluded.name,preexisting=CASE WHEN installed_apps.package<>excluded.package THEN 1 ELSE installed_apps.preexisting END,source_state=CASE WHEN installed_apps.package<>excluded.package THEN 'observed_locally' ELSE installed_apps.source_state END,package=excluded.package,repository=excluded.repository,observed_version=excluded.observed_version,present=1,last_seen_at=excluded.last_seen_at,catalogue_release=excluded.catalogue_release,catalogue_version=excluded.catalogue_version",params![app.id,app.name,package,repository,installed,now,release.id,package_version]))?;
                 }
             }
         }
@@ -434,6 +434,10 @@ mod tests {
         store.observe(&c, &host, now + 21).unwrap();
         assert_eq!(store.view(0).unwrap()["items"][0]["present"], true);
         host.locked = false;
+        store
+            .connection
+            .execute("UPDATE installed_apps SET preexisting=0", [])
+            .unwrap();
         let mut changed = c.clone();
         let app = changed
             .apps
@@ -453,6 +457,8 @@ mod tests {
         store.observe(&changed, &host, now + 22).unwrap();
         let item = store.view(0).unwrap()["items"][0].clone();
         assert_eq!(item["package"], "replacement-package");
+        assert_eq!(item["preexisting"], true);
+        assert_eq!(item["sourceState"], "observed_locally");
         assert_eq!(item["installedVersion"], "3-1");
         assert!(Store::at(&path, false).is_err());
         let link = temp.path().join("link");
