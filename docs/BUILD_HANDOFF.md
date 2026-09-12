@@ -374,3 +374,27 @@ First B13b CI: Arch package passed; native compilation and the new core-session
 regression passed. Repository journeys caught an empty activity-banner binding
 reading the first element of an empty list. Guarded the empty list and rerunning
 native checks. No assertion or acceptance gate was removed.
+
+
+## 12 September 2026 — B13c shared actions and stale observations
+
+Starting remote 7b9221e316b422a8140b92199fd0a5662ebcc7e2, local 5743ec3
+(identical trees). Branch feat/shared-app-actions, stacked on PR #11.
+B13b final native workflow 34694258175 passed all 13 ordinary and 12 sample
+tests; Arch workflow 34694258171 passed.
+
+Tom requested both gaps from the detailed reference specs be closed. Preserve
+stale information while invalidating state-dependent actions, and share action
+precedence/dispatch across cards and app detail. ADR 0017 records this deliberate
+change to ADR 0016, including launcher verification, external options, shared
+confirmation and Open/update coexistence. Existing Rust execution adapters and
+live gates remain unchanged. Formatting and diff checks pass; expanded Qt
+process-peer and native card-action tests await native CI (Qt absent locally).
+
+Tom also raised adopting AsDecided to avoid re-litigating decisions. Its current
+README confirms typed Markdown, native validation/gates and read-only MCP.
+Recommendation: a separately reviewable adoption slice with durable requirement
+IDs, accepted/proposed/superseded status, provenance back to the seven reference
+specs, and PR/test links. Existing ADRs remain authoritative until that migration
+is validated. Do not label the entire Apple reference as accepted OmaStore scope
+or silently turn implemented/unverified features into accepted live capability.

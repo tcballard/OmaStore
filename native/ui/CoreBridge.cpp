@@ -15,6 +15,10 @@
 namespace { constexpr qsizetype MaxLineBytes = 256 * 1024; }
 CoreBridge::CoreBridge(bool demo, QObject *parent) : QObject(parent), m_demo(demo) {
     m_clock.start();
+    const auto actions = [this] { ++m_actionRevision; emit actionsChanged(); };
+    connect(this, &CoreBridge::deviceChanged, this, actions);
+    connect(this, &CoreBridge::activityChanged, this, actions);
+    connect(this, &CoreBridge::stateChanged, this, actions);
     m_deviceTimer.setInterval(1000);
     connect(&m_deviceTimer, &QTimer::timeout, this, &CoreBridge::pollDevice);
     m_deviceTimer.start();
@@ -182,6 +186,7 @@ void CoreBridge::acceptReply(const QByteArray &line) {
         m_ready = true; m_version = result.value("version").toString(); request("catalogue.info");
         if(!m_pendingHandoff.isEmpty()) { const auto uri=m_pendingHandoff;m_pendingHandoff.clear();communityAction("handoff.open",{{"uri",uri}}); }
     } else if (pending.method == "catalogue.info" || pending.method == "catalogue.refresh") {
+        if (m_catalogue.value("snapshot") != result.value("snapshot")) invalidateDevice("Catalogue changed. Rechecking device status…");
         m_catalogue = result; refreshDevice(); search(); communityAction("makers.list"); communityAction("editorial.list"); communityAction("setups.list"); emit dataChanged();
         if (!m_detailRequested.isEmpty()) showApp(m_detailRequested);
     } else if (pending.method == "apps.list" && pending.generation == m_generation) {
@@ -193,8 +198,8 @@ void CoreBridge::acceptReply(const QByteArray &line) {
     emit stateChanged();
 }
 void CoreBridge::fail(const QString &message) {
-    m_inventoryRunning = false; m_deviceRequested = false; m_appStates.clear();
-    m_device = {{"observationState", "unavailable"}, {"notice", "Device status unavailable. Reconnect to check again."}};
+    m_inventoryRunning = false; m_deviceRequested = false;
+    invalidateDevice("Device status unavailable. Showing the last observation; reconnect to check again.");
     m_activityCurrent = false; emit deviceChanged(); emit activityChanged();
     m_timeout.stop(); m_ready = false; m_error = message; m_output.clear(); m_pending.clear();
     if (m_process.state() != QProcess::NotRunning) m_process.terminate();
@@ -306,14 +311,21 @@ void CoreBridge::pollDevice() {
         request("library.inventory", {}, "inventory"); emit deviceChanged();
     } else if (now >= m_nextActivity) {
         request("library.activity", {}, "activity");
+    } else if (m_device.value("observationState").toString() == "available") {
+        // Resolve launchability once per device snapshot, without per-card probes.
+        for (auto it=m_appStates.cbegin(); it!=m_appStates.cend(); ++it) {
+            const auto state=it.value().toMap().value("state").toString();
+            if ((state=="installed" || state=="update_available") && !m_launchability.contains(it.key())) {
+                request("library.launchers", {{"id",it.key()}}, "launcher:"+it.key()); break;
+            }
+        }
     }
 }
 void CoreBridge::acceptDevice(const QString &scope, const QVariantMap &result, const QString &error) {
     if (scope == "inventory") {
         if (!error.isEmpty()) {
             m_inventoryRunning = false; m_inventoryStage.clear(); m_inventoryItems.clear();
-            m_appStates.clear();
-            m_device = {{"observationState","unavailable"},{"notice","Device status changed or is unavailable. Checking again shortly."}};
+            invalidateDevice("Could not check this device. Showing the last observation; actions need a fresh check.");
             m_nextDevice = m_clock.elapsed() + 3000;
         } else {
             if (m_inventoryOffset == 0) m_inventoryMetadata = result;
@@ -325,8 +337,18 @@ void CoreBridge::acceptDevice(const QString &scope, const QVariantMap &result, c
             if (!next.isNull() && next.isValid() && next.toInt() > m_inventoryOffset && next.toInt() <= 20000) {
                 m_inventoryOffset = next.toInt();
             } else {
-                m_appStates = m_inventoryStage; m_device = m_inventoryMetadata;
-                m_device.insert("items", m_inventoryItems); m_device.insert("nextOffset", QVariant{});
+                if (m_inventoryMetadata.value("observationState").toString()=="available") {
+                    m_appStates = m_inventoryStage; m_device = m_inventoryMetadata;
+                    m_device.insert("items", m_inventoryItems); m_device.insert("nextOffset", QVariant{});
+                    m_device.insert("stale",false);
+                    if (m_launcherSnapshot!=m_device.value("snapshot").toString()) {
+                        m_launchability.clear(); m_launcherSnapshot=m_device.value("snapshot").toString();
+                    }
+                } else {
+                    if (m_device.isEmpty()) { m_device=m_inventoryMetadata; m_appStates=m_inventoryStage; }
+                    invalidateDevice("Device status unavailable. Any retained versions are from the last successful check.");
+                    m_device.insert("host",m_inventoryMetadata.value("host"));
+                }
                 m_inventoryRunning = false; m_nextDevice = m_clock.elapsed() + 15000;
             }
         }
@@ -354,8 +376,84 @@ void CoreBridge::acceptDevice(const QString &scope, const QVariantMap &result, c
         }
         m_nextActivity = m_clock.elapsed() + (active ? 1000 : 15000);
         emit activityChanged();
+    } else if (scope.startsWith("launcher:")) {
+        // A catalogue/device refresh may have invalidated this lookup in flight.
+        if (m_device.value("observationState").toString()=="available") {
+            m_launchability.insert(scope.mid(9), error.isEmpty() ? result : QVariantMap{{"error",error}});
+            ++m_actionRevision; emit actionsChanged();
+        }
     } else if (scope == "review" && error.isEmpty() && result.value("id") == m_community.value("system.plan").toMap().value("digest")) {
         m_community.insert("operations.status", result); emit communityChanged();
     }
     QTimer::singleShot(0, this, &CoreBridge::pollDevice);
+}
+
+
+void CoreBridge::invalidateDevice(const QString &notice) {
+    bool observed=false;
+    QVariantList items;
+    for (auto it=m_appStates.begin(); it!=m_appStates.end(); ++it) {
+        auto item=it.value().toMap();
+        const bool wasObserved=item.value("observedAt").isValid() && !item.value("observedAt").isNull();
+        observed |= wasObserved;
+        item.insert("stale",wasObserved); item.insert("primaryAction","details");
+        it.value()=item;
+    }
+    // Preserve the original stable ordering, versions, counts and timestamp.
+    for (const auto &entry:m_device.value("items").toList())
+        items.append(m_appStates.value(entry.toMap().value("id").toString()));
+    m_device.insert("items",items); m_device.insert("stale",observed);
+    m_device.insert("observationState",observed ? "stale" : "unavailable");
+    m_device.insert("notice",notice); m_launchability.clear();
+    emit deviceChanged();
+}
+QVariantMap CoreBridge::actionForApp(const QString &id) const {
+    const auto make=[this](const QString &kind,const QString &label,const QString &operation=QString{}) {
+        return QVariantMap{{"kind",kind},{"label",label},{"enabled",!loading()},{"operationId",operation}};
+    };
+    if (!m_ready) return make("reconnect","Reconnect");
+    for (const auto &entry:m_activity) {
+        const auto op=entry.toMap(); const auto phase=op.value("state").toString();
+        if (phase!="running" && phase!="awaiting_user" && phase!="unknown" && phase!="failed") continue;
+        for (const auto &app:op.value("apps").toList()) {
+            const auto a=app.toMap();
+            if (a.value("appId").toString()==id && (a.value("action")=="install" || a.value("action")=="remove"))
+                return make("review_operation", "Review operation", op.value("id").toString());
+        }
+    }
+    const auto device=m_appStates.value(id).toMap();
+    if (device.value("stale").toBool() || m_device.value("stale").toBool()) return make("refresh","Recheck status");
+    const auto state=device.value("state").toString();
+    if (state=="external") return make("details","View options");
+    if (m_device.value("observationState").toString()!="available" || state=="unknown" || state.isEmpty())
+        return make("inspect_availability","Check availability…");
+    if (state=="not_installed") return make("review_install","Review installation");
+    const auto launch=m_launchability.value(id).toMap();
+    const auto choices=launch.value("items").toList();
+    if (!choices.isEmpty()) {
+        auto action=make("open",choices.size()>1?"Open…":"Open");
+        if (state=="update_available") { action.insert("secondaryKind","system_update"); action.insert("secondaryLabel","Update with Omarchy…"); }
+        return action;
+    }
+    if (state=="update_available") return make("system_update","Update with Omarchy…");
+    if (launch.contains("items")) { auto action=make("no_launcher","No desktop launcher"); action.insert("enabled",false); return action; }
+    return make("check_launch",launch.contains("error")?"Retry launcher check":"Check launch options…");
+}
+void CoreBridge::activateAppAction(const QString &id, bool secondary) {
+    if (id.isEmpty()) return;
+    const auto action=actionForApp(id);
+    if (!action.value("enabled").toBool()) return;
+    const auto kind=action.value(secondary?"secondaryKind":"kind").toString();
+    if (kind=="reconnect") start();
+    else if (kind=="refresh") refreshDevice();
+    else if (kind=="review_operation") communityAction("operations.get",{{"id",action.value("operationId")}});
+    else if (kind=="review_install" || kind=="inspect_availability") communityAction("system.plan",{{"kind","app"},{"id",id}});
+    else if (kind=="details") showApp(id);
+    else if (kind=="check_launch") {
+        m_launchability.remove(id); request("library.launchers",{{"id",id}},"launcher:"+id);
+    } else if (kind=="open") {
+        const auto choices=m_launchability.value(id).toMap().value("items").toList();
+        if (choices.size()==1) communityAction("library.launch",{{"id",id},{"desktop",choices.first()}});
+        else emit appActionRequested("choose_launcher",id,choices);
+    } else if (kind=="system_update") emit appActionRequested(kind,id,{});
 }

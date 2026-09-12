@@ -21,14 +21,11 @@ ScrollView {
     }
     function refreshInventory(offset) { inventoryOffset=offset || 0; }
     onTabChanged: inventoryOffset=0
-    property string pendingLaunch:""
-    property string launchChoice:""
     property string notice:""
     property var pendingDetach:({})
     property bool detaching:false
     readonly property var setups:core.community["library.setups"] || ({})
     readonly property var library:core.community["library.list"] || ({})
-    readonly property var launchers:core.community["library.launchers"] || ({})
     contentWidth:availableWidth;clip:true
     Component.onCompleted:{tab=destinationTab;core.communityAction("library.list");core.communityAction("library.setups");}
     Connections {
@@ -37,12 +34,6 @@ ScrollView {
             const detached=page.core.community["library.detach_setup"] || {};
             if(page.detaching && detached.detached && page.pendingDetach.id){page.detaching=false;page.pendingDetach=({});page.notice=detached.notice;page.core.communityAction("library.setups");}
 
-            if(page.pendingLaunch && page.launchers.id===page.pendingLaunch){
-                const id=page.pendingLaunch;page.pendingLaunch="";
-                if(page.launchers.items.length===1)page.core.communityAction("library.launch",{id:id,desktop:page.launchers.items[0]});
-                else if(page.launchers.items.length>1)page.launchChoice=id;
-                else page.notice="This package has no supported desktop launcher. Use its normal system entry.";
-            }
             const handoff=page.core.community["system.handoff"] || {};
             if(handoff.requested)page.notice=handoff.simulated?"Sample updater handoff. No system changes were made.":"Updater opened. Device status refreshes automatically when you return.";
             const result=page.core.community["library.launch"] || {};
@@ -84,16 +75,16 @@ ScrollView {
                         ColumnLayout {
                             anchors.fill:parent
                             Label {text:modelData.name;font.bold:true;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
-                            Label {text:"Installed: "+modelData.installedVersion+(modelData.availableVersion?" → Available: "+modelData.availableVersion:"")+"\n"+modelData.package+(modelData.updateIgnored?" · Held by package settings":"");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
+                            Label {text:(modelData.stale?"Last observed installed: ":"Installed: ")+modelData.installedVersion+(modelData.availableVersion?" → Available: "+modelData.availableVersion:"")+"\n"+modelData.package+(modelData.updateIgnored?" · Held by package settings":"");Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText}
                             AppStateLabel {core:page.core;theme:page.theme;appId:modelData.id;Layout.fillWidth:true}
                             Label {text:"Checked: "+new Date(modelData.observedAt*1000).toLocaleString();Layout.fillWidth:true;wrapMode:Text.Wrap}
                             Flow {
                                 Layout.fillWidth:true;spacing:8
                                 Button {text:"App details";onClicked:page.core.showApp(modelData.id)}
                                 Button {objectName:"remove-"+modelData.id;text:"Review removal";enabled:page.inventory.observationState==="available"&&!page.core.loading;onClicked:page.core.communityAction("system.plan",{kind:"remove",id:modelData.id})}
-                                Button {text:"Open";enabled:page.inventory.observationState==="available"&&!page.core.loading;onClicked:{page.pendingLaunch=modelData.id;page.core.communityAction("library.launchers",{id:modelData.id});}}
+                                AppActionButton {core:page.core;theme:page.theme;appId:modelData.id}
+                                AppActionButton {core:page.core;theme:page.theme;appId:modelData.id;secondary:true}
                             }
-                            Repeater {model:page.launchChoice===modelData.id?page.launchers.items:[];Button {required property string modelData;text:"Open "+modelData;onClicked:page.core.communityAction("library.launch",{id:page.launchChoice,desktop:modelData})}}
                         }
                     }
                 }
@@ -102,7 +93,7 @@ ScrollView {
             ColumnLayout {
                 visible:page.tab===1;Layout.fillWidth:true;spacing:12
                 Label {visible:page.core.saved.length===0;text:"Save an app from its detail page to keep it here.";Layout.fillWidth:true;wrapMode:Text.Wrap}
-                Repeater {model:page.core.saved;Frame {required property var modelData;Layout.fillWidth:true;ColumnLayout {anchors.fill:parent;Label {text:modelData.name;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText} AppStateLabel {core:page.core;theme:page.theme;appId:modelData.id;Layout.fillWidth:true} Flow {Layout.fillWidth:true;spacing:8;Button {text:"Inspect";onClicked:page.core.showApp(modelData.id)} Button {text:"Remove from saved";onClicked:page.core.removeSaved(modelData.id)}}}}}
+                Repeater {model:page.core.saved;Frame {required property var modelData;Layout.fillWidth:true;ColumnLayout {anchors.fill:parent;Label {text:modelData.name;Layout.fillWidth:true;wrapMode:Text.Wrap;textFormat:Text.PlainText} AppStateLabel {core:page.core;theme:page.theme;appId:modelData.id;Layout.fillWidth:true} Flow {Layout.fillWidth:true;spacing:8;AppActionButton {core:page.core;theme:page.theme;appId:modelData.id} Button {text:"Inspect";onClicked:page.core.showApp(modelData.id)} Button {text:"Remove from saved";onClicked:page.core.removeSaved(modelData.id)}}}}}
             }
             ColumnLayout {
                 visible:page.tab===2;Layout.fillWidth:true;spacing:12

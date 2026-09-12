@@ -31,11 +31,14 @@ for line in sys.stdin:
                 time.sleep(.4)
             installed = mode != 'initial'
             app = {'id': 'second' if offset else 'first', 'name': 'Test app',
-                   'state': 'installed' if installed else 'not_installed',
+                   'state': 'update_available' if mode == 'updates' else 'installed' if installed else 'not_installed',
+                   'package': 'test-package', 'installedVersion': '1-1' if installed else None, 'observedAt': 123,
                    'primaryAction': 'open' if installed else 'review_install'}
             result = {'snapshot': mode, 'items': [app], 'offset': offset,
                       'nextOffset': None if offset else 30, 'observationState': 'available',
-                      'installedCount': 2 if installed else 0}
+                      'installedCount': 2 if installed else 0, 'observedAt': 123}
+    elif method == 'library.launchers':
+        result = {'id': params['id'], 'items': [] if mode == 'no_launcher' else ['test.desktop']}
     elif method == 'library.activity':
         result = {'items': [] if mode == 'initial' else [{'id': 'operation', 'state': 'failed',
                   'apps': [{'appId': 'first', 'action': 'install'}], 'cancelRequested': False}]}
